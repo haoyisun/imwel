@@ -10,5 +10,6 @@ docs/.vitepress/cache/
 .claudecode
 .codegraph
 
-# Track project Cursor assets (.cursor/rules, skills, commands) and OpenSpec planning.
-# Do not ignore `.cursor/` or `openspec/` — contributors need them.
+# Local AI / OpenSpec planning (keep on disk, do not publish)
+/.cursor/
+/openspec/

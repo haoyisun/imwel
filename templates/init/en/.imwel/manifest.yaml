@@ -1,0 +1,14 @@
+# imwel manifest — declares projects and directory conventions.
+# See https://github.com/haoyisun/imwel for documentation.
+
+conventions:
+  # Default directory names (per-project overrides allowed)
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+
+projects:
+  - name: example-project
+    path: example-project
+    optional:
+      - skills/example-skill

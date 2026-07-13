@@ -1,0 +1,14 @@
+node_modules/
+dist/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+*.log
+.DS_Store
+
+# Local IDE / tool caches (not shared)
+.idea/
+.claudecode
+.codegraph
+
+# Track project Cursor assets (.cursor/rules, skills, commands) and OpenSpec planning.
+# Do not ignore `.cursor/` or `openspec/` — contributors need them.

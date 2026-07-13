@@ -1,0 +1,15 @@
+# imwel manifest — 声明项目与目录约定。
+# 文档见 https://github.com/haoyisun/imwel
+
+conventions:
+  # 默认目录名（可在单个 project 下覆盖）
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+
+projects:
+  - name: example-project
+    path: example-project
+    # 可选制品在安装/同步时会提示用户：
+    # optional:
+    #   - rules/optional-rule.md

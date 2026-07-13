@@ -1,0 +1,57 @@
+---
+description: Non-negotiable imwel architecture and coding constraints (always apply)
+alwaysApply: true
+---
+
+# imwel core constraints
+
+Full rationale: `AGENTS.md`. Keep this list short; do not duplicate that file.
+
+## Product boundary
+
+- imwel is an npm CLI only — no backend, database, hosted platform, or custom ACL/versioning that replaces Git / the Git host.
+- Flag scope creep if a change reintroduces server-side accounts, phone-home governance, or a non-Git content store.
+
+## Architecture
+
+- Git is the database (blob/tree/commit SHAs). Do not invent parallel content hashes or changelogs when `git` already answers.
+- The Git host is governance (permissions, PR/MR). Do not build access-control inside imwel.
+- Bindings are per-directory (`.imwel/binding.yaml`), not per-repo monorepo magic.
+- Rule artifacts: agents.md-flavored Markdown + `targetOverrides` at render time — no competing rule dialect.
+- Local history = real hidden Git under `.imwel/history/`. Conflicts = standard markers; never silent auto-resolve.
+- Drift checks: throttled / explicit CLI only — never hook an AI tool's session lifecycle.
+- Upstream push defaults to branch + PR/MR; direct push only as explicit per-remote opt-in.
+- Shell out to system `git` — no isomorphic-git or embedded Git library.
+
+## Tech stack
+
+- TypeScript on Node.js; single npm package for v1.
+- One interactive-prompts library for CLI prompts — do not mix prompt libraries.
+- Do not add monorepo tooling unless a second independently versioned deployable exists.
+
+## Code & CLI strings
+
+- All source identifiers, comments, commit messages, and code docstrings: **English**.
+- User-facing CLI strings: never hardcode — use `src/locales/` (en default, zh-CN maintained).
+- Scaffold files for *user* template repos live under `templates/init/<locale>/` — separate from CLI i18n.
+
+## KISS / YAGNI
+
+- Implement only what current specs/tasks require.
+- Extract shared helpers only at the second real call site.
+- Comments explain non-obvious *why*, never obvious *what*.
+
+## Safety
+
+- Do not write unmanaged files without explicit user action (`init` / confirmed `sync` / `propose`).
+- Do not silently overwrite locally edited artifacts — detect drift first.
+- No network fetch/push except explicit commands or throttled passive check — no daemons.
+
+## CLI vocabulary
+
+- Prefer established verbs: `init`, `sync`, `status`, `push`, `propose`, `rollback`, `remote`, `template` (and later roadmap verbs that fit this family).
+- Multi-step / network commands must print progress; confirmations must state what will change; errors must be actionable.
+
+## Roadmap note
+
+- Template-repo AI authoring (Slash Commands, repo-type detection) belongs to `template-author-experience` — do not invent ad-hoc author UX in unrelated changes.

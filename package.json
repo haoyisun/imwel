@@ -1,0 +1,52 @@
+{
+  "name": "imwel",
+  "version": "0.1.0",
+  "description": "Git-native CLI for distributing AI coding rules, skills, and agent instructions across teams and tools.",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "imwel": "./dist/cli.js" },
+  "files": ["dist", "templates"],
+  "engines": { "node": ">=18.18" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haoyisun/imwel.git"
+  },
+  "homepage": "https://github.com/haoyisun/imwel#readme",
+  "bugs": {
+    "url": "https://github.com/haoyisun/imwel/issues"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "cursor",
+    "claude-code",
+    "git",
+    "agents",
+    "rules",
+    "skills",
+    "imwel"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "node --test --test-reporter spec dist/**/*.test.js",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "ci": "npm run build && npm run check:i18n && npm test",
+    "e2e": "npm run build && node scripts/e2e-walkthrough.mjs",
+    "doctor": "tsx src/cli.ts doctor",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.1",
+    "commander": "^12.1.0",
+    "execa": "^9.5.2",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitepress": "^1.6.3"
+  }
+}

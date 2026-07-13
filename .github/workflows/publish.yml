@@ -1,0 +1,30 @@
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm run ci
+      - name: Publish
+        run: npm publish --access public
+        env:
+          # Prefer npm Trusted Publisher when configured; otherwise set NPM_TOKEN
+          # as a repository secret (https://docs.npmjs.com/about-access-tokens).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

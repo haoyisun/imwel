@@ -1,0 +1,12 @@
+---
+description: imwel template-author constraints — read manifest first; no competing dialects
+alwaysApply: true
+---
+
+# imwel template author rules
+
+- Always read `.imwel/manifest.yaml` before adding or editing Artifacts.
+- Place rules under the project's `rulesDir`, skills under `skillsDir` (each skill needs `SKILL.md`), and agents content at `agentsFile`.
+- Rules use AGENTS.md-flavored Markdown. Skills follow Cursor / agentskills.io `SKILL.md` (YAML `name` + triggerable `description`). Do not invent a competing dialect.
+- Validate with `imwel lint` before proposing a PR. Use `imwel lint --strict` in CI.
+- Contribute via branch + PR/MR on the Git host. Do not put a consumer `binding.yaml` in this template root.

@@ -1,0 +1,115 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import * as p from '@clack/prompts';
+import { addRemote, getRemote, listRemotes, removeRemote, setRemote } from '../core/config.js';
+import { remoteCacheDir } from '../core/paths.js';
+import { ensureRemoteCache } from '../core/remote-cache.js';
+import { listBoundDirectories } from '../core/binding-registry.js';
+import { t } from '../locales/index.js';
+
+export async function runRemoteAdd(
+  alias: string,
+  url: string,
+  directPush = false,
+): Promise<number> {
+  try {
+    await addRemote(alias, { url, directPush, defaultBranch: 'main' });
+    await ensureRemoteCache(alias, { force: true });
+    console.log(t('remote.add.success', { alias, url }));
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('already exists')) {
+      console.error(t('remote.add.exists', { alias }));
+      return 1;
+    }
+    console.error(t('common.error', { message }));
+    return 1;
+  }
+}
+
+export async function runRemoteList(): Promise<number> {
+  const remotes = await listRemotes();
+  const keys = Object.keys(remotes);
+  if (keys.length === 0) {
+    console.log(t('remote.list.empty'));
+    return 0;
+  }
+  console.log(t('remote.list.title'));
+  for (const alias of keys) {
+    const remote = remotes[alias]!;
+    console.log(
+      t('remote.list.entry', {
+        alias,
+        url: remote.url,
+        branch: remote.defaultBranch ?? 'main',
+        directPush: String(Boolean(remote.directPush)),
+      }),
+    );
+  }
+  return 0;
+}
+
+export async function runRemoteRemove(alias: string, yes = false): Promise<number> {
+  const remote = await getRemote(alias);
+  if (!remote) {
+    console.error(t('common.notFound', { name: alias }));
+    return 1;
+  }
+  const bound = await listBoundDirectories(alias);
+  if (bound.length > 0) {
+    console.log(t('remote.remove.boundWarning', { count: bound.length, alias }));
+  }
+  if (!yes) {
+    const confirm = await p.confirm({ message: t('remote.remove.confirm', { alias }) });
+    if (p.isCancel(confirm) || !confirm) {
+      console.log(t('common.cancelled'));
+      return 1;
+    }
+  }
+  await removeRemote(alias);
+  await fs.rm(remoteCacheDir(alias), { recursive: true, force: true });
+  console.log(t('remote.remove.success', { alias }));
+  return 0;
+}
+
+export async function runRemoteSet(alias: string, directPush?: boolean): Promise<number> {
+  const remote = await getRemote(alias);
+  if (!remote) {
+    console.error(t('common.notFound', { name: alias }));
+    return 1;
+  }
+  if (directPush === undefined) {
+    console.error(t('common.error', { message: 'No options provided' }));
+    return 1;
+  }
+  await setRemote(alias, { directPush });
+  console.log(t('remote.set.success', { alias }));
+  return 0;
+}
+
+export async function runRemoteInteractive(subcommand?: string): Promise<number> {
+  if (subcommand === 'list' || !subcommand) {
+    return runRemoteList();
+  }
+  if (subcommand === 'add') {
+    const alias = await p.text({ message: t('remote.prompt.alias') });
+    if (p.isCancel(alias)) {
+      console.log(t('common.cancelled'));
+      return 1;
+    }
+    const url = await p.text({ message: t('remote.prompt.url') });
+    if (p.isCancel(url)) {
+      console.log(t('common.cancelled'));
+      return 1;
+    }
+    const direct = await p.confirm({ message: t('remote.prompt.directPush'), initialValue: false });
+    if (p.isCancel(direct)) {
+      console.log(t('common.cancelled'));
+      return 1;
+    }
+    return runRemoteAdd(String(alias), String(url), Boolean(direct));
+  }
+  console.error(t('common.error', { message: `Unknown remote subcommand: ${subcommand}` }));
+  return 1;
+}

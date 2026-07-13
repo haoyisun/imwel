@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an enhancement for imwel
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem you want to solve and a concrete proposal.
+        Keep scope aligned with imwel’s Git-native CLI model (no backend/platform).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pain point or gap exists today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should imwel behave?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about (optional).
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, related issues (optional).
+    validations:
+      required: false

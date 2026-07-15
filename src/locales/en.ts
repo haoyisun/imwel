@@ -148,8 +148,29 @@ export const en = {
 
   'passive.driftNotice': 'Drift detected — run `imwel status` or `imwel sync` for details.',
 
+  'adapter.pathConflict':
+    'Render conflict for "{path}" from tools: {tools}. Contents differ; nothing was written for this path.',
+  'adapter.pathConflict.hint':
+    'Pick a single dominant target for that shared file (or align overrides), then re-run.',
+  'adapter.skill.r4Warning':
+    'Warning: this tool has no on-demand skills channel — the skill was merged as always-on instructions.',
+  'adapter.codex.skillsHint':
+    'Codex skills were written under .agents/skills/. Enable them in ~/.codex/config.toml with `[features] skills = true`, then restart Codex.',
+
   'tool.cursor': 'Cursor',
   'tool.claude-code': 'Claude Code',
+  'tool.trae': 'Trae',
+  'tool.qoder': 'Qoder',
+  'tool.codex': 'Codex',
+  'tool.opencode': 'OpenCode',
+  'tool.zcode': 'ZCode',
+  'tool.gemini-cli': 'Gemini CLI',
+  'tool.windsurf': 'Windsurf',
+  'tool.continue': 'Continue',
+  'tool.cline': 'Cline',
+  'tool.kiro': 'Kiro',
+  'tool.copilot': 'GitHub Copilot',
+  'tool.aider': 'Aider',
 
   'artifact.type.rule': 'Rule',
   'artifact.type.skill': 'Skill',

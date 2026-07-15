@@ -99,7 +99,30 @@ Add unit tests that assert this round-trip. Existing Cursor / Claude Code tests 
 
 **Docs-only (no npm `exports` for `./adapters`).** The published package remains a CLI (`bin` + `dist` + `templates`). Adding a public `exports` map for adapter types would expand the npm surface without a real SDK consumer today and risks implying a stable application API. Contributors should import types from the repository source (`src/adapters/types.ts`) when developing a PR. If a future change needs published types, keep the export thin and document it as contributor reference — not a general app SDK.
 
+## Built-in target matrix (summary)
+
+| id | Rules | Skills |
+|----|-------|--------|
+| `cursor` | `.cursor/rules/*.mdc` | (rules only in MVP adapter; skills via Cursor conventions if extended) |
+| `claude-code` | `CLAUDE.md` upsert-block | `.claude/skills/<name>/` |
+| `trae` | `.trae/rules/*.md` | `.trae/skills/<name>/` |
+| `qoder` | `.qoder/rules/*.md` | `.qoder/skills/<name>/` |
+| `codex` | `AGENTS.md` upsert-block | `.agents/skills/<name>/` |
+| `opencode` | `AGENTS.md` upsert-block | `.opencode/skills/<name>/` |
+| `zcode` | `AGENTS.md` upsert-block | `.zcode/skills/<name>/` |
+| `gemini-cli` | `GEMINI.md` upsert-block | merged into `GEMINI.md` (always-on warning) |
+| `windsurf` | `.windsurf/rules/*.md` | same dir, `trigger: model_decision` / `manual` |
+| `continue` | `.continue/rules/*.md` | `.continue/prompts/` |
+| `cline` | `.clinerules/*.md` | same dir, `alwaysApply: false` |
+| `kiro` | `.kiro/steering/*.md` | same dir, `inclusion: auto` / `manual` |
+| `copilot` | `.github/copilot-instructions.md` or `.github/instructions/*.instructions.md` | `.github/prompts/*.prompt.md` |
+| `aider` | `CONVENTIONS.md` + ensure `read:` in `.aider.conf.yml` | merged into `CONVENTIONS.md` (always-on warning) |
+
+Shared-path writes (e.g. several tools → `AGENTS.md`) are **deduped** when content matches and **blocked with a conflict message** when content differs — pick one dominant tool or align overrides.
+
+Prefer shared helpers under `src/adapters/strategies/` for new frontmatter / single-md / skill mappings instead of copying an entire adapter.
+
 ## Related
 
 - [Architecture](../guide/architecture) — where adapters sit in the pipeline
-- Built-in implementations: `src/adapters/cursor.ts`, `src/adapters/claude-code.ts`
+- Built-in implementations: `src/adapters/cursor.ts`, `src/adapters/claude-code.ts`, `src/adapters/extra-adapters.ts`

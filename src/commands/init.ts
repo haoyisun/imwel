@@ -217,7 +217,19 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   }
 
   const artifacts = allArtifacts.filter((a) => !a.optional || optionalSet.has(a.sourcePath));
-  const { files, managed } = renderArtifacts(artifacts, tools);
+  const { files, managed, conflicts, warningLocaleKeys } = renderArtifacts(artifacts, tools);
+  if (conflicts.length) {
+    for (const conflict of conflicts) {
+      console.error(
+        t('adapter.pathConflict', {
+          path: conflict.path,
+          tools: conflict.adapterIds.join(', '),
+        }),
+      );
+    }
+    console.error(t('adapter.pathConflict.hint'));
+    return 1;
+  }
   await applyRenderedFiles(projectDir, files);
   await ensureHistoryRepo(projectDir);
   const writtenPaths = files.map((f) => f.path);
@@ -233,6 +245,15 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
     artifacts: managed,
   };
   await writeBinding(projectDir, binding);
+  for (const key of warningLocaleKeys) {
+    console.warn(t(key as 'adapter.skill.r4Warning'));
+  }
+  if (
+    tools.includes('codex') &&
+    writtenPaths.some((p) => p.replace(/\\/g, '/').includes('.agents/skills/'))
+  ) {
+    console.log(t('adapter.codex.skillsHint'));
+  }
   console.log(t('init.success', { project, branch }));
 
   if (rebind && !nonInteractive && !opts.yes) {

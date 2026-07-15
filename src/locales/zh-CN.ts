@@ -149,8 +149,29 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
 
   'passive.driftNotice': '检测到漂移 — 运行 `imwel status` 或 `imwel sync` 查看详情。',
 
+  'adapter.pathConflict':
+    '路径 "{path}" 的渲染结果冲突（工具：{tools}）。内容不一致，该路径未写入。',
+  'adapter.pathConflict.hint':
+    '请为该共享文件选定一个主导目标（或对齐 targetOverrides）后重试。',
+  'adapter.skill.r4Warning':
+    '警告：该工具没有按需 skills 通道 — 技能已并入常驻说明（always-on）。',
+  'adapter.codex.skillsHint':
+    '已将 Codex skills 写入 .agents/skills/。请在 ~/.codex/config.toml 中设置 `[features] skills = true` 并重启 Codex。',
+
   'tool.cursor': 'Cursor',
   'tool.claude-code': 'Claude Code',
+  'tool.trae': 'Trae',
+  'tool.qoder': 'Qoder',
+  'tool.codex': 'Codex',
+  'tool.opencode': 'OpenCode',
+  'tool.zcode': 'ZCode',
+  'tool.gemini-cli': 'Gemini CLI',
+  'tool.windsurf': 'Windsurf',
+  'tool.continue': 'Continue',
+  'tool.cline': 'Cline',
+  'tool.kiro': 'Kiro',
+  'tool.copilot': 'GitHub Copilot',
+  'tool.aider': 'Aider',
 
   'artifact.type.rule': '规则',
   'artifact.type.skill': '技能',

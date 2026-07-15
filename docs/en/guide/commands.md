@@ -68,7 +68,7 @@ Binds the current directory to one project inside one remote template repository
 | Flag | Description |
 |------|-------------|
 | `-y` / `--yes` | Skip confirmation prompts (**does not** invent selections) |
-| `--tools <csv>` | Comma-separated target tool ids (e.g. `cursor,claude-code`) |
+| `--tools <csv>` | Comma-separated target tool ids (e.g. `cursor,claude-code,codex,trae`) |
 | `--remote <alias>` | Remote alias |
 | `--branch <name>` | Branch name |
 | `--project <name>` | Manifest project name |

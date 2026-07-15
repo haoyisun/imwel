@@ -68,7 +68,7 @@ imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
 - Template repositories are ordinary Git repos with `.imwel/manifest.yaml`
 - Local bindings live in `.imwel/binding.yaml` per directory
 - Install history is tracked in `.imwel/history/` as a separate Git repo
-- Render adapters: **Cursor** (`.cursor/rules/*.mdc`) and **Claude Code** (`CLAUDE.md` blocks, `.claude/skills/`)
+- Render adapters: **Cursor**, **Claude Code**, plus `trae`, `qoder`, `codex`, `opencode`, `zcode`, `gemini-cli`, `windsurf`, `continue`, `cline`, `kiro`, `copilot`, `aider` (see [adapters docs](docs/en/contribute/adapters.md))
 
 ## Development
 

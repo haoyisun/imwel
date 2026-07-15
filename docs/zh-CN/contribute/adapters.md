@@ -99,7 +99,30 @@ export const adapters: Adapter[] = [
 
 **仅文档（不为 `./adapters` 增加 npm `exports`）。** 已发布包仍是 CLI（`bin` + `dist` + `templates`）。为适配器类型增加公开 `exports` 会扩大 npm 表面，而当前没有真实的 SDK 消费者，也容易被误解为稳定应用 API。贡献者开发 PR 时应从仓库源码引用类型（`src/adapters/types.ts`）。若未来需要发布类型，保持导出极薄，并标明用途为贡献者参考 — 而非通用应用 SDK。
 
+## 内置目标矩阵（摘要）
+
+| id | 规则 | 技能 |
+|----|------|------|
+| `cursor` | `.cursor/rules/*.mdc` | （当前适配器以规则为主） |
+| `claude-code` | `CLAUDE.md` upsert-block | `.claude/skills/<name>/` |
+| `trae` | `.trae/rules/*.md` | `.trae/skills/<name>/` |
+| `qoder` | `.qoder/rules/*.md` | `.qoder/skills/<name>/` |
+| `codex` | `AGENTS.md` upsert-block | `.agents/skills/<name>/` |
+| `opencode` | `AGENTS.md` upsert-block | `.opencode/skills/<name>/` |
+| `zcode` | `AGENTS.md` upsert-block | `.zcode/skills/<name>/` |
+| `gemini-cli` | `GEMINI.md` upsert-block | 并入 `GEMINI.md`（always-on 警告） |
+| `windsurf` | `.windsurf/rules/*.md` | 同目录，`trigger: model_decision` / `manual` |
+| `continue` | `.continue/rules/*.md` | `.continue/prompts/` |
+| `cline` | `.clinerules/*.md` | 同目录，`alwaysApply: false` |
+| `kiro` | `.kiro/steering/*.md` | 同目录，`inclusion: auto` / `manual` |
+| `copilot` | `.github/copilot-instructions.md` 或 `.github/instructions/*.instructions.md` | `.github/prompts/*.prompt.md` |
+| `aider` | `CONVENTIONS.md` + 确保 `.aider.conf.yml` 的 `read:` | 并入 `CONVENTIONS.md`（always-on 警告） |
+
+多工具写同一路径时：内容一致则**静默去重**；内容冲突则**跳过并提示**，需选定主导目标或对齐 overrides。
+
+新增 frontmatter / 单文件 / 技能映射时，优先复用 `src/adapters/strategies/` 下的共享 helper，避免整份复制适配器。
+
 ## 相关
 
 - [架构](../guide/architecture) — 适配器在流水线中的位置
-- 内置实现：`src/adapters/cursor.ts`、`src/adapters/claude-code.ts`
+- 内置实现：`src/adapters/cursor.ts`、`src/adapters/claude-code.ts`、`src/adapters/extra-adapters.ts`

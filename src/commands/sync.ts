@@ -5,9 +5,39 @@ import { isInteractiveStdin } from '../core/cli-flags.js';
 import { remoteCacheDir } from '../core/paths.js';
 import { checkoutBranch, ensureRemoteCache } from '../core/remote-cache.js';
 import { planSync, writeSyncResults } from '../core/sync-engine.js';
+import type { PathConflict } from '../adapters/strategies/dedupe.js';
 import { pathExists } from '../core/fs-utils.js';
 import { pendingSyncPath } from '../core/paths.js';
 import { t } from '../locales/index.js';
+import type { LocaleKey } from '../locales/en.js';
+
+function printRenderSideEffects(
+  warningLocaleKeys: string[],
+  tools: string[],
+  writtenPaths: string[],
+): void {
+  for (const key of warningLocaleKeys) {
+    console.warn(t(key as LocaleKey));
+  }
+  if (
+    tools.includes('codex') &&
+    writtenPaths.some((p) => p.replace(/\\/g, '/').includes('.agents/skills/'))
+  ) {
+    console.log(t('adapter.codex.skillsHint'));
+  }
+}
+
+function printPathConflicts(conflicts: PathConflict[]): void {
+  for (const conflict of conflicts) {
+    console.error(
+      t('adapter.pathConflict', {
+        path: conflict.path,
+        tools: conflict.adapterIds.join(', '),
+      }),
+    );
+  }
+  console.error(t('adapter.pathConflict.hint'));
+}
 
 export interface SyncOptions {
   yes?: boolean;
@@ -87,6 +117,10 @@ export async function runSync(opts: SyncOptions | boolean = {}): Promise<number>
   }
 
   const result = await writeSyncResults(projectDir, binding, plan, binding.tools, false);
+  if (result.skippedWrite && result.pathConflicts?.length) {
+    printPathConflicts(result.pathConflicts);
+    return 1;
+  }
   if (result.hasConflicts) {
     const pending = await import('../core/yaml-file.js').then((m) =>
       m.readYamlFile<{ conflictPaths: string[] }>(pendingSyncPath(projectDir)),
@@ -95,6 +129,11 @@ export async function runSync(opts: SyncOptions | boolean = {}): Promise<number>
     return 1;
   }
   await writeBinding(projectDir, result.binding);
+  printRenderSideEffects(
+    result.warningLocaleKeys ?? [],
+    binding.tools,
+    result.writtenPaths ?? [],
+  );
   console.log(t('sync.success', { sha: result.binding.lastSyncedCommit }));
   p.outro(t('common.done'));
   return 0;

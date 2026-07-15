@@ -30,7 +30,7 @@ imwel 是一个 **npm 分发的 CLI**。没有 imwel 服务器、数据库或托
 2. 对每个选中的 AI 工具调用对应**适配器**：`render` 写出工具原生文件；`parseExisting` 读回以做漂移检测与 `push` / `propose`。
 3. core 负责安全（哪些路径可写）与 Git 操作；适配器不得在 core 里做目标特判。
 
-当前内置适配器：**Cursor**（`.cursor/rules/*.mdc` 等）与 **Claude Code**（`CLAUDE.md` 块、`.claude/skills/` 等）。新增目标需通过上游 PR 注册适配器 — 见 [适配器](../contribute/adapters)。
+当前内置适配器包括 **Cursor**、**Claude Code**，以及另外十二个目标（`trae`、`qoder`、`codex`、`opencode`、`zcode`、`gemini-cli`、`windsurf`、`continue`、`cline`、`kiro`、`copilot`、`aider`）。落盘约定按族划分（frontmatter 规则目录、扁平规则目录、单 Markdown upsert-block、GitHub instructions）。技能走保真阶梯（原生 skills 目录 → 按需规则 → prompts → 并入常驻并警告）。多个已选工具对同一路径渲染出不同内容时，imwel 跳过该路径并要求选定主导目标。新增目标仍通过上游 PR 注册适配器 — 见 [适配器](../contribute/adapters)。
 
 规则类 Artifact 的规范正文是 **agents.md 风 Markdown**。工具特有增强放在小型 `targetOverrides` 覆盖层，仅在该目标的 `render` 时展开。
 

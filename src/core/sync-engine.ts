@@ -8,6 +8,7 @@ import { commitInstalledFiles } from './history.js';
 import { threeWayMergeText } from './merge.js';
 import { readManifest, resolveConventions } from './manifest.js';
 import { renderArtifacts } from './render.js';
+import type { PathConflict } from '../adapters/strategies/dedupe.js';
 import { diffNameStatus, showFileAtCommit } from './git.js';
 import { pendingSyncPath } from './paths.js';
 import { readYamlFile, writeYamlFile } from './yaml-file.js';
@@ -76,20 +77,45 @@ export interface PendingSyncState {
   conflictPaths: string[];
 }
 
+export interface WriteSyncResult {
+  binding: Binding;
+  hasConflicts: boolean;
+  pathConflicts?: PathConflict[];
+  warningLocaleKeys?: string[];
+  writtenPaths?: string[];
+  skippedWrite?: boolean;
+}
+
 export async function writeSyncResults(
   projectDir: string,
   binding: Binding,
   plan: SyncPlan,
   tools: string[],
   continueMode = false,
-): Promise<{ binding: Binding; hasConflicts: boolean }> {
+): Promise<WriteSyncResult> {
   const overrideMap = new Map<string, Record<string, Record<string, unknown>>>();
   for (const artifact of binding.artifacts) {
     if (artifact.targetOverrides) {
       overrideMap.set(artifact.sourcePath, artifact.targetOverrides);
     }
   }
-  const { files, managed } = renderArtifacts(plan.artifacts, tools, overrideMap);
+  const {
+    files,
+    managed,
+    conflicts: pathConflicts,
+    warningLocaleKeys,
+  } = renderArtifacts(plan.artifacts, tools, overrideMap);
+
+  if (pathConflicts.length && !continueMode) {
+    return {
+      binding,
+      hasConflicts: false,
+      pathConflicts,
+      warningLocaleKeys,
+      skippedWrite: true,
+    };
+  }
+
   const pending = continueMode ? await readYamlFile<PendingSyncState>(pendingSyncPath(projectDir)) : null;
   const conflictPaths: string[] = pending?.conflictPaths ?? [];
   let hasConflicts = false;
@@ -150,7 +176,7 @@ export async function writeSyncResults(
       remoteCommit: plan.remoteCommit,
       conflictPaths,
     });
-    return { binding, hasConflicts: true };
+    return { binding, hasConflicts: true, warningLocaleKeys };
   }
 
   const writtenPaths = await applyRenderedFiles(projectDir, files);
@@ -167,7 +193,12 @@ export async function writeSyncResults(
   } catch {
     // ignore
   }
-  return { binding: updatedBinding, hasConflicts: false };
+  return {
+    binding: updatedBinding,
+    hasConflicts: false,
+    warningLocaleKeys,
+    writtenPaths,
+  };
 }
 
 export async function loadArtifactAtCommit(

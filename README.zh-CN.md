@@ -68,7 +68,7 @@ imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
 - 模板仓库是带有 `.imwel/manifest.yaml` 的普通 Git 仓库
 - 本地绑定位于每个目录的 `.imwel/binding.yaml`
 - 安装历史记录在 `.imwel/history/` 独立 Git 仓库中
-- 渲染适配器：**Cursor**（`.cursor/rules/*.mdc`）与 **Claude Code**（`CLAUDE.md` 块、`.claude/skills/`）
+- 渲染适配器：**Cursor**、**Claude Code**，以及 `trae`、`qoder`、`codex`、`opencode`、`zcode`、`gemini-cli`、`windsurf`、`continue`、`cline`、`kiro`、`copilot`、`aider`（详见 [适配器文档](docs/zh-CN/contribute/adapters.md)）
 
 ## 开发
 

@@ -68,7 +68,7 @@
 | 选项 | 说明 |
 |------|------|
 | `-y` / `--yes` | 跳过确认（**不会**自动填选择） |
-| `--tools <csv>` | 逗号分隔的工具 id（如 `cursor,claude-code`） |
+| `--tools <csv>` | 逗号分隔的工具 id（如 `cursor,claude-code,codex,trae`） |
 | `--remote <alias>` | 远程别名 |
 | `--branch <name>` | 分支名 |
 | `--project <name>` | manifest project 名 |

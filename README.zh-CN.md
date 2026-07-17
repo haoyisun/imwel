@@ -4,6 +4,8 @@
 
 **imwel** 是一个 Git 原生的 CLI，用于在团队与多种 AI 编程工具之间分发规则、技能与 agent 说明 — 无需后端、数据库或托管平台。
 
+初次使用？请阅读端到端[使用说明](docs/zh-CN/guide/usage.md)（或[命令参考](docs/zh-CN/guide/commands.md)）。
+
 ## 快速开始
 
 ```bash
@@ -22,9 +24,12 @@ imwel sync
 | `imwel lint` | 检查模板仓库（error=装坏类；warning=风格；`--strict` 时 warning 也失败） |
 | `imwel remote add/list/remove/set` | 管理模板仓库远程源 |
 | `imwel template init` | 脚手架生成新模板仓库（含作者向 `AGENTS.md` 与 Cursor Slash Commands） |
+| `imwel adopt` | 将项目中散落的工具规则归并为 canonical Artifact 到 `.imwel/adopted/`（无需 binding/remote） |
+| `imwel scan` | 确定性地生成项目指纹到 `.imwel/fingerprint.yaml`（语言、工具链、现有规则位置）—— 无 LLM |
+| `imwel skill install` | 将 imwel 第一方 skill（`imwel-extract`、`imwel-audit`）安装进所选工具（非受管，不被 sync 跟踪） |
 | `imwel init` | 将当前目录绑定到模板项目 |
 | `imwel sync` | 拉取上游制品更新 |
-| `imwel status` | 报告远程与本地漂移 |
+| `imwel status` | 报告远程与本地漂移，并附确定性规则健康检查（空壳规则、死链导入、孤儿路径引用） |
 | `imwel rollback` | 恢复到先前的安装状态（会删除该点之后新增的管理文件） |
 | `imwel push` | 将本地编辑推送到上游（默认分支 + PR；对所有绑定工具反向渲染） |
 | `imwel propose <file>` | 登记新制品供下次 push 使用（校验 manifest 约定） |

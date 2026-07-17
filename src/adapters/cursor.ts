@@ -8,6 +8,7 @@ import {
 import type { Artifact } from '../core/artifact-types.js';
 import type { Adapter, ParsedExisting, RenderedFile } from './types.js';
 import { toSlug } from './slug.js';
+import { discoverFrontmatterDir } from './strategies/discover.js';
 
 export interface CursorOverrides {
   globs?: string[];
@@ -62,5 +63,8 @@ export const cursorAdapter: Adapter = {
       canonicalContent: parsed.body,
       targetOverrides,
     };
+  },
+  discoverExisting(projectDir) {
+    return discoverFrontmatterDir(projectDir, '.cursor/rules', 'mdc');
   },
 };

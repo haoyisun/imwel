@@ -12,6 +12,9 @@ import {
 } from './commands/remote.js';
 import { runTemplateInit } from './commands/template.js';
 import { runInit, type InitOptions } from './commands/init.js';
+import { runAdopt, type AdoptOptions } from './commands/adopt.js';
+import { runScan, type ScanOptions } from './commands/scan.js';
+import { runSkillInstall, type SkillInstallOptions } from './commands/skill.js';
 import { runSync, type SyncOptions } from './commands/sync.js';
 import { runStatus } from './commands/status.js';
 import { runRollback, type RollbackOptions } from './commands/rollback.js';
@@ -125,6 +128,34 @@ async function main(): Promise<void> {
         process.exit(await runInit(initOpts));
       },
     );
+
+  program
+    .command('adopt')
+    .description('Consolidate existing scattered tool-native rules into canonical artifacts')
+    .option('-y, --yes', 'Skip write confirmation')
+    .option('--out <path>', 'Output directory (default .imwel/adopted)')
+    .option('--tools <csv>', 'Limit to specific tool ids')
+    .action(async (opts: AdoptOptions) => {
+      process.exit(await runAdopt(opts));
+    });
+
+  program
+    .command('scan')
+    .description('Deterministically fingerprint the project into .imwel/fingerprint.yaml')
+    .option('--out <path>', 'Output path (default .imwel/fingerprint.yaml)')
+    .action(async (opts: ScanOptions) => {
+      process.exit(await runScan(opts));
+    });
+
+  const skill = program.command('skill').description('Install imwel first-party skills into your tools');
+  skill
+    .command('install')
+    .description('Render imwel first-party skills (e.g. imwel-extract) into selected tools')
+    .option('--tools <csv>', 'Comma-separated target tool ids')
+    .option('-y, --yes', 'Skip confirmation')
+    .action(async (opts: SkillInstallOptions) => {
+      process.exit(await runSkillInstall(opts));
+    });
 
   program
     .command('sync')

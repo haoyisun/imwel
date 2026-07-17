@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress';
 // English content lives under docs/en/ (VitePress locale key `en`).
 // Design calls this the canonical / "root" locale; zh-CN is parallel under docs/zh-CN/.
 const enGuide = [
+  { text: 'Usage guide', link: '/en/guide/usage' },
   { text: 'Architecture', link: '/en/guide/architecture' },
   { text: 'Manifest', link: '/en/guide/manifest' },
   { text: 'Commands', link: '/en/guide/commands' },
@@ -11,6 +12,7 @@ const enGuide = [
 ];
 
 const zhGuide = [
+  { text: '使用说明', link: '/zh-CN/guide/usage' },
   { text: '架构', link: '/zh-CN/guide/architecture' },
   { text: 'Manifest', link: '/zh-CN/guide/manifest' },
   { text: '命令', link: '/zh-CN/guide/commands' },
@@ -31,7 +33,7 @@ export default defineConfig({
       description: 'Git-native CLI for distributing AI coding rules, skills, and agent instructions',
       themeConfig: {
         nav: [
-          { text: 'Guide', link: '/en/guide/architecture' },
+          { text: 'Guide', link: '/en/guide/usage' },
           { text: 'Contribute', link: '/en/contribute/adapters' },
           {
             text: 'GitHub',
@@ -61,7 +63,7 @@ export default defineConfig({
       description: '用于分发 AI 编程规则、技能与 agent 说明的 Git 原生 CLI',
       themeConfig: {
         nav: [
-          { text: '指南', link: '/zh-CN/guide/architecture' },
+          { text: '指南', link: '/zh-CN/guide/usage' },
           { text: '贡献', link: '/zh-CN/contribute/adapters' },
           {
             text: 'GitHub',

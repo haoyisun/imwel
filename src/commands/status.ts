@@ -1,7 +1,11 @@
+import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { readBinding } from '../core/binding.js';
 import { computeDrift } from '../core/drift.js';
 import { remoteCacheDir } from '../core/paths.js';
 import { ensureRemoteCache, checkoutBranch } from '../core/remote-cache.js';
+import { checkRuleHealth, type HealthIssue } from '../core/rule-health.js';
 import { t } from '../locales/index.js';
 
 export async function runStatus(): Promise<number> {
@@ -31,5 +35,45 @@ export async function runStatus(): Promise<number> {
   if (!drift.remoteUpdated && !drift.localEdited) {
     console.log(t('status.clean'));
   }
+
+  await reportRuleHealth(projectDir, binding.artifacts);
   return 0;
+}
+
+async function reportRuleHealth(
+  projectDir: string,
+  artifacts: { installedPaths: Record<string, string[]> }[],
+): Promise<void> {
+  const relPaths = [
+    ...new Set(
+      artifacts.flatMap((a) => Object.values(a.installedPaths).flat()),
+    ),
+  ];
+  const files: { path: string; content: string }[] = [];
+  for (const rel of relPaths) {
+    try {
+      files.push({ path: rel, content: await fs.readFile(path.join(projectDir, rel), 'utf8') });
+    } catch {
+      // File missing (drift already reports that); skip health for it.
+    }
+  }
+
+  const exists = (ref: string, fromFileDir: string): boolean =>
+    existsSync(path.join(projectDir, ref)) ||
+    existsSync(path.join(projectDir, fromFileDir, ref));
+
+  const issues = checkRuleHealth(files, exists);
+  console.log(t('health.title'));
+  if (issues.length === 0) {
+    console.log(t('health.clean'));
+    return;
+  }
+  for (const issue of issues) {
+    console.log(formatHealthIssue(issue));
+  }
+}
+
+export function formatHealthIssue(issue: HealthIssue): string {
+  const ref = issue.ref ?? '';
+  return t(`health.${issue.code}` as 'health.rule.empty', { path: issue.path, ref });
 }

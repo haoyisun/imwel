@@ -109,6 +109,12 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'status.localEdited': '检测到本地手工修改：{paths}',
   'status.clean': '未检测到漂移。',
 
+  'health.title': '规则健康：',
+  'health.clean': '  所有受管规则均健康。',
+  'health.rule.empty': '  [空壳] {path} 无实质内容（空文件或仅占位）',
+  'health.rule.deadImport': '  [死链导入] {path} 导入了不存在的路径：{ref}',
+  'health.rule.orphanRef': '  [孤儿引用] {path} 引用了不存在的路径：{ref}',
+
   'rollback.title': '回滚到先前的安装状态',
   'rollback.noHistory': '未找到历史提交。',
   'rollback.prompt': '选择要恢复的历史提交',
@@ -148,6 +154,38 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'propose.unknownTool': '未知工具 id：{tool}',
 
   'passive.driftNotice': '检测到漂移 — 运行 `imwel status` 或 `imwel sync` 查看详情。',
+
+  'adopt.title': '将现有工具规则归并为 canonical Artifact',
+  'adopt.scanning': '正在扫描现有的工具原生规则与技能……',
+  'adopt.noneFound': '未发现可归并的现有工具规则或技能。',
+  'adopt.plan': '发现 {sources} 份来源文件 → {artifacts} 条 Artifact，{conflicts} 处冲突。',
+  'adopt.conflict':
+    '冲突：{type} "{slug}" 在多个工具间内容不一致（{tools}）。来源：{sources}。已跳过。',
+  'adopt.conflict.hint':
+    '请对齐这些冲突来源文件（或只保留其一），然后重新运行 `imwel adopt`。',
+  'adopt.confirm': '将 {count} 条归并后的 Artifact 写入 {dir}？',
+  'adopt.written': '  + {path}',
+  'adopt.success': '已归并 {count} 条 Artifact 到 {dir}。',
+  'adopt.nextSteps':
+    '请先查看，再运行 `imwel template init` 发布为模板，或 `imwel init` + `imwel propose` 反馈到远端。',
+  'adopt.allConflicts':
+    '未写入任何内容 — 所有发现的规则在工具间均存在冲突。请解决冲突后重试。',
+
+  'scan.title': '生成项目指纹（确定性，无 LLM）',
+  'scan.scanning': '正在扫描项目文件与配置……',
+  'scan.summary':
+    '语言：{languages} 种（最多 {topLang}）· 清单文件：{manifests} · 现有规则文件：{rules}',
+  'scan.written': '指纹已写入 {path}',
+
+  'skill.install.title': '安装 imwel 第一方 skill',
+  'skill.install.none': '当前 imwel 安装未随包提供任何第一方 skill。',
+  'skill.install.prompt.tools': '选择要安装 skill 的工具',
+  'skill.install.plan': '将安装 {skills} 个 skill → {files} 个文件到：{tools}',
+  'skill.install.confirm': '写入这些第一方 skill 文件（非受管，不被 sync 跟踪）？',
+  'skill.install.written': '  + {path}',
+  'skill.install.success': '已安装 {count} 个第一方 skill。',
+  'skill.install.nextSteps':
+    '如尚未运行请先 `imwel scan`，然后在你的 AI 工具中调用 `imwel-extract` skill，将草稿起草到 `.imwel/drafts/`。',
 
   'adapter.pathConflict':
     '路径 "{path}" 的渲染结果冲突（工具：{tools}）。内容不一致，该路径未写入。',

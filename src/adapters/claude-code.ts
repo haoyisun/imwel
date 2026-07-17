@@ -4,6 +4,7 @@ import { extractBlock } from '../core/marked-blocks.js';
 import type { Artifact } from '../core/artifact-types.js';
 import type { Adapter, ParsedExisting, RenderedFile } from './types.js';
 import { toSlug } from './slug.js';
+import { discoverSingleMdBlocks, discoverSkillBundles } from './strategies/discover.js';
 
 export interface ClaudeCodeOverrides {
   imports?: string[];
@@ -75,5 +76,11 @@ export const claudeCodeAdapter: Adapter = {
       canonicalContent: body,
       targetOverrides: importLines.length ? { imports: importLines } : {},
     };
+  },
+  async discoverExisting(projectDir) {
+    return [
+      ...(await discoverSingleMdBlocks(projectDir, 'CLAUDE.md')),
+      ...(await discoverSkillBundles(projectDir, '.claude/skills')),
+    ];
   },
 };

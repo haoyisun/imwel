@@ -10,6 +10,7 @@ All commands below are implemented in the current CLI. Global option: `--lang <l
 | `imwel lint` | Lint a **template** repository |
 | `imwel remote add/list/remove/set` | Manage template remotes |
 | `imwel template init` | Scaffold a new template repository |
+| `imwel adopt` | Consolidate existing scattered tool rules into canonical artifacts |
 | `imwel init` | Bind the current directory to a template project |
 | `imwel sync` | Pull upstream Artifact updates |
 | `imwel status` | Report remote and local drift |
@@ -30,7 +31,9 @@ Validates a **template** repository (expects `.imwel/manifest.yaml`, not a consu
 | `--strict` | Fail on warnings as well as errors |
 
 - **Errors** — install-breaking (invalid manifest, missing project path, skill without `SKILL.md`, path escape, …).
-- **Warnings** — style / best practice (skill `description` quality, …).
+- **Warnings** — style / best practice (skill `description` quality, **empty/placeholder rules**, …).
+
+> Template-side lint only flags **empty/placeholder** rules. Orphan-reference and dead-import checks are skipped here because template rules reference the *consumer's* files (absent in the template repo); those run consumer-side in `imwel status`.
 
 In a consumer binding, the CLI directs you to the template repo instead of reporting a fake clean result. See [Template authoring](../template-authoring).
 
@@ -61,6 +64,55 @@ Scaffolds a new template repository (manifest, example project, author `AGENTS.m
 | `--name <name>` | Repository name |
 | `-y` / `--yes` | Skip confirmation prompts (non-interactive defaults) |
 
+## `imwel adopt`
+
+Scans the current project for existing tool-native rule/skill files across all 14 adapters (`.cursor/rules`, `CLAUDE.md`, `.trae/rules`, `AGENTS.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`, …), reverse-parses them into canonical Artifacts, and writes them under `.imwel/adopted/`. Solves the cold-start problem and consolidates rules that drifted apart across tools.
+
+- **Identical content** across tools is merged into one canonical Artifact (silent dedupe).
+- **Conflicting content** is reported per artifact and **skipped** — nothing is overwritten; resolve and re-run.
+- Runs **without a binding or remote**; only reads the scanned files (never modifies them).
+
+| Flag | Description |
+|------|-------------|
+| `-y` / `--yes` | Skip the write confirmation (does not invent conflict resolutions) |
+| `--out <path>` | Output directory (default `.imwel/adopted`) |
+| `--tools <csv>` | Limit consolidation to specific tool ids |
+
+After adopting, review the artifacts, then run `imwel template init` to publish them as a template, or `imwel init` + `imwel propose` to feed a remote.
+
+## `imwel scan`
+
+Deterministically fingerprints the project (no LLM, no network, read-only) into `.imwel/fingerprint.yaml`. The fingerprint is a **map of where to look**, not conclusions: language mix (by extension count), manifest/build files, test/lint/format/CI configs, top-level directories, DB schema/migration files, and the locations of scattered tool-native rule files (via the same discovery adapters as `imwel adopt`).
+
+It only inspects file names and paths — never file contents — and skips heavy directories (`node_modules`, `.git`, `dist`, …). Output is stably sorted and reproducible (apart from the timestamp).
+
+| Flag | Description |
+|------|-------------|
+| `--out <path>` | Output path (default `.imwel/fingerprint.yaml`) |
+
+The fingerprint is **not** a managed artifact — it never participates in `sync`/drift. It is meant to be fed to your AI coding tool (or the first-party `imwel-extract` skill below) to draft project-fit rules.
+
+## `imwel skill install`
+
+Installs imwel's own **first-party** skills (shipped with the npm package) into your selected tools, rendering them through the same adapters as template artifacts (skill fidelity ladder + dedupe). Bundled skills:
+
+- `imwel-extract` — drafts project-fit rules/skills from scratch using the scan fingerprint.
+- `imwel-audit` — audits existing rules for semantic drift (rule ↔ code mismatch, rule ↔ rule conflict, missing rules) and writes actionable suggestions to `.imwel/audit/`.
+
+| Flag | Description |
+|------|-------------|
+| `--tools <csv>` | Target tool ids (required in non-interactive mode) |
+| `-y` / `--yes` | Skip the write confirmation |
+
+First-party skills are **unmanaged**: they are written to disk but not registered in your binding, not committed to `.imwel/history/`, and never tracked by `status`/`sync`/`push`.
+
+Workflow: run `imwel scan`, then `imwel skill install`, then invoke a skill inside your AI tool:
+
+- `imwel-extract` reads `.imwel/fingerprint.yaml`, targeted-reads the key files, and drafts rules/skills into `.imwel/drafts/`.
+- `imwel-audit` reads your current rules plus the fingerprint-pointed code and writes drift findings + suggested wording into `.imwel/audit/`.
+
+Both only write to isolated review folders — you then consolidate with `imwel adopt` or register with `imwel propose`. Audits are explicit skill invocations; imwel never hooks your AI tool's session.
+
 ## `imwel init`
 
 Binds the current directory to one project inside one remote template repository and installs Artifacts for selected tools.
@@ -90,7 +142,13 @@ Always force-refreshes remote state (not subject to the passive fetch throttle).
 
 ## `imwel status`
 
-Reports remote vs local drift. Always force-refreshes.
+Reports remote vs local drift. Always force-refreshes. After drift, it runs a **rule health** check over the managed rendered files and lists any issues (this never changes the exit code):
+
+- **empty** — rule has no meaningful content (empty or placeholder-only).
+- **dead-import** — a `@path` import points to a missing file.
+- **orphan-ref** — a backtick path (e.g. `` `src/foo.ts` ``) references a file that no longer exists.
+
+The checks are deterministic and conservative (no LLM, globs/URLs/commands are ignored) — advisory hints, not blockers.
 
 ## `imwel rollback`
 

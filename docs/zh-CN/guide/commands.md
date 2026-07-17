@@ -10,6 +10,7 @@
 | `imwel lint` | 检查**模板**仓库 |
 | `imwel remote add/list/remove/set` | 管理模板远程源 |
 | `imwel template init` | 脚手架生成新模板仓库 |
+| `imwel adopt` | 将项目中散落的工具规则归并为 canonical Artifact |
 | `imwel init` | 将当前目录绑定到模板 project |
 | `imwel sync` | 拉取上游 Artifact 更新 |
 | `imwel status` | 报告远程与本地漂移 |
@@ -30,7 +31,9 @@
 | `--strict` | warning 与 error 一并失败 |
 
 - **Errors** — 装坏类（无效 manifest、项目 path 缺失、skill 缺 `SKILL.md`、路径逃逸等）。
-- **Warnings** — 风格 / 最佳实践（skill `description` 质量等）。
+- **Warnings** — 风格 / 最佳实践（skill `description` 质量、**空壳/占位规则**等）。
+
+> 模板侧 lint 只检测**空壳/占位**规则；孤儿引用、死链 import 在此跳过——模板规则引用的是**消费项目**的文件（模板仓中不存在），这两类检查在消费侧 `imwel status` 运行。
 
 在消费侧 binding 目录中，CLI 会引导你到模板仓，而不是假装检查通过。见 [模板编写](../template-authoring)。
 
@@ -61,6 +64,55 @@
 | `--name <name>` | 仓库名 |
 | `-y` / `--yes` | 跳过确认（非交互默认） |
 
+## `imwel adopt`
+
+扫描当前项目中已存在的工具原生规则/技能文件（覆盖全部 14 个适配器：`.cursor/rules`、`CLAUDE.md`、`.trae/rules`、`AGENTS.md`、`.github/copilot-instructions.md`、`CONVENTIONS.md` 等），反向解析为 canonical Artifact 并写入 `.imwel/adopted/`。用于消除冷启动，并把在各工具间漂移的规则收编为单一真相。
+
+- 跨工具**内容一致**→合并为一份 canonical Artifact（静默去重）。
+- 跨工具**内容冲突**→逐条上报并**跳过**，绝不覆盖；请对齐后重新运行。
+- **无需 binding 或 remote** 即可运行；只读扫描，不修改被扫描文件。
+
+| 选项 | 说明 |
+|------|------|
+| `-y` / `--yes` | 跳过写入确认（不会臆造冲突裁决） |
+| `--out <path>` | 产物输出目录（默认 `.imwel/adopted`） |
+| `--tools <csv>` | 仅归并指定工具 id |
+
+归并完成后请先查看产物，再运行 `imwel template init` 发布为模板，或 `imwel init` + `imwel propose` 反馈到远端。
+
+## `imwel scan`
+
+确定性地生成项目指纹（无 LLM、无网络、只读）到 `.imwel/fingerprint.yaml`。指纹是一张"该看哪里"的地图，而非结论：语言构成（按扩展名计数）、清单/构建文件、测试/lint/format/CI 配置、顶层目录、DB schema/迁移文件，以及散落的工具原生规则文件位置（复用与 `imwel adopt` 相同的发现适配器）。
+
+它只检查文件名与路径——从不读取文件正文——并跳过重目录（`node_modules`、`.git`、`dist` 等）。输出稳定排序、可复现（时间戳除外）。
+
+| 选项 | 说明 |
+|------|------|
+| `--out <path>` | 输出路径（默认 `.imwel/fingerprint.yaml`） |
+
+指纹**不是**受管制品——不参与 `sync`/漂移。它用于喂给你的 AI 编码工具（或下方第一方 `imwel-extract` skill）来起草贴合本项目的规则。
+
+## `imwel skill install`
+
+把 imwel 自带的**第一方** skill（随 npm 包分发）安装进你所选的工具，经与模板 Artifact 相同的适配器渲染（skill 降级阶梯 + 去重）。自带 skill：
+
+- `imwel-extract` —— 借 scan 指纹从零起草贴合本项目的 rule/skill。
+- `imwel-audit` —— 审计现有规则的语义脱节（规则↔代码不符、规则↔规则矛盾、缺失规则），把可执行建议写入 `.imwel/audit/`。
+
+| 选项 | 说明 |
+|------|------|
+| `--tools <csv>` | 目标工具 id（非交互模式必填） |
+| `-y` / `--yes` | 跳过写入确认 |
+
+第一方 skill 是**非受管**的：写入磁盘但不登记进 binding、不提交到 `.imwel/history/`，也不被 `status`/`sync`/`push` 跟踪。
+
+工作流：先 `imwel scan`，再 `imwel skill install`，然后在你的 AI 工具中调用 skill：
+
+- `imwel-extract` 读取 `.imwel/fingerprint.yaml`、定向读关键文件，把草稿起草到 `.imwel/drafts/`。
+- `imwel-audit` 读取现有规则 + 指纹指向的代码，把脱节发现与建议措辞写入 `.imwel/audit/`。
+
+两者都只写隔离的 review 目录——之后用 `imwel adopt` 归并或 `imwel propose` 登记。审计是显式的 skill 调用；imwel 绝不 hook 你的 AI 工具会话。
+
 ## `imwel init`
 
 将当前目录绑定到某远程模板仓中的一个 project，并为所选工具安装 Artifact。
@@ -90,7 +142,13 @@
 
 ## `imwel status`
 
-报告远程与本地漂移。始终强制刷新。
+报告远程与本地漂移。始终强制刷新。漂移报告之后，会对受管的已渲染文件运行**规则健康**检查并列出问题（不改变退出码）：
+
+- **空壳** — 规则无实质内容（空文件或仅占位）。
+- **死链导入** — `@path` 导入指向不存在的文件。
+- **孤儿引用** — 反引号路径（如 `` `src/foo.ts` ``）指向已不存在的文件。
+
+检查是确定性且保守的（无 LLM，忽略 glob/URL/命令），仅作提示，不阻断。
 
 ## `imwel rollback`
 

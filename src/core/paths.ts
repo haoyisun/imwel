@@ -32,3 +32,13 @@ export function pendingProposalsPath(projectDir: string): string {
 export function pendingSyncPath(projectDir: string): string {
   return path.join(imwelDir(projectDir), 'pending-sync.yaml');
 }
+
+/** Default output directory for consolidated (`adopt`) canonical artifacts. */
+export function adoptedDir(projectDir: string): string {
+  return path.join(imwelDir(projectDir), 'adopted');
+}
+
+/** Default output path for the deterministic project scan (`scan`). */
+export function fingerprintPath(projectDir: string): string {
+  return path.join(imwelDir(projectDir), 'fingerprint.yaml');
+}

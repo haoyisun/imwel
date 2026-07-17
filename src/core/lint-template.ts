@@ -3,6 +3,7 @@ import path from 'node:path';
 import { detectImwelContext, isDirectory } from './detect-context.js';
 import { parseFrontmatter } from './frontmatter.js';
 import { pathExists } from './fs-utils.js';
+import { checkRuleHealth } from './rule-health.js';
 import {
   ManifestError,
   type Manifest,
@@ -271,6 +272,24 @@ async function lintRules(
       code: 'rules.empty',
       message: `Rules directory has no .md files: ${conventions.rulesDir}`,
       path: conventions.rulesDir,
+    });
+    return;
+  }
+
+  // Template-side rules reference the *consumer's* files (absent here), so only
+  // the context-free empty/placeholder check is meaningful. Passing exists=() => true
+  // suppresses orphan-ref / dead-import checks, leaving `rule.empty`.
+  const files: { path: string; content: string }[] = [];
+  for (const entry of mdFiles) {
+    const rel = path.posix.join(conventions.rulesDir, entry.name);
+    files.push({ path: rel, content: await fs.readFile(path.join(rulesDir, entry.name), 'utf8') });
+  }
+  for (const issue of checkRuleHealth(files, () => true)) {
+    issues.push({
+      severity: 'warning',
+      code: issue.code,
+      message: `Rule has no meaningful content (empty or placeholder-only): ${issue.path}`,
+      path: issue.path,
     });
   }
 }

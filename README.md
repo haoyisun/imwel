@@ -4,6 +4,8 @@
 
 **imwel** is a Git-native CLI for distributing AI coding rules, skills, and agent instructions across teams and tools — with no backend, no database, and no hosted platform.
 
+New here? Read the end-to-end [Usage guide](docs/en/guide/usage.md) (or the [command reference](docs/en/guide/commands.md)).
+
 ## Quickstart
 
 ```bash
@@ -22,9 +24,12 @@ imwel sync
 | `imwel lint` | Lint a template repository (errors = install-breaking; warnings = style; `--strict` fails on warnings) |
 | `imwel remote add/list/remove/set` | Manage template repository remotes |
 | `imwel template init` | Scaffold a new template repository (includes author `AGENTS.md` + Cursor slash commands) |
+| `imwel adopt` | Consolidate existing scattered tool rules into canonical artifacts under `.imwel/adopted/` (no binding/remote required) |
+| `imwel scan` | Deterministically fingerprint the project into `.imwel/fingerprint.yaml` (languages, tooling, existing rule locations) — no LLM |
+| `imwel skill install` | Install imwel's first-party skills (`imwel-extract`, `imwel-audit`) into selected tools (unmanaged; not tracked by sync) |
 | `imwel init` | Bind the current directory to a template project |
 | `imwel sync` | Pull upstream artifact updates |
-| `imwel status` | Report remote and local drift |
+| `imwel status` | Report remote and local drift, plus deterministic rule-health checks (empty rules, dead imports, orphan path references) |
 | `imwel rollback` | Restore a prior installed state (deletes managed files added after that point) |
 | `imwel push` | Propose local edits upstream (branch + PR by default; reverse-renders all bound tools) |
 | `imwel propose <file>` | Register a new artifact for the next push (validates manifest conventions) |

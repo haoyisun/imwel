@@ -20,6 +20,13 @@ import {
   renderSkillAsPrompt,
   windsurfOnDemandDefaults,
 } from './strategies/skill-render.js';
+import {
+  discoverFrontmatterDir,
+  discoverPromptDir,
+  discoverSingleMdBlocks,
+  discoverSkillBundles,
+} from './strategies/discover.js';
+import type { DiscoveredArtifact } from './types.js';
 
 function detectAny(projectDir: string, candidates: string[]): Promise<boolean> {
   return Promise.any(
@@ -53,6 +60,12 @@ export const traeAdapter: Adapter = {
     }
     return parseFrontmatterRule(files, { dir: '.trae/rules', ext: 'md', shape: 'standard' });
   },
+  async discoverExisting(projectDir): Promise<DiscoveredArtifact[]> {
+    return [
+      ...(await discoverFrontmatterDir(projectDir, '.trae/rules', 'md')),
+      ...(await discoverSkillBundles(projectDir, '.trae/skills')),
+    ];
+  },
 };
 
 export const qoderAdapter: Adapter = {
@@ -76,6 +89,12 @@ export const qoderAdapter: Adapter = {
     }
     return parseFrontmatterRule(files, { dir: '.qoder/rules', ext: 'md', shape: 'standard' });
   },
+  async discoverExisting(projectDir): Promise<DiscoveredArtifact[]> {
+    return [
+      ...(await discoverFrontmatterDir(projectDir, '.qoder/rules', 'md')),
+      ...(await discoverSkillBundles(projectDir, '.qoder/skills')),
+    ];
+  },
 };
 
 export const codexAdapter: Adapter = {
@@ -95,6 +114,12 @@ export const codexAdapter: Adapter = {
     }
     return parseSingleMdBlockWithExtract(files, 'AGENTS.md', extractBlock, 'rule');
   },
+  async discoverExisting(projectDir): Promise<DiscoveredArtifact[]> {
+    return [
+      ...(await discoverSingleMdBlocks(projectDir, 'AGENTS.md')),
+      ...(await discoverSkillBundles(projectDir, '.agents/skills')),
+    ];
+  },
 };
 
 export const opencodeAdapter: Adapter = {
@@ -113,6 +138,12 @@ export const opencodeAdapter: Adapter = {
       return parseSkillBundle(files);
     }
     return parseSingleMdBlockWithExtract(files, 'AGENTS.md', extractBlock, 'rule');
+  },
+  async discoverExisting(projectDir): Promise<DiscoveredArtifact[]> {
+    return [
+      ...(await discoverSingleMdBlocks(projectDir, 'AGENTS.md')),
+      ...(await discoverSkillBundles(projectDir, '.opencode/skills')),
+    ];
   },
 };
 
@@ -139,6 +170,9 @@ export const windsurfAdapter: Adapter = {
       ext: 'md',
       shape: 'windsurf',
     });
+  },
+  discoverExisting(projectDir) {
+    return discoverFrontmatterDir(projectDir, '.windsurf/rules', 'md');
   },
 };
 
@@ -167,6 +201,12 @@ export const continueAdapter: Adapter = {
       shape: 'standard',
     });
   },
+  async discoverExisting(projectDir): Promise<DiscoveredArtifact[]> {
+    return [
+      ...(await discoverFrontmatterDir(projectDir, '.continue/rules', 'md')),
+      ...(await discoverPromptDir(projectDir, '.continue/prompts', 'md')),
+    ];
+  },
 };
 
 export const clineAdapter: Adapter = {
@@ -188,6 +228,9 @@ export const clineAdapter: Adapter = {
   },
   parseExisting(files) {
     return parseFrontmatterRule(files, { dir: '.clinerules', ext: 'md', shape: 'cline' });
+  },
+  discoverExisting(projectDir) {
+    return discoverFrontmatterDir(projectDir, '.clinerules', 'md');
   },
 };
 
@@ -211,6 +254,9 @@ export const kiroAdapter: Adapter = {
   parseExisting(files) {
     return parseFrontmatterRule(files, { dir: '.kiro/steering', ext: 'md', shape: 'kiro' });
   },
+  discoverExisting(projectDir) {
+    return discoverFrontmatterDir(projectDir, '.kiro/steering', 'md');
+  },
 };
 
 export const zcodeAdapter: Adapter = {
@@ -229,6 +275,12 @@ export const zcodeAdapter: Adapter = {
       return parseSkillBundle(files);
     }
     return parseSingleMdBlockWithExtract(files, 'AGENTS.md', extractBlock, 'rule');
+  },
+  async discoverExisting(projectDir): Promise<DiscoveredArtifact[]> {
+    return [
+      ...(await discoverSingleMdBlocks(projectDir, 'AGENTS.md')),
+      ...(await discoverSkillBundles(projectDir, '.zcode/skills')),
+    ];
   },
 };
 
@@ -254,6 +306,9 @@ export const geminiCliAdapter: Adapter = {
     }
     return parseSingleMdBlockWithExtract(files, 'GEMINI.md', extractBlock, 'rule');
   },
+  discoverExisting(projectDir) {
+    return discoverSingleMdBlocks(projectDir, 'GEMINI.md');
+  },
 };
 
 export const copilotAdapter: Adapter = {
@@ -275,6 +330,13 @@ export const copilotAdapter: Adapter = {
       return parsePromptFile(files);
     }
     return parseGithubInstructions(files);
+  },
+  async discoverExisting(projectDir): Promise<DiscoveredArtifact[]> {
+    return [
+      ...(await discoverSingleMdBlocks(projectDir, '.github/copilot-instructions.md')),
+      ...(await discoverFrontmatterDir(projectDir, '.github/instructions', 'instructions.md')),
+      ...(await discoverPromptDir(projectDir, '.github/prompts', 'prompt.md')),
+    ];
   },
 };
 
@@ -315,5 +377,8 @@ export const aiderAdapter: Adapter = {
       return { canonicalContent: '' };
     }
     return parseSingleMdBlockWithExtract([conventions], 'CONVENTIONS.md', extractBlock);
+  },
+  discoverExisting(projectDir) {
+    return discoverSingleMdBlocks(projectDir, 'CONVENTIONS.md');
   },
 };

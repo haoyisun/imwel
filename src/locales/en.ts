@@ -108,6 +108,12 @@ export const en = {
   'status.localEdited': 'Local hand-edits detected: {paths}',
   'status.clean': 'No drift detected.',
 
+  'health.title': 'Rule health:',
+  'health.clean': '  All managed rules look healthy.',
+  'health.rule.empty': '  [empty] {path} has no meaningful content (empty or placeholder-only)',
+  'health.rule.deadImport': '  [dead-import] {path} imports missing path: {ref}',
+  'health.rule.orphanRef': '  [orphan-ref] {path} references missing path: {ref}',
+
   'rollback.title': 'Rollback to a prior installed state',
   'rollback.noHistory': 'No history commits found.',
   'rollback.prompt': 'Select a history commit to restore',
@@ -147,6 +153,39 @@ export const en = {
   'propose.unknownTool': 'Unknown tool id: {tool}',
 
   'passive.driftNotice': 'Drift detected — run `imwel status` or `imwel sync` for details.',
+
+  'adopt.title': 'Consolidate existing tool rules into canonical artifacts',
+  'adopt.scanning': 'Scanning for existing tool-native rules and skills...',
+  'adopt.noneFound': 'No existing tool rules or skills found to consolidate.',
+  'adopt.plan':
+    'Found {sources} source file(s) → {artifacts} artifact(s), {conflicts} conflict(s).',
+  'adopt.conflict':
+    'Conflict: {type} "{slug}" differs across tools ({tools}). Sources: {sources}. Skipped.',
+  'adopt.conflict.hint':
+    'Align the conflicting source files (or drop all but one), then re-run `imwel adopt`.',
+  'adopt.confirm': 'Write {count} consolidated artifact(s) to {dir}?',
+  'adopt.written': '  + {path}',
+  'adopt.success': 'Consolidated {count} artifact(s) into {dir}.',
+  'adopt.nextSteps':
+    'Review them, then run `imwel template init` to publish as a template, or `imwel init` + `imwel propose` to feed a remote.',
+  'adopt.allConflicts':
+    'Nothing written — all discovered rules conflict across tools. Resolve conflicts and re-run.',
+
+  'scan.title': 'Fingerprint the project (deterministic, no LLM)',
+  'scan.scanning': 'Scanning project files and configuration...',
+  'scan.summary':
+    'Languages: {languages} (top {topLang}) · manifests: {manifests} · existing rule files: {rules}',
+  'scan.written': 'Fingerprint written to {path}',
+
+  'skill.install.title': 'Install imwel first-party skills',
+  'skill.install.none': 'No first-party skills are bundled with this imwel installation.',
+  'skill.install.prompt.tools': 'Select tools to install the skill(s) into',
+  'skill.install.plan': 'Installing {skills} skill(s) → {files} file(s) into: {tools}',
+  'skill.install.confirm': 'Write these first-party skill files (unmanaged, not tracked by sync)?',
+  'skill.install.written': '  + {path}',
+  'skill.install.success': 'Installed {count} first-party skill(s).',
+  'skill.install.nextSteps':
+    'Run `imwel scan` first if you have not, then invoke the `imwel-extract` skill in your AI tool to draft rules into `.imwel/drafts/`.',
 
   'adapter.pathConflict':
     'Render conflict for "{path}" from tools: {tools}. Contents differ; nothing was written for this path.',

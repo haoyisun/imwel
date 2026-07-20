@@ -9,7 +9,7 @@ New here? Read the end-to-end [Usage guide](docs/en/guide/usage.md) (or the [com
 ## Quickstart
 
 ```bash
-npx imwel@latest template init
+npx @culock/imwel@latest template init
 imwel remote add org-standards git@github.com:example/imwel-templates.git
 cd your-project
 imwel init

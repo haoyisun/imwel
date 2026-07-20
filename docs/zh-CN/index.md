@@ -8,7 +8,7 @@
 
 ```bash
 # 1. 脚手架（或克隆）模板仓库
-npx imwel@latest template init
+npx @culock/imwel@latest template init
 
 # 2. 注册为远程源（任意将要消费它的机器）
 imwel remote add org-standards git@github.com:example/imwel-templates.git
@@ -19,7 +19,7 @@ imwel init
 imwel sync
 ```
 
-需要全局命令时可：`npm install -g imwel`。本地开发见 [CONTRIBUTING.zh-CN.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.zh-CN.md)；安全披露见 [SECURITY.md](https://github.com/haoyisun/imwel/blob/main/SECURITY.md)。
+需要全局命令时可：`npm install -g @culock/imwel`（命令名仍是 `imwel`）。本地开发见 [CONTRIBUTING.zh-CN.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.zh-CN.md)；安全披露见 [SECURITY.md](https://github.com/haoyisun/imwel/blob/main/SECURITY.md)。
 
 ## 指南
 

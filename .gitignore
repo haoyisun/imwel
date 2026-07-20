@@ -13,3 +13,6 @@ docs/.vitepress/cache/
 # Local AI / OpenSpec planning (keep on disk, do not publish)
 /.cursor/
 /openspec/
+
+# Local-only publish runbook (not shared)
+/发布指南.md

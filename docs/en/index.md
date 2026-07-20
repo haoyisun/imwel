@@ -8,7 +8,7 @@ Template repositories are ordinary Git repos. imwel binds a local project direct
 
 ```bash
 # 1. Scaffold (or clone) a template repository
-npx imwel@latest template init
+npx @culock/imwel@latest template init
 
 # 2. Register it as a remote (from any machine that will consume it)
 imwel remote add org-standards git@github.com:example/imwel-templates.git
@@ -19,7 +19,7 @@ imwel init
 imwel sync
 ```
 
-Install from npm when you need a global binary: `npm install -g imwel`. See [CONTRIBUTING.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md) for local development and [SECURITY.md](https://github.com/haoyisun/imwel/blob/main/SECURITY.md) for reporting vulnerabilities.
+Install from npm when you need a global binary: `npm install -g @culock/imwel` (the command stays `imwel`). See [CONTRIBUTING.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md) for local development and [SECURITY.md](https://github.com/haoyisun/imwel/blob/main/SECURITY.md) for reporting vulnerabilities.
 
 ## Guides
 

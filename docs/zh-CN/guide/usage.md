@@ -19,10 +19,10 @@ imwel 是一个 **Git 原生 CLI**，用于在团队与多种 AI 编程工具之
 
 ```bash
 # 免安装一次性运行：
-npx imwel@latest <command>
+npx @culock/imwel@latest <command>
 
-# 或全局安装：
-npm install -g imwel
+# 或全局安装（命令名仍是 `imwel`）：
+npm install -g @culock/imwel
 imwel doctor   # 校验 git 与环境前置
 ```
 

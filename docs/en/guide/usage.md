@@ -21,10 +21,10 @@ You need Node.js ≥ 18.18 and the system `git` binary on your PATH.
 
 ```bash
 # One-off, no install:
-npx imwel@latest <command>
+npx @culock/imwel@latest <command>
 
-# Or install globally:
-npm install -g imwel
+# Or install globally (the command stays `imwel`):
+npm install -g @culock/imwel
 imwel doctor   # verify git + environment prerequisites
 ```
 

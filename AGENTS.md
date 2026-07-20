@@ -32,7 +32,7 @@ If a proposed change reintroduces a server, database, user-account system, or a 
 
 ## Tech stack (do not substitute without updating this file)
 
-- **Language/runtime:** TypeScript on Node.js. Distributed via npm (`npm install -g imwel`, `npx imwel@latest ...`).
+- **Language/runtime:** TypeScript on Node.js. Distributed via npm as the scoped package `@culock/imwel` (`npm install -g @culock/imwel`, `npx @culock/imwel@latest ...`); the installed CLI command stays `imwel`.
 - **CLI interaction:** an interactive-prompts library (multi-select/single-select flows) — keep this as the one library used throughout, don't mix multiple prompt libraries.
 - **Git access:** child-process calls to the system `git` binary. No embedded Git implementation.
 - **Project shape:** a single npm package for v1. Do not introduce monorepo tooling (Nx/Turborepo/workspaces) unless a second independently-versioned deployable is actually added — there is no platform/backend package to justify one today.

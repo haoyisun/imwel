@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```bash
-npx imwel@latest template init
+npx @culock/imwel@latest template init
 imwel remote add org-standards git@github.com:example/imwel-templates.git
 cd your-project
 imwel init

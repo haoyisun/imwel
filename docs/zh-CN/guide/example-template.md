@@ -3,14 +3,14 @@
 学习布局不需要单独托管的「演示 monorepo」。**规范的最小示例**就是 CLI 自带的脚手架：
 
 - 源码树：[`templates/init/en/`](https://github.com/haoyisun/imwel/tree/main/templates/init/en) 与 [`templates/init/zh-CN/`](https://github.com/haoyisun/imwel/tree/main/templates/init/zh-CN)
-- 生成可工作副本：`imwel template init`（或 `npx imwel@latest template init`）
+- 生成可工作副本：`imwel template init`（或 `npx @culock/imwel@latest template init`）
 
 独立公开的「示例模板组织仓」URL 是可选的；在你发布自己的模板之前，以脚手架为对照即可。
 
 ## 生成模板仓
 
 ```bash
-npx imwel@latest template init --dir ./my-templates --name my-templates --locale zh-CN -y
+npx @culock/imwel@latest template init --dir ./my-templates --name my-templates --locale zh-CN -y
 cd my-templates
 imwel lint
 ```

@@ -3,14 +3,14 @@
 There is no separate hosted “demo monorepo” required to learn the layout. The **canonical minimal example** is the scaffold shipped with the CLI:
 
 - Source trees: [`templates/init/en/`](https://github.com/haoyisun/imwel/tree/main/templates/init/en) and [`templates/init/zh-CN/`](https://github.com/haoyisun/imwel/tree/main/templates/init/zh-CN)
-- Generate a working copy: `imwel template init` (or `npx imwel@latest template init`)
+- Generate a working copy: `imwel template init` (or `npx @culock/imwel@latest template init`)
 
 A standalone public “example template org repo” URL is optional; until you publish your own, treat the scaffold as the reference.
 
 ## Generate a template repo
 
 ```bash
-npx imwel@latest template init --dir ./my-templates --name my-templates --locale en -y
+npx @culock/imwel@latest template init --dir ./my-templates --name my-templates --locale en -y
 cd my-templates
 imwel lint
 ```

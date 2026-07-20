@@ -1,6 +1,6 @@
 ---
 name: imwel-audit
-description: Use this skill when the user wants to audit whether a project's existing AI coding rules still match the codebase. It reads the current rules plus, guided by the `imwel scan` fingerprint, the relevant code, and flags semantic rot — rules that contradict the code, rules that contradict each other, and conventions that have no rule yet. It writes actionable suggestions to a review folder and never edits managed rules directly.
+description: Use this skill when the user wants to audit whether a project's existing AI coding rules still match the codebase. It reads the current rules plus, guided by the `imwel scan` fingerprint (including its Git-history overlay), the relevant code, and flags semantic rot — rules that contradict the code, rules that contradict each other, and conventions that have no rule yet. It writes actionable suggestions to a review folder and never edits managed rules directly.
 ---
 
 # imwel-audit — audit rules for semantic drift against the code
@@ -27,18 +27,43 @@ out of sync with the actual code, conflict with each other, or leave new convent
 1. **Read the rules.** Collect every current rule and note the concrete claim each one makes
    (a pattern to follow, a library to use, a directory convention, a workflow step).
 2. **Read the fingerprint, then targeted-read code.** Do NOT scan the whole repo. Use the
-   fingerprint to open only what a claim depends on — the manifest/lint/test config for
-   tooling claims, representative source files for pattern claims, the relevant directory for
-   layout claims.
-3. **Flag three kinds of semantic drift**, each backed by evidence you actually read:
+   fingerprint to open only what a claim depends on — the manifest/lint/test config for tooling
+   claims, representative source files for pattern claims, the relevant directory for layout
+   claims.
+3. **Use the Git-history overlay to focus and strengthen findings.** If `history.available` is
+   true:
+   - A **hotspot** (`history.hotspots`) that no rule covers is a strong **missing-rule** signal —
+     the areas that change most are the ones most worth guarding. Prioritize these.
+   - A **co-change** pattern (`history.coChanges`) that contradicts what a rule claims about
+     coupling/boundaries is evidence for a **rule ↔ code mismatch**.
+   - If `history.available` is false or `history.confidence` is `low`, fall back to the pure
+     rule↔code / rule↔rule analysis and say so; do not manufacture findings from weak frequency.
+4. **Flag three kinds of semantic drift**, each backed by evidence you actually read:
    - **Rule ↔ code mismatch** — the rule states X, the code does Y (cite the file/line).
    - **Rule ↔ rule conflict** — two rules give contradictory guidance (cite both).
-   - **Missing rule** — a clear, repeated convention in the code that no rule covers.
-4. **Write actionable suggestions to an isolated folder.** Create `.imwel/audit/` if needed and
+   - **Missing rule** — a clear, repeated convention (often a hotspot) that no rule covers.
+5. **Write actionable suggestions to an isolated folder.** Create `.imwel/audit/` if needed and
    write a report (e.g. `.imwel/audit/report.md`). For each finding include: which rule is
-   affected, the drift type, the evidence, and a concrete suggested wording (or a proposed new
-   rule). Mark anything uncertain with `TODO(verify)`.
-5. **Summarize** the findings and hand back to imwel.
+   affected, the drift type, the evidence (cite hotspots/co-changes where relevant), and a
+   concrete suggested wording (or a proposed new rule). Mark anything uncertain `TODO(verify)`.
+6. **Summarize and self-check.** Summarize the findings, then run the Self-check below over the
+   existing rules and your suggested wordings, and fold any quality gaps into your suggestions.
+
+## Authoring standard (applies to your suggested wordings too)
+
+Judge existing rules — and write your own suggestions — against the same bar imwel-extract uses:
+
+- **Precise, triggerable description** for skills (names concrete situations, not a vague line).
+- **Progressive disclosure** — concise SKILL.md body, bulky detail in linked `reference/*.md`.
+- **Short, focused rules with do/don't examples** and the non-obvious *why*.
+- **Evidence over guesses** — cite what you read; mark uncertainty `TODO(verify)`.
+
+## Self-check (run before handing back)
+
+- Does each finding cite concrete evidence (file/line, or a hotspot/co-change)?
+- For each suggested rewording/new rule: is it short, single-concern, example-backed, and
+  triggerable where it is a skill?
+- Did you keep everything inside `.imwel/audit/` and leave managed rules untouched?
 
 ## Guardrails
 

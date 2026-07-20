@@ -24,8 +24,8 @@ imwel sync
 | `imwel lint` | Lint a template repository (errors = install-breaking; warnings = style; `--strict` fails on warnings) |
 | `imwel remote add/list/remove/set` | Manage template repository remotes |
 | `imwel template init` | Scaffold a new template repository (includes author `AGENTS.md` + Cursor slash commands) |
-| `imwel adopt` | Consolidate existing scattered tool rules into canonical artifacts under `.imwel/adopted/` (no binding/remote required) |
-| `imwel scan` | Deterministically fingerprint the project into `.imwel/fingerprint.yaml` (languages, tooling, existing rule locations) — no LLM |
+| `imwel adopt` | Consolidate existing scattered tool rules into canonical artifacts under `.imwel/adopted/` (no binding/remote required); `--from` adopts reviewed AI drafts from `.imwel/drafts/` through a deterministic quality gate |
+| `imwel scan` | Deterministically fingerprint the project into `.imwel/fingerprint.yaml` (languages, tooling, existing rule locations, plus a Git-history overlay of change hotspots/co-changes when available) — no LLM |
 | `imwel skill install` | Install imwel's first-party skills (`imwel-extract`, `imwel-audit`) into selected tools (unmanaged; not tracked by sync) |
 | `imwel init` | Bind the current directory to a template project |
 | `imwel sync` | Pull upstream artifact updates |

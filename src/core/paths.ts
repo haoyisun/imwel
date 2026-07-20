@@ -42,3 +42,8 @@ export function adoptedDir(projectDir: string): string {
 export function fingerprintPath(projectDir: string): string {
   return path.join(imwelDir(projectDir), 'fingerprint.yaml');
 }
+
+/** Default location where `imwel-extract` writes AI-drafted rules/skills for review. */
+export function draftsDir(projectDir: string): string {
+  return path.join(imwelDir(projectDir), 'drafts');
+}

@@ -111,6 +111,67 @@ export async function consolidateExisting(
   };
 }
 
+/**
+ * Collect AI-drafted rules/skills from a drafts directory (default `.imwel/drafts/`)
+ * as consolidation candidates. Drafts are already canonical (agents.md-flavored
+ * Markdown), so no adapter parsing or cross-tool merge is needed — each draft maps
+ * directly to one artifact. Returns an empty array when the directory is absent or
+ * has no drafts. Read-only.
+ */
+export async function collectDrafts(draftsDir: string): Promise<ConsolidatedArtifact[]> {
+  const artifacts: ConsolidatedArtifact[] = [];
+
+  const rules = await readDir(path.join(draftsDir, 'rules'));
+  for (const entry of rules) {
+    if (!entry.isFile() || !entry.name.endsWith('.md')) {
+      continue;
+    }
+    const rel = `rules/${entry.name}`;
+    const content = await fs.readFile(path.join(draftsDir, 'rules', entry.name), 'utf8');
+    if (!content.trim()) {
+      continue;
+    }
+    artifacts.push(draftArtifact('rule', entry.name.slice(0, -'.md'.length), content, rel));
+  }
+
+  const skillDirs = await readDir(path.join(draftsDir, 'skills'));
+  for (const entry of skillDirs) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const skillMd = path.join(draftsDir, 'skills', entry.name, 'SKILL.md');
+    let content: string;
+    try {
+      content = await fs.readFile(skillMd, 'utf8');
+    } catch {
+      continue;
+    }
+    if (!content.trim()) {
+      continue;
+    }
+    artifacts.push(draftArtifact('skill', entry.name, content, `skills/${entry.name}/SKILL.md`));
+  }
+
+  return artifacts.sort((a, b) => `${a.type}:${a.slug}`.localeCompare(`${b.type}:${b.slug}`));
+}
+
+async function readDir(dir: string): Promise<import('node:fs').Dirent[]> {
+  try {
+    return await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+}
+
+function draftArtifact(
+  type: ArtifactType,
+  slug: string,
+  canonicalContent: string,
+  sourceFile: string,
+): ConsolidatedArtifact {
+  return { slug, type, canonicalContent, targetOverrides: {}, tools: [], sourceFiles: [sourceFile] };
+}
+
 /** Output-relative path for a consolidated artifact, using template-repo layout. */
 export function outputPathFor(artifact: ConsolidatedArtifact): string {
   if (artifact.type === 'skill') {

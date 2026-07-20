@@ -170,11 +170,23 @@ export const en = {
     'Review them, then run `imwel template init` to publish as a template, or `imwel init` + `imwel propose` to feed a remote.',
   'adopt.allConflicts':
     'Nothing written — all discovered rules conflict across tools. Resolve conflicts and re-run.',
+  'adopt.drafts.scanning': 'Collecting AI drafts...',
+  'adopt.drafts.none': 'No adoptable drafts found in {dir}.',
+  'adopt.drafts.plan': 'Found {artifacts} draft(s) · {issues} health issue(s).',
+  'adopt.drafts.confirm': 'Adopt {count} draft(s) into {dir}?',
+  'adopt.drafts.confirmIssues':
+    'Adopt {count} draft(s) into {dir}? {issues} health issue(s) found above — review before continuing.',
 
   'scan.title': 'Fingerprint the project (deterministic, no LLM)',
   'scan.scanning': 'Scanning project files and configuration...',
   'scan.summary':
     'Languages: {languages} (top {topLang}) · manifests: {manifests} · existing rule files: {rules}',
+  'scan.history.summary':
+    'Git history: {commits} commit(s) analyzed ({confidence}) · hotspots: {hotspots} · co-changes: {coChanges}',
+  'scan.history.lowConfidence':
+    '  (few commits — history signals are low-confidence; treat them as hints, not facts)',
+  'scan.history.none':
+    'Git history: not detected — file-tree signals only. Run `git init` and commit for richer signals.',
   'scan.written': 'Fingerprint written to {path}',
 
   'skill.install.title': 'Install imwel first-party skills',

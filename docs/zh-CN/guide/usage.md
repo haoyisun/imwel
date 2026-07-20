@@ -125,19 +125,44 @@ imwel adopt           # 把 .cursor/rules、CLAUDE.md、AGENTS.md…… 归并�
 imwel scan            # 写出 .imwel/fingerprint.yaml
 ```
 
+  当项目是 Git 仓库时，`scan` 还会把一层 **Git 历史信号**挖进指纹的可选 `history` 段：变更
+  **热点**（改动最频繁的文件）与**共变**（总是一起改动的文件）——这些正是最值得写成规则的地方。
+  该层是叠加的，且优雅降级：
+
+  - **满血** —— 提交足够多的仓库：完整历史信号（`confidence: normal`）。
+  - **低置信** —— 新仓或浅克隆、提交很少：有信号但标记 `confidence: low`（当作线索，而非结论）。
+  - **兜底** —— 无 `.git` 或无提交：跳过历史（`available: false`），仍产出文件树指纹，并提示可
+    运行 `git init` 以获取更丰富的信号。
+
+  `scan` 会打印当前处于哪一级。历史挖掘是只读的，shell out 到系统 `git`，且仅在你运行 `imwel scan`
+  时触发 —— 不与任何 AI 工具会话绑定。
+
 - **安装 imwel 第一方 skill** 到工具，再在 AI 工具中调用：
 
 ```bash
 imwel skill install   # 安装 imwel-extract 与 imwel-audit（非受管）
 ```
 
-  - `imwel-extract` 借指纹把贴合项目的规则草稿写到 `.imwel/drafts/`。
+  - `imwel-extract` 借指纹把贴合项目的规则草稿写到 `.imwel/drafts/`。它会利用 Git 历史信号
+    （变更热点作规则候选、共变作跨文件线索），并遵循创作标准——渐进式披露、带 do/don't 示例的
+    短规则、精确可触发的描述——收尾前对草稿自检。
   - `imwel-audit` 审计现有规则的语义脱节（规则↔代码、规则↔规则、缺失规则）到 `.imwel/audit/`。
+    高频热点却无规则覆盖会被当作强"缺失规则"信号；历史不可用/低置信时退回纯规则↔代码、规则↔规则判断。
 
 - **规则健康**由 `imwel status`（空壳规则、死链导入、孤儿路径引用）与 `imwel lint`（空壳/占位规则）自动报告。
 
+- **采纳 review 过的 AI 草稿**：把 `.imwel/drafts/`（由 `imwel-extract` 写出）中的草稿采纳为
+  canonical 制品，写入前会先跑一道确定性质量闸：
+
+```bash
+imwel adopt --from            # 采纳 .imwel/drafts（可用 --from <dir> 覆盖目录）
+```
+
+  规则健康检查（空壳规则、死链导入、孤儿路径引用）会先在草稿上运行，问题数会显示在确认提示里
+  —— 绝不静默写入。非交互 shell 下需加 `-y` 确认。
+
 典型维护闭环：`imwel scan` → 在 AI 工具中跑 `imwel-extract`/`imwel-audit` → review 草稿 →
-`imwel adopt` 或 `imwel propose` → `imwel push`。
+`imwel adopt --from`（或 `imwel propose`）→ `imwel push`。
 
 ## 故障排查
 

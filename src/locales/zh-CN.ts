@@ -170,11 +170,23 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
     '请先查看，再运行 `imwel template init` 发布为模板，或 `imwel init` + `imwel propose` 反馈到远端。',
   'adopt.allConflicts':
     '未写入任何内容 — 所有发现的规则在工具间均存在冲突。请解决冲突后重试。',
+  'adopt.drafts.scanning': '正在收集 AI 草稿……',
+  'adopt.drafts.none': '在 {dir} 未发现可采纳的草稿。',
+  'adopt.drafts.plan': '发现 {artifacts} 份草稿 · {issues} 处健康问题。',
+  'adopt.drafts.confirm': '将 {count} 份草稿采纳到 {dir}？',
+  'adopt.drafts.confirmIssues':
+    '将 {count} 份草稿采纳到 {dir}？上方发现 {issues} 处健康问题 —— 请先 review 再继续。',
 
   'scan.title': '生成项目指纹（确定性，无 LLM）',
   'scan.scanning': '正在扫描项目文件与配置……',
   'scan.summary':
     '语言：{languages} 种（最多 {topLang}）· 清单文件：{manifests} · 现有规则文件：{rules}',
+  'scan.history.summary':
+    'Git 历史：已分析 {commits} 个提交（{confidence}）· 热点：{hotspots} · 共变：{coChanges}',
+  'scan.history.lowConfidence':
+    '  （提交较少 — 历史信号置信度低，请当作线索而非结论）',
+  'scan.history.none':
+    'Git 历史：未检测到 — 仅使用文件树信号。运行 `git init` 并提交可获得更丰富的信号。',
   'scan.written': '指纹已写入 {path}',
 
   'skill.install.title': '安装 imwel 第一方 skill',

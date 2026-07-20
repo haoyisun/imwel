@@ -82,4 +82,17 @@ describe('buildFingerprint', () => {
     first.generatedAt = second.generatedAt;
     assert.deepEqual(first, second);
   });
+
+  it('keeps the file-tree layer complete when there is no Git history', async () => {
+    await writeFile(root, 'package.json', '{}');
+    await writeFile(root, 'src/a.ts', 'export const a = 1;\n');
+    await writeFile(root, 'src/b.ts', 'export const b = 2;\n');
+
+    const fp = await buildFingerprint(root, adapters);
+
+    // history is an additive layer — absent here, but the tree layer is intact
+    assert.equal(fp.history.available, false);
+    assert.equal(fp.languages[0]?.ext, '.ts');
+    assert.ok(fp.manifests.includes('package.json'));
+  });
 });

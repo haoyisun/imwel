@@ -1,6 +1,6 @@
 ---
 name: imwel-extract
-description: Use this skill when the user wants to draft project-fit AI coding rules or skills for a codebase that has few or none yet. It reads the deterministic project fingerprint produced by `imwel scan`, targeted-reads the key files it points to, and drafts rule/skill artifacts into an isolated review folder — it never edits managed artifacts directly.
+description: Use this skill when the user wants to draft project-fit AI coding rules or skills for a codebase that has few or none yet. It reads the deterministic project fingerprint produced by `imwel scan` (including its Git-history overlay), targeted-reads the key files it points to, and drafts rule/skill artifacts into an isolated review folder — it never edits managed artifacts directly.
 ---
 
 # imwel-extract — draft project-fit rules from a scan fingerprint
@@ -26,26 +26,64 @@ starting set of rules/skills tailored to their actual codebase — not generic b
 1. **Read the fingerprint.** Parse `.imwel/fingerprint.yaml`. Note the dominant languages,
    the manifest/build files, the test/lint/format/CI configs, top-level directory layout,
    DB schema/migration files, and any existing scattered rule-file locations.
-2. **Targeted reads only.** Do NOT scan the whole repo. Open only what the fingerprint points
-   to: the manifest(s) for stack/scripts, the lint/format config for style rules, the test
-   config for how tests are run, a couple of representative source files per dominant language,
-   and any existing rule files (to avoid duplicating or contradicting them).
-3. **Infer conventions, not guesses.** Base each rule on concrete evidence you read (a lint
-   rule that is enabled, a script in the manifest, an actual directory convention). If you are
-   unsure, leave a `TODO(verify)` marker rather than inventing a convention.
-4. **Draft into an isolated folder.** Write drafts under `.imwel/drafts/` (create it if needed):
-   - Rules: `.imwel/drafts/rules/<slug>.md` — agents.md-flavored Markdown. Keep each rule
-     focused and actionable; explain the *why* when non-obvious.
-   - Skills: `.imwel/drafts/skills/<slug>/SKILL.md` — include a triggerable frontmatter
-     `description` that says *when* to use the skill.
-5. **Summarize.** List what you drafted and the evidence behind each item, and flag anything
-   that needs the user's confirmation.
+2. **Use the Git-history overlay to prioritize.** If `history.available` is true, treat it as
+   a candidate list, not a conclusion:
+   - **Hotspots** (`history.hotspots`) — the files/areas that change most often are the highest
+     value places to have a rule. Start your reading there.
+   - **Co-changes** (`history.coChanges`) — files that keep changing together hint at a
+     cross-file convention or coupling worth capturing in a rule.
+   - **Confidence** — if `history.available` is false or `history.confidence` is `low` (new or
+     shallow repo), fall back to the file-tree signals only and say so in your summary; never
+     treat low-confidence frequency as proof of a convention.
+3. **Targeted reads only.** Do NOT scan the whole repo. Open only what the fingerprint points
+   to (and the hotspots above): the manifest(s) for stack/scripts, the lint/format config for
+   style rules, the test config for how tests are run, a couple of representative source files
+   per dominant language, and any existing rule files (to avoid duplicating or contradicting
+   them). Frequency is a pointer; the evidence for a rule is what you actually read.
+4. **Infer conventions, not guesses.** Base each rule on concrete evidence you read (a lint
+   rule that is enabled, a script in the manifest, an actual directory convention, a hotspot's
+   real code). If you are unsure, leave a `TODO(verify)` marker rather than inventing one.
+5. **Draft into an isolated folder**, following the Authoring standard below. Write drafts under
+   `.imwel/drafts/` (create it if needed):
+   - Rules: `.imwel/drafts/rules/<slug>.md` — agents.md-flavored Markdown.
+   - Skills: `.imwel/drafts/skills/<slug>/SKILL.md` — with a triggerable frontmatter
+     `description`. Put large or rarely-needed detail in linked `reference/*.md` files rather
+     than in the SKILL.md body.
+6. **Summarize and self-check.** List what you drafted and the evidence behind each item
+   (cite hotspots where relevant). Then run the Self-check below and list any item that does
+   not yet meet the standard, so the user can confirm or strengthen it.
+
+## Authoring standard
+
+Drafts must follow these, because a rule/skill that a tool cannot load or trust is worse than
+none:
+
+- **Progressive disclosure (skills).** frontmatter `description` says precisely *when* to use
+  the skill; the SKILL.md body stays short and holds only the common path; push bulky or
+  rarely-needed detail into linked `reference/*.md`, not the body.
+- **Precise, triggerable description.** The description names concrete situations/triggers, not
+  a vague one-liner. Bad: "Helps with the database." Good: "Use when adding or changing a Prisma
+  model or migration under `prisma/`."
+- **Short, focused rules with examples.** Each rule covers one concern and is actionable. Where
+  a convention has a clear right/wrong form, include a **do / don't** pair, and state the
+  non-obvious *why*. Prefer several small rules over one long, vague rule.
+- **Evidence over guesses.** Every rule traces to something you read. Mark anything uncertain
+  with `TODO(verify)`; prefer fewer, well-grounded rules over many speculative ones.
+
+## Self-check (run before handing back)
+
+- Does each skill draft have a precise, triggerable `description` and a concise body?
+- Is each rule short, single-concern, and (where applicable) accompanied by a do/don't example?
+- Is every rule backed by evidence you actually read, with guesses marked `TODO(verify)`?
+- Did you keep everything inside `.imwel/drafts/` and leave managed artifacts untouched?
 
 ## Guardrails
 
 - **Drafts are proposals, not managed artifacts.** Everything goes under `.imwel/drafts/`.
   Never edit files already managed by imwel, and never write outside `.imwel/drafts/`.
 - **No fabrication.** Prefer fewer, well-grounded rules over many speculative ones.
+- **No session hooks, no full scans.** This runs only when invoked; never install session
+  hooks or background watchers, and always go through the fingerprint for targeted reads.
 - **Hand back to imwel.** After the user reviews the drafts, they consolidate/publish them via
   `imwel adopt` (or register individually with `imwel propose`) — do not attempt to wire them
   into the sync pipeline yourself.

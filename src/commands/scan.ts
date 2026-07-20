@@ -29,6 +29,23 @@ export async function runScan(opts: ScanOptions = {}): Promise<number> {
     }),
   );
 
+  const { history } = fingerprint;
+  if (!history.available) {
+    console.log(t('scan.history.none'));
+  } else {
+    console.log(
+      t('scan.history.summary', {
+        commits: history.commitsAnalyzed ?? 0,
+        confidence: history.confidence ?? 'normal',
+        hotspots: history.hotspots?.length ?? 0,
+        coChanges: history.coChanges?.length ?? 0,
+      }),
+    );
+    if (history.confidence === 'low') {
+      console.log(t('scan.history.lowConfidence'));
+    }
+  }
+
   const outPath = opts.out ? path.resolve(projectDir, opts.out) : fingerprintPath(projectDir);
   await writeYamlFile(outPath, fingerprint);
   console.log(t('scan.written', { path: path.relative(projectDir, outPath) || outPath }));

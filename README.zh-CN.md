@@ -24,8 +24,8 @@ imwel sync
 | `imwel lint` | 检查模板仓库（error=装坏类；warning=风格；`--strict` 时 warning 也失败） |
 | `imwel remote add/list/remove/set` | 管理模板仓库远程源 |
 | `imwel template init` | 脚手架生成新模板仓库（含作者向 `AGENTS.md` 与 Cursor Slash Commands） |
-| `imwel adopt` | 将项目中散落的工具规则归并为 canonical Artifact 到 `.imwel/adopted/`（无需 binding/remote） |
-| `imwel scan` | 确定性地生成项目指纹到 `.imwel/fingerprint.yaml`（语言、工具链、现有规则位置）—— 无 LLM |
+| `imwel adopt` | 将项目中散落的工具规则归并为 canonical Artifact 到 `.imwel/adopted/`（无需 binding/remote）；`--from` 经确定性质量闸采纳 `.imwel/drafts/` 中 review 过的 AI 草稿 |
+| `imwel scan` | 确定性地生成项目指纹到 `.imwel/fingerprint.yaml`（语言、工具链、现有规则位置，Git 仓库时附带变更热点/共变的历史信号）—— 无 LLM |
 | `imwel skill install` | 将 imwel 第一方 skill（`imwel-extract`、`imwel-audit`）安装进所选工具（非受管，不被 sync 跟踪） |
 | `imwel init` | 将当前目录绑定到模板项目 |
 | `imwel sync` | 拉取上游制品更新 |

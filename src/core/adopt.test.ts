@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { adapters } from '../adapters/index.js';
-import { consolidateExisting, writeConsolidated, outputPathFor } from './adopt.js';
+import { collectDrafts, consolidateExisting, writeConsolidated, outputPathFor } from './adopt.js';
 
 async function makeTempDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), 'imwel-adopt-'));
@@ -92,5 +92,52 @@ describe('consolidateExisting', () => {
     assert.ok(written[0]!.endsWith(path.join('rules', 'foo.md')));
     const content = await fs.readFile(written[0]!, 'utf8');
     assert.match(content, /Body\./);
+  });
+});
+
+describe('collectDrafts', () => {
+  let root: string;
+
+  beforeEach(async () => {
+    root = await makeTempDir();
+  });
+
+  afterEach(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it('returns an empty array when the drafts directory is absent', async () => {
+    const artifacts = await collectDrafts(path.join(root, '.imwel', 'drafts'));
+    assert.deepEqual(artifacts, []);
+  });
+
+  it('collects rule and skill drafts as canonical candidates', async () => {
+    const drafts = path.join(root, '.imwel', 'drafts');
+    await writeFile(root, '.imwel/drafts/rules/style.md', '# Style\n\nUse TypeScript.\n');
+    await writeFile(root, '.imwel/drafts/skills/helper/SKILL.md', '---\nname: helper\n---\nBody.\n');
+    await writeFile(root, '.imwel/drafts/rules/empty.md', '   \n');
+
+    const artifacts = await collectDrafts(drafts);
+
+    const rule = artifacts.find((a) => a.type === 'rule' && a.slug === 'style');
+    const skill = artifacts.find((a) => a.type === 'skill' && a.slug === 'helper');
+    assert.ok(rule, 'expected a style rule draft');
+    assert.ok(skill, 'expected a helper skill draft');
+    assert.equal(rule!.sourceFiles[0], 'rules/style.md');
+    assert.equal(skill!.sourceFiles[0], 'skills/helper/SKILL.md');
+    // blank draft is skipped
+    assert.ok(!artifacts.some((a) => a.slug === 'empty'));
+  });
+
+  it('adopts drafts into canonical layout via writeConsolidated', async () => {
+    const drafts = path.join(root, '.imwel', 'drafts');
+    await writeFile(root, '.imwel/drafts/rules/style.md', '# Style\n\nUse TypeScript.\n');
+    const artifacts = await collectDrafts(drafts);
+    const outDir = path.join(root, '.imwel', 'adopted');
+    const written = await writeConsolidated(outDir, artifacts);
+
+    assert.ok(written[0]!.endsWith(path.join('rules', 'style.md')));
+    const content = await fs.readFile(written[0]!, 'utf8');
+    assert.match(content, /Use TypeScript\./);
   });
 });

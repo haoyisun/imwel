@@ -135,6 +135,7 @@ async function main(): Promise<void> {
     .option('-y, --yes', 'Skip write confirmation')
     .option('--out <path>', 'Output directory (default .imwel/adopted)')
     .option('--tools <csv>', 'Limit to specific tool ids')
+    .option('--from [dir]', 'Adopt AI drafts from a directory (default .imwel/drafts)')
     .action(async (opts: AdoptOptions) => {
       process.exit(await runAdopt(opts));
     });

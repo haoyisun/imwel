@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Adapter } from '../adapters/types.js';
+import { collectHistorySignals, type HistorySignals } from './history-signals.js';
 
-export const FINGERPRINT_VERSION = 1;
+export const FINGERPRINT_VERSION = 2;
 
 export interface LanguageCount {
   ext: string;
@@ -31,6 +32,12 @@ export interface Fingerprint {
   topLevelDirs: string[];
   schemaFiles: string[];
   existingRules: ExistingRuleLocation[];
+  /**
+   * Optional Git-history overlay (change hotspots, co-change pairs). Additive:
+   * `available: false` when there is no Git work tree or no commits, in which case
+   * the file-tree layer above is still complete.
+   */
+  history: HistorySignals;
 }
 
 const IGNORED_DIRS = new Set([
@@ -202,6 +209,8 @@ export async function buildFingerprint(
   const byPath = (a: string, b: string): number => a.localeCompare(b);
   const uniqSort = (values: string[]): string[] => [...new Set(values)].sort(byPath);
 
+  const history = await collectHistorySignals(projectDir);
+
   return {
     version: FINGERPRINT_VERSION,
     generatedAt: new Date().toISOString(),
@@ -219,5 +228,6 @@ export async function buildFingerprint(
     existingRules: existingRules.sort(
       (a, b) => byPath(a.tool, b.tool) || byPath(a.path, b.path),
     ),
+    history,
   };
 }

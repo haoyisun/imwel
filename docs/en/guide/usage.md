@@ -129,21 +129,50 @@ imwel adopt           # consolidates .cursor/rules, CLAUDE.md, AGENTS.md, … in
 imwel scan            # writes .imwel/fingerprint.yaml
 ```
 
+  When the project is a Git repository, `scan` also mines a **Git-history overlay** into the
+  fingerprint's optional `history` section: change **hotspots** (files that change most often) and
+  **co-changes** (files that keep changing together) — the places most worth writing rules about.
+  This layer is additive and degrades gracefully:
+
+  - **Full** — a repo with enough commits: complete history signals (`confidence: normal`).
+  - **Low-confidence** — a new or shallow repo with few commits: signals present but marked
+    `confidence: low` (treat as hints, not facts).
+  - **None** — no `.git` or no commits: history is skipped (`available: false`), the file-tree
+    fingerprint is still produced, and `scan` suggests running `git init` for richer signals.
+
+  `scan` prints which level applied. History mining is read-only, shells out to your system `git`,
+  and never runs unless you invoke `imwel scan` — it is not tied to any AI tool session.
+
 - **Install imwel's first-party skills** into your tools, then invoke them in your AI tool:
 
 ```bash
 imwel skill install   # installs imwel-extract and imwel-audit (unmanaged)
 ```
 
-  - `imwel-extract` drafts project-fit rules from the fingerprint into `.imwel/drafts/`.
+  - `imwel-extract` drafts project-fit rules from the fingerprint into `.imwel/drafts/`. It uses
+    the Git-history overlay (change hotspots as rule candidates, co-changes as cross-file hints)
+    and follows an authoring standard — progressive disclosure, short rules with do/don't
+    examples, precise triggerable descriptions — then self-checks the drafts before handing back.
   - `imwel-audit` audits existing rules for semantic drift (rule↔code, rule↔rule, missing rules)
-    into `.imwel/audit/`.
+    into `.imwel/audit/`. A hotspot with no rule is treated as a strong missing-rule signal; when
+    history is unavailable/low-confidence it falls back to pure rule↔code / rule↔rule analysis.
 
 - **Rule health** is reported automatically by `imwel status` (empty rules, dead imports, orphan
   path references) and by `imwel lint` (empty/placeholder rules).
 
+- **Adopt reviewed AI drafts** from `.imwel/drafts/` (written by `imwel-extract`) into canonical
+  artifacts, with a deterministic quality gate applied before writing:
+
+```bash
+imwel adopt --from            # adopts .imwel/drafts (or --from <dir> to override)
+```
+
+  Rule-health checks (empty rules, dead imports, orphan path references) run over the drafts and
+  their count is shown in the confirmation prompt — nothing is written silently. In a
+  non-interactive shell you must pass `-y` to confirm.
+
 The typical maintenance loop: `imwel scan` → run `imwel-extract`/`imwel-audit` in your AI tool →
-review the drafts → `imwel adopt` or `imwel propose` → `imwel push`.
+review the drafts → `imwel adopt --from` (or `imwel propose`) → `imwel push`.
 
 ## Troubleshooting
 

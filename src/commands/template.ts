@@ -49,22 +49,10 @@ export async function runTemplateInit(
     }
   }
 
-  let repoName: string;
-  if (name) {
-    repoName = name;
-  } else if (nonInteractive) {
-    repoName = path.basename(absDir);
-  } else {
-    const prompted = await p.text({
-      message: t('template.init.prompt.name'),
-      defaultValue: path.basename(absDir),
-    });
-    if (p.isCancel(prompted)) {
-      console.log(t('common.cancelled'));
-      return 1;
-    }
-    repoName = String(prompted);
-  }
+  // The name only feeds `{{name}}` substitution and the optional remote-repo
+  // creation, and defaults to the directory name — so don't prompt for it up
+  // front; ask only when the user opts into creating a remote (below).
+  let repoName = name ?? path.basename(absDir);
 
   let selectedLocale: SupportedLocale;
   if (locale) {
@@ -120,7 +108,17 @@ export async function runTemplateInit(
         initialValue: false,
       });
       if (!p.isCancel(createRemote) && createRemote) {
-        await createRemoteRepo(hostCli, repoName);
+        let remoteName = repoName;
+        if (!name) {
+          const promptedName = await p.text({
+            message: t('template.init.prompt.name'),
+            defaultValue: repoName,
+          });
+          if (!p.isCancel(promptedName) && String(promptedName).trim()) {
+            remoteName = String(promptedName).trim();
+          }
+        }
+        await createRemoteRepo(hostCli, remoteName);
       }
     }
   }

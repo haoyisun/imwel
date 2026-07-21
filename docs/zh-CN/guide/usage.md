@@ -1,177 +1,55 @@
-# 使用说明
+# 快速走查
 
-这是 imwel 的**面向任务、端到端**使用说明，带你从安装走到日常工作流。每个命令的完整选项参考见
-[命令](./commands)。
+> **快速上手。** 本页并排给出两条泳道的最小、可复制命令序列。逐步轨道请follow[消费者路径](../consume/quickstart.md)或[作者路径](../author/quickstart.md)。不熟悉术语?见[术语词表](../concepts/glossary.md)。
 
-## imwel 是什么
+imwel 有两条彼此独立的生命周期。按你的角色选择对应泳道。
 
-imwel 是一个 **Git 原生 CLI**，用于在团队与多种 AI 编程工具之间分发规则、技能与 agent 说明。无后端、无数据库、无托管平台：
-
-- **Git 即数据库** —— 内容标识、版本与历史都来自 Git 对象。
-- **Git 主机即治理层** —— 权限与评审通过 GitHub/GitLab/Gitea 的 PR 完成。
-- **模板仓**是任何遵循 imwel manifest 约定、持有 Artifact（规则、技能、`agents.md` 内容）的普通 Git 仓库。
-
-完整理念见[架构](./architecture)。
-
-## 安装与前置
-
-需要 Node.js ≥ 18.18，以及 PATH 上的系统 `git`。
+## 作者泳道 —— 你发布规则
 
 ```bash
-# 免安装一次性运行：
-npx @culock/imwel@latest <command>
-
-# 或全局安装（命令名仍是 `imwel`）：
-npm install -g @culock/imwel
-imwel doctor   # 校验 git 与环境前置
+imwel template init                 # 生成模板仓骨架（manifest + 示例 project）
+# 编辑 .imwel/manifest.yaml 与你的 rules/skills/agents.md
+imwel lint                          # 发布前校验（CI 用 imwel lint --strict）
+git init && git add . && git commit -m "initial template"
+git remote add origin <git-host-url>
+git push -u origin main             # ← 发布靠普通 git，不是 imwel 命令
+# 维护：编辑 artifact → imwel lint → git commit → git push
 ```
 
-若有异常先跑 `imwel doctor` —— 它会报告缺失的前置并给出可执行的下一步。
+逐步：[编写模板](../author/quickstart.md) → [Lint 与质量条](../author/lint.md) → [发布与维护](../author/publish.md)。
 
-## 核心概念
-
-| 概念 | 含义 |
-|------|------|
-| **模板仓** | 含 `.imwel/manifest.yaml` 的 Git 仓库，列出一个或多个 *project* 及其 Artifact。 |
-| **Artifact** | 规则（`agents.md` 风格 Markdown）、技能（`SKILL.md` bundle）或 agent 说明。 |
-| **绑定** | 消费目录的 `.imwel/binding.yaml`，把它关联到某远程模板仓中的一个 project。 |
-| **适配器** | 每个工具（Cursor、Claude Code、Codex……）的渲染器，把 Artifact 写成该工具的原生格式。 |
-| **漂移** | 远程模板、上次同步、本地磁盘文件之间的偏离——经 Git 检测。 |
-
-## 消费侧工作流（使用团队规则）
-
-你是想把团队规则装进自己 AI 工具的开发者。
-
-1. **注册模板 remote**（每台机器一次）：
+## 消费者泳道 —— 你安装他人的规则
 
 ```bash
-imwel remote add org-standards git@github.com:example/imwel-templates.git
-```
-
-2. **绑定项目并安装 Artifact：**
-
-```bash
+imwel remote add <template-repo-url> # 别名由 URL 推导
 cd your-project
-imwel init            # 交互式选择工具、remote、branch、project
+imwel init                          # 选工具/branch/project；单个远程会自动选用
+imwel sync                          # 拉取上游更新（带漂移预览）
+# 漂移：imwel status → imwel sync / imwel rollback
+imwel push                          # 把本地改动以分支 + PR/MR 反馈上游
 ```
 
-`imwel init` 会把所选 project 的 Artifact 渲染到每个所选工具的原生位置并记录绑定，同时在
-`.imwel/history/` 下创建隐藏历史仓。
+逐步：[安装模板](../consume/quickstart.md) → [同步、漂移与回滚](../consume/sync-and-drift.md) → [回馈上游](../consume/contribute-back.md)。
 
-3. **拉取上游更新：**
+> **易被忽略：** 作者是用普通 `git` 把模板仓推送到 Git 宿主来**发布**的——没有 `imwel publish`。
+> imwel 命令负责本地的创作/校验与消费者侧；Git 宿主才是分发与治理层。
 
-```bash
-imwel sync            # 预览新增/删除/修改的文件，再确认
-```
+## 从代码库起步规则
 
-不重叠的本地改动与上游改动会自动合并；重叠处写入标准 Git 冲突标记供你手工解决，再
-`imwel sync --continue`。
-
-4. **随时查看状态：**
-
-```bash
-imwel status          # 远程与本地漂移 + 确定性规则健康检查
-```
-
-5. **撤销不想要的更新：**
-
-```bash
-imwel rollback        # 从 .imwel/history/ 恢复到先前状态
-```
-
-6. **把本地改动反馈上游：**
-
-```bash
-imwel push            # 反向渲染本地工具文件 → canonical，开分支 + PR/MR
-imwel propose <file>  # 为下次 push 登记一个全新 artifact
-```
-
-上游贡献默认走**分支 + PR/MR**，绝不直接提交到共享分支。
-
-## 模板作者工作流（发布规则）
-
-你维护团队消费的规则。
-
-1. **脚手架生成模板仓：**
-
-```bash
-imwel template init   # manifest、示例 project、作者 AGENTS.md、Cursor slash command
-```
-
-2. **编辑 Artifact**（位于 `.imwel/manifest.yaml` 声明的路径下，见[Manifest](./manifest)与[示例模板](./example-template)）。
-
-3. **发布前校验：**
-
-```bash
-imwel lint            # error = 会装坏；warning = 风格/最佳实践
-imwel lint --strict   # warning 也失败（适合 CI）
-```
-
-完整编写参考见[模板编写](/zh-CN/template-authoring)。
-
-## 冷启动与规则保鲜
-
-即便没有模板，imwel 也能帮你起步与维护规则。
-
-- **归并散落规则**为 canonical artifact：
-
-```bash
-imwel adopt           # 把 .cursor/rules、CLAUDE.md、AGENTS.md…… 归并到 .imwel/adopted/
-```
-
-- **生成项目指纹**（确定性、无 LLM），作为 AI 起草规则的地图：
-
-```bash
-imwel scan            # 写出 .imwel/fingerprint.yaml
-```
-
-  当项目是 Git 仓库时，`scan` 还会把一层 **Git 历史信号**挖进指纹的可选 `history` 段：变更
-  **热点**（改动最频繁的文件）与**共变**（总是一起改动的文件）——这些正是最值得写成规则的地方。
-  该层是叠加的，且优雅降级：
-
-  - **满血** —— 提交足够多的仓库：完整历史信号（`confidence: normal`）。
-  - **低置信** —— 新仓或浅克隆、提交很少：有信号但标记 `confidence: low`（当作线索，而非结论）。
-  - **兜底** —— 无 `.git` 或无提交：跳过历史（`available: false`），仍产出文件树指纹，并提示可
-    运行 `git init` 以获取更丰富的信号。
-
-  `scan` 会打印当前处于哪一级。历史挖掘是只读的，shell out 到系统 `git`，且仅在你运行 `imwel scan`
-  时触发 —— 不与任何 AI 工具会话绑定。
-
-- **安装 imwel 第一方 skill** 到工具，再在 AI 工具中调用：
-
-```bash
-imwel skill install   # 安装 imwel-extract 与 imwel-audit（非受管）
-```
-
-  - `imwel-extract` 借指纹把贴合项目的规则草稿写到 `.imwel/drafts/`。它会利用 Git 历史信号
-    （变更热点作规则候选、共变作跨文件线索），并遵循创作标准——渐进式披露、带 do/don't 示例的
-    短规则、精确可触发的描述——收尾前对草稿自检。
-  - `imwel-audit` 审计现有规则的语义脱节（规则↔代码、规则↔规则、缺失规则）到 `.imwel/audit/`。
-    高频热点却无规则覆盖会被当作强"缺失规则"信号；历史不可用/低置信时退回纯规则↔代码、规则↔规则判断。
-
-- **规则健康**由 `imwel status`（空壳规则、死链导入、孤儿路径引用）与 `imwel lint`（空壳/占位规则）自动报告。
-
-- **采纳 review 过的 AI 草稿**：把 `.imwel/drafts/`（由 `imwel-extract` 写出）中的草稿采纳为
-  canonical 制品，写入前会先跑一道确定性质量闸：
-
-```bash
-imwel adopt --from            # 采纳 .imwel/drafts（可用 --from <dir> 覆盖目录）
-```
-
-  规则健康检查（空壳规则、死链导入、孤儿路径引用）会先在草稿上运行，问题数会显示在确认提示里
-  —— 绝不静默写入。非交互 shell 下需加 `-y` 确认。
-
-典型维护闭环：`imwel scan` → 在 AI 工具中跑 `imwel-extract`/`imwel-audit` → review 草稿 →
-`imwel adopt --from`（或 `imwel propose`）→ `imwel push`。
+还没有模板?imwel 能归并散落规则、生成项目指纹,并用第一方 skill 起草规则 —— 见[从代码库起草规则](../author/from-codebase.md)。
 
 ## 故障排查
 
 | 现象 | 处理 |
 |------|------|
 | `no git binary found on PATH` | 安装 Git 后重跑 `imwel doctor`。 |
-| 在模板仓里 `imwel status` 报了个假的"干净"结果 | 你在模板仓而非消费绑定——改用 `imwel lint`。 |
-| `imwel sync` 留下冲突标记 | 手工解决 `<<<<<<<`/`=======`/`>>>>>>>` 标记，再 `imwel sync --continue`。 |
-| CI 中命令需要输入 | 传入所需选择 flag（如 `--tools`、`--remote`、`--branch`、`--project`）与 `-y`。 |
-| 第一方 skill 文件出现在 `imwel status` 中 | 不应如此——第一方 skill 是非受管的。若被跟踪，请用最新版本重跑 `imwel skill install`。 |
+| 在模板仓里 `imwel status` 报了假的"干净"结果 | 你在模板仓而非消费绑定——改用 `imwel lint`。 |
+| `imwel sync` 留下冲突标记 | 手工解决 `<<<<<<<`/`=======`/`>>>>>>>` 标记,再 `imwel sync --continue`。 |
+| CI 中命令需要输入 | 传入所需选择 flag（`--tools`、`--remote`、`--branch`、`--project`）与 `-y`。 |
+| 第一方 skill 文件出现在 `imwel status` 中 | 不应如此——第一方 skill 是非受管的。请用最新版本重跑 `imwel skill install`。 |
 
-每个命令的精确选项与退出码见[命令](./commands)。
+## 下一步
+
+- 消费者? → [安装模板](../consume/quickstart.md)
+- 作者? → [编写模板](../author/quickstart.md)
+- 每个命令的选项与退出码 → [命令](./commands.md)

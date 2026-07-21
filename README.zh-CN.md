@@ -10,9 +10,9 @@
 
 ```bash
 npx @culock/imwel@latest template init
-imwel remote add org-standards git@github.com:example/imwel-templates.git
+imwel remote add git@github.com:example/imwel-templates.git   # 别名由 URL 推导
 cd your-project
-imwel init
+imwel init                                                    # 单个远程会自动选用
 imwel sync
 ```
 
@@ -95,11 +95,14 @@ npm run docs:build
 
 | 指南 | 路径 |
 |------|------|
-| 架构 | [docs/zh-CN/guide/architecture.md](docs/zh-CN/guide/architecture.md) |
-| Manifest | [docs/zh-CN/guide/manifest.md](docs/zh-CN/guide/manifest.md) |
+| 概览与选择路径 | [docs/zh-CN/index.md](docs/zh-CN/index.md) |
+| 快速走查（两条泳道） | [docs/zh-CN/guide/usage.md](docs/zh-CN/guide/usage.md) |
+| 消费者路径（安装模板） | [docs/zh-CN/consume/quickstart.md](docs/zh-CN/consume/quickstart.md) |
+| 作者路径（编写模板） | [docs/zh-CN/author/quickstart.md](docs/zh-CN/author/quickstart.md) |
 | 命令 | [docs/zh-CN/guide/commands.md](docs/zh-CN/guide/commands.md) |
-| 示例模板 | [docs/zh-CN/guide/example-template.md](docs/zh-CN/guide/example-template.md) |
-| 模板编写 | [docs/zh-CN/template-authoring.md](docs/zh-CN/template-authoring.md) |
+| Manifest | [docs/zh-CN/guide/manifest.md](docs/zh-CN/guide/manifest.md) |
+| 架构 | [docs/zh-CN/guide/architecture.md](docs/zh-CN/guide/architecture.md) |
+| 术语词表 | [docs/zh-CN/concepts/glossary.md](docs/zh-CN/concepts/glossary.md) |
 | 适配器（贡献） | [docs/zh-CN/contribute/adapters.md](docs/zh-CN/contribute/adapters.md) |
 
 English (canonical)：平行路径见 [`docs/en/`](docs/en/)。

@@ -122,7 +122,8 @@ export const adapters: Adapter[] = [
 
 新增 frontmatter / 单文件 / 技能映射时，优先复用 `src/adapters/strategies/` 下的共享 helper，避免整份复制适配器。
 
-## 相关
+## 下一步
 
-- [架构](../guide/architecture) — 适配器在流水线中的位置
+- 适配器在流水线中的位置 → [架构](../guide/architecture.md)
+- 核心术语 → [术语词表](../concepts/glossary.md)
 - 内置实现：`src/adapters/cursor.ts`、`src/adapters/claude-code.ts`、`src/adapters/extra-adapters.ts`

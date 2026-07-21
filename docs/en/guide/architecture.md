@@ -30,7 +30,7 @@ Installed Artifact states are recorded in a real, hidden Git repository under `.
 2. For each selected AI tool, call that tool’s **adapter**: `render` writes tool-native files; `parseExisting` reads them back for drift and `push` / `propose`.
 3. Core owns safety (what may be written) and Git operations; adapters must not special-case targets inside core.
 
-Built-in adapters today include **Cursor**, **Claude Code**, and twelve additional targets (`trae`, `qoder`, `codex`, `opencode`, `zcode`, `gemini-cli`, `windsurf`, `continue`, `cline`, `kiro`, `copilot`, `aider`). Path conventions differ by family (frontmatter rule dirs, flat rule dirs, single Markdown upsert-blocks, GitHub instructions). Skills use a fidelity ladder (native skills dirs → on-demand rules → prompts → always-on merge with a warning). When multiple selected tools render the same path with different content, imwel skips that path and asks you to pick a dominant target. Adding another target remains an upstream PR that registers an adapter — see [Adapters](../contribute/adapters).
+Built-in adapters today include **Cursor**, **Claude Code**, and twelve additional targets (`trae`, `qoder`, `codex`, `opencode`, `zcode`, `gemini-cli`, `windsurf`, `continue`, `cline`, `kiro`, `copilot`, `aider`). Path conventions differ by family (frontmatter rule dirs, flat rule dirs, single Markdown upsert-blocks, GitHub instructions). Skills use a fidelity ladder (native skills dirs → on-demand rules → prompts → always-on merge with a warning). When multiple selected tools render the same path with different content, imwel skips that path and asks you to pick a dominant target. Adding another target remains an upstream PR that registers an adapter — see [Adapters](../contribute/adapters.md).
 
 Canonical rule content is **agents.md-flavored Markdown**. Tool-specific enrichments live in a small `targetOverrides` overlay and expand only at render time for that target.
 
@@ -55,9 +55,9 @@ Who may edit a template repo is controlled by the Git host’s permissions and b
 - Do not silently overwrite locally hand-edited Artifacts — detect drift first; confirm or merge.
 - No network fetch / push except explicit commands or the throttled passive check.
 
-## Related docs
+## Next
 
-- [Manifest reference](./manifest)
-- [Commands](./commands)
-- [Template authoring](../template-authoring)
+- Core terms used above → [Glossary](../concepts/glossary.md)
+- Manifest fields → [Manifest reference](./manifest.md)
+- Full CLI reference → [Commands](./commands.md)
 - Repository [AGENTS.md](https://github.com/haoyisun/imwel/blob/main/AGENTS.md) (project constraints for contributors)

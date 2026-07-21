@@ -3,6 +3,8 @@ import path from 'node:path';
 import type { Artifact, ArtifactType } from './artifact-types.js';
 import type { ManifestConventions, ManifestProject } from './manifest.js';
 import { pathExists } from './fs-utils.js';
+import { parseFrontmatter } from './frontmatter.js';
+import { parseRuleOverlay } from './rule-overlay.js';
 
 async function readTextIfExists(filePath: string): Promise<string | null> {
   if (!(await pathExists(filePath))) {
@@ -100,12 +102,19 @@ export async function discoverArtifacts(
         })),
       );
       const skillMd = files.find((f) => f.relativePath === 'SKILL.md' || f.relativePath.endsWith('/SKILL.md'));
+      const skillDescription = skillMd
+        ? parseFrontmatter(skillMd.content).frontmatter.description
+        : undefined;
       artifacts.push({
         sourcePath: root,
         type: 'skill',
         optional: skillOptional,
         canonicalContent: skillMd?.content ?? '',
         bundleFiles: files,
+        targetOverrides:
+          typeof skillDescription === 'string' && skillDescription.trim()
+            ? { description: skillDescription }
+            : undefined,
       });
       continue;
     }
@@ -113,11 +122,13 @@ export async function discoverArtifacts(
     if (content === null) {
       continue;
     }
+    const { body, overrides } = parseRuleOverlay(content);
     artifacts.push({
       sourcePath: rel.replace(/\\/g, '/'),
       type,
       optional,
-      canonicalContent: content,
+      canonicalContent: body,
+      targetOverrides: overrides,
     });
   }
   return artifacts;

@@ -53,11 +53,26 @@ async function main(): Promise<void> {
 
   const remote = program.command('remote').description('Manage template remotes');
   remote
-    .command('add <alias> <url>')
+    .command('add <urlOrAlias> [url]')
+    .description('Add a remote: `add <url>` (alias derived) or `add <alias> <url>`')
+    .option('--as <alias>', 'Explicit local alias (with the single-URL form)')
     .option('--direct-push', 'Allow direct push to bound branch')
-    .action(async (alias: string, url: string, opts: { directPush?: boolean }) => {
-      process.exit(await runRemoteAdd(alias, url, Boolean(opts.directPush)));
-    });
+    .action(
+      async (
+        urlOrAlias: string,
+        url: string | undefined,
+        opts: { as?: string; directPush?: boolean },
+      ) => {
+        process.exit(
+          await runRemoteAdd({
+            urlOrAlias,
+            url,
+            as: opts.as,
+            directPush: Boolean(opts.directPush),
+          }),
+        );
+      },
+    );
   remote.command('list').action(async () => {
     process.exit(await runRemoteList());
   });

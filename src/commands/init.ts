@@ -45,6 +45,17 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   const projectDir = process.cwd();
   const nonInteractive = useNonInteractiveSelections(opts);
 
+  const remotes = await listRemotes();
+  const remoteAliases = Object.keys(remotes);
+  if (remoteAliases.length === 0) {
+    console.error(t('init.noRemotes'));
+    return 1;
+  }
+  // When exactly one remote is configured, select it by default so callers
+  // don't have to pass --remote (or pick from a one-item list).
+  const soleRemote = remoteAliases.length === 1 ? remoteAliases[0] : undefined;
+  const effectiveRemote = opts.remote ?? soleRemote;
+
   if (nonInteractive) {
     const optionalStrategyMissing =
       opts.optional === undefined
@@ -52,7 +63,7 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
         : {};
     const missing = exitIfMissingFlags({
       '--tools': opts.tools,
-      '--remote': opts.remote,
+      '--remote': effectiveRemote,
       '--branch': opts.branch,
       '--project': opts.project,
       ...optionalStrategyMissing,
@@ -83,13 +94,6 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
     }
   }
 
-  const remotes = await listRemotes();
-  const remoteAliases = Object.keys(remotes);
-  if (remoteAliases.length === 0) {
-    console.error(t('init.noRemotes'));
-    return 1;
-  }
-
   let tools: string[] = [];
   let remote = '';
   let branch = '';
@@ -109,7 +113,7 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
       );
       return 1;
     }
-    remote = opts.remote!;
+    remote = effectiveRemote!;
     if (!remoteAliases.includes(remote)) {
       console.error(t('init.unknownRemote', { alias: remote }));
       return 1;
@@ -141,16 +145,21 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
     }
     tools = selectedTools;
 
-    const selectedRemote = (await p.select({
-      message: t('init.prompt.remote'),
-      options: remoteAliases.map((alias) => ({ value: alias, label: alias })),
-      initialValue: existing?.remote,
-    })) as string;
-    if (p.isCancel(selectedRemote)) {
-      console.log(t('common.cancelled'));
-      return 1;
+    if (soleRemote) {
+      remote = soleRemote;
+      console.log(t('init.autoRemote', { alias: soleRemote }));
+    } else {
+      const selectedRemote = (await p.select({
+        message: t('init.prompt.remote'),
+        options: remoteAliases.map((alias) => ({ value: alias, label: alias })),
+        initialValue: existing?.remote,
+      })) as string;
+      if (p.isCancel(selectedRemote)) {
+        console.log(t('common.cancelled'));
+        return 1;
+      }
+      remote = selectedRemote;
     }
-    remote = selectedRemote;
   }
 
   const spinner = p.spinner();

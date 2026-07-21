@@ -36,7 +36,8 @@
     "e2e": "npm run build && node scripts/e2e-walkthrough.mjs",
     "doctor": "tsx src/cli.ts doctor",
     "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs"
+    "docs:build": "vitepress build docs",
+    "docs:check-links": "vitepress build docs && node scripts/check-doc-links.mjs"
   },
   "dependencies": {
     "@clack/prompts": "^0.9.1",

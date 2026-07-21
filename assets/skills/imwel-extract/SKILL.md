@@ -45,7 +45,8 @@ starting set of rules/skills tailored to their actual codebase — not generic b
    real code). If you are unsure, leave a `TODO(verify)` marker rather than inventing one.
 5. **Draft into an isolated folder**, following the Authoring standard below. Write drafts under
    `.imwel/drafts/` (create it if needed):
-   - Rules: `.imwel/drafts/rules/<slug>.md` — agents.md-flavored Markdown.
+   - Rules: `.imwel/drafts/rules/<slug>.md` — agents.md-flavored Markdown, with a small
+     frontmatter metadata overlay (see "Rule metadata" below). Keep the body plain Markdown.
    - Skills: `.imwel/drafts/skills/<slug>/SKILL.md` — with a triggerable frontmatter
      `description`. Put large or rarely-needed detail in linked `reference/*.md` files rather
      than in the SKILL.md body.
@@ -67,6 +68,16 @@ none:
 - **Short, focused rules with examples.** Each rule covers one concern and is actionable. Where
   a convention has a clear right/wrong form, include a **do / don't** pair, and state the
   non-obvious *why*. Prefer several small rules over one long, vague rule.
+- **Rule metadata (frontmatter overlay).** Each rule draft starts with a small YAML frontmatter
+  overlay so tools can trigger it reliably (without it, the rule degrades to a filename slug):
+  - `description` — always required; a precise, triggerable one-liner saying *when/why* the rule
+    applies (same bar as a skill description).
+  - Choose exactly one trigger intent:
+    - **always-on** — set `alwaysApply: true` (only for a rule that must always be active).
+    - **glob-attached** — set `globs: ["<path glob>"]` when the rule is specific to certain files.
+    - **agent-requested** — set neither `globs` nor `alwaysApply: true`; the model invokes it by
+      `description` alone.
+  - Keep metadata in frontmatter only; the rule body stays plain agents.md-flavored Markdown.
 - **Evidence over guesses.** Every rule traces to something you read. Mark anything uncertain
   with `TODO(verify)`; prefer fewer, well-grounded rules over many speculative ones.
 
@@ -74,6 +85,8 @@ none:
 
 - Does each skill draft have a precise, triggerable `description` and a concise body?
 - Is each rule short, single-concern, and (where applicable) accompanied by a do/don't example?
+- Does each rule have a precise `description`, and a correct trigger intent (path-specific rules
+  set `globs`; only truly always-on rules set `alwaysApply: true`)?
 - Is every rule backed by evidence you actually read, with guesses marked `TODO(verify)`?
 - Did you keep everything inside `.imwel/drafts/` and leave managed artifacts untouched?
 

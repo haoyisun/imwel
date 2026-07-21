@@ -2,49 +2,42 @@
 
 Git-native CLI for distributing AI coding rules, skills, and agent instructions — **no backend, no database, no hosted platform**.
 
-Template repositories are ordinary Git repos. imwel binds a local project directory to one project inside a remote template repo, renders Artifacts into tool-native formats (Cursor, Claude Code, …), detects drift with Git, and proposes upstream changes via branch + PR/MR.
+Template repositories are ordinary Git repos. imwel binds a local project directory to one project inside a remote template repo, renders Artifacts into tool-native formats (Cursor, Claude Code, …), detects drift with Git, and proposes upstream changes via branch + PR/MR. New to the terms? See the [Glossary](./concepts/glossary.md).
 
-## Quickstart
+## 30-second quickstart
 
 ```bash
-# 1. Scaffold (or clone) a template repository
-npx @culock/imwel@latest template init
-
-# 2. Register it as a remote (from any machine that will consume it)
-imwel remote add org-standards git@github.com:example/imwel-templates.git
-
-# 3. Bind a consumer project and install Artifacts
+# Consume a team's rules:
+imwel remote add git@github.com:example/imwel-templates.git   # alias derived from the URL
 cd your-project
-imwel init
-imwel sync
+imwel init && imwel sync
 ```
 
-Install from npm when you need a global binary: `npm install -g @culock/imwel` (the command stays `imwel`). See [CONTRIBUTING.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md) for local development and [SECURITY.md](https://github.com/haoyisun/imwel/blob/main/SECURITY.md) for reporting vulnerabilities.
+Install globally when you want a persistent binary: `npm install -g @culock/imwel` (the command stays `imwel`). Or run once with `npx @culock/imwel@latest <command>`.
 
-## Guides
+## Choose your path
 
-| Page | What you will learn |
-|------|---------------------|
-| [Architecture](./guide/architecture) | Git as the database, per-directory bindings, history repo, safety defaults |
-| [Manifest](./guide/manifest) | `.imwel/manifest.yaml` fields, conventions, optional Artifacts |
-| [Commands](./guide/commands) | Full CLI reference (`doctor`, `lint`, `init`, `sync`, `push`, …) |
-| [Example template](./guide/example-template) | Scaffold layout under `templates/init` and `imwel template init` |
-| [Template authoring](./template-authoring) | Author workflow: `/imwel-author`, `imwel lint`, host PR/MR |
+imwel has two distinct lifecycles. Pick the one that matches your role — each is an ordered, step-by-step track:
 
-## Contribute
+| I want to… | Start here |
+|------------|-----------|
+| **Use** a team's rules in my AI tools | [Consumer path → Install a template](./consume/quickstart.md) |
+| **Publish** rules for others to consume | [Author path → Author a template](./author/quickstart.md) |
 
-| Page | What you will learn |
-|------|---------------------|
-| [Adapters](./contribute/adapters) | How to add a render target via upstream PR (not a plugin system) |
+Prefer a single-screen overview first? See the [Quick walkthrough](./guide/usage.md) (both lanes, minimal commands).
 
-## Consumer notes
+## Reference & concepts
 
-- Non-interactive: `init` / `sync` / `push` / `propose` / `rollback` accept `-y` / `--yes`. Selection inputs need explicit flags. `--yes` never invents selections.
-- `IMWEL_FETCH_THROTTLE_MS` overrides the global passive fetch interval (default 4h). `sync` / `status` always force-refresh.
-- `imwel rollback` restores history and **deletes** managed files added after the restore point (never unmanaged files).
-- `imwel push` reverse-renders **every** bound tool that has installed paths.
+| Page | What you will find |
+|------|--------------------|
+| [Commands](./guide/commands.md) | Full CLI reference (`doctor`, `lint`, `init`, `sync`, `push`, …) |
+| [Manifest](./guide/manifest.md) | `.imwel/manifest.yaml` fields, conventions, rule metadata overlay |
+| [Architecture](./guide/architecture.md) | Git as the database, per-directory bindings, history repo, safety defaults |
+| [Glossary](./concepts/glossary.md) | Core terms: Template repo, Artifact, Binding, Adapter, Drift, … |
+| [Adapters](./contribute/adapters.md) | How to add a render target via upstream PR (not a plugin system) |
 
-## Related
+## Next
 
-- Repository [README](https://github.com/haoyisun/imwel)
-- [Contributing](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md)
+- New consumer? → [Install a template](./consume/quickstart.md)
+- New author? → [Author a template](./author/quickstart.md)
+- Repository [README](https://github.com/haoyisun/imwel) · [Contributing](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md) · [Security](https://github.com/haoyisun/imwel/blob/main/SECURITY.md)

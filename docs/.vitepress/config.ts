@@ -2,22 +2,98 @@ import { defineConfig } from 'vitepress';
 
 // English content lives under docs/en/ (VitePress locale key `en`).
 // Design calls this the canonical / "root" locale; zh-CN is parallel under docs/zh-CN/.
-const enGuide = [
-  { text: 'Usage guide', link: '/en/guide/usage' },
-  { text: 'Architecture', link: '/en/guide/architecture' },
-  { text: 'Manifest', link: '/en/guide/manifest' },
-  { text: 'Commands', link: '/en/guide/commands' },
-  { text: 'Example template', link: '/en/guide/example-template' },
-  { text: 'Template authoring', link: '/en/template-authoring' },
+// The sidebar is grouped by purpose + audience (Diátaxis-lite), not one flat list,
+// so prev/next follows a real learning path. en and zh-CN mirror each other.
+const enSidebar = [
+  {
+    text: 'Getting started',
+    items: [
+      { text: 'Overview', link: '/en/' },
+      { text: 'Install & prerequisites', link: '/en/getting-started/install' },
+      { text: 'Quick walkthrough', link: '/en/guide/usage' },
+    ],
+  },
+  {
+    text: 'Consumer path',
+    items: [
+      { text: '1. Install a template', link: '/en/consume/quickstart' },
+      { text: '2. Sync, drift & rollback', link: '/en/consume/sync-and-drift' },
+      { text: '3. Contribute changes back', link: '/en/consume/contribute-back' },
+    ],
+  },
+  {
+    text: 'Author path',
+    items: [
+      { text: '1. Author a template', link: '/en/author/quickstart' },
+      { text: '2. Lint & quality bar', link: '/en/author/lint' },
+      { text: '3. Publish & maintain', link: '/en/author/publish' },
+      { text: 'Draft rules from your codebase', link: '/en/author/from-codebase' },
+    ],
+  },
+  {
+    text: 'Reference',
+    items: [
+      { text: 'Commands', link: '/en/guide/commands' },
+      { text: 'Manifest', link: '/en/guide/manifest' },
+    ],
+  },
+  {
+    text: 'Concepts',
+    items: [
+      { text: 'Architecture', link: '/en/guide/architecture' },
+      { text: 'Glossary', link: '/en/concepts/glossary' },
+    ],
+  },
+  {
+    text: 'Contribute',
+    items: [{ text: 'Adapters', link: '/en/contribute/adapters' }],
+  },
 ];
 
-const zhGuide = [
-  { text: '使用说明', link: '/zh-CN/guide/usage' },
-  { text: '架构', link: '/zh-CN/guide/architecture' },
-  { text: 'Manifest', link: '/zh-CN/guide/manifest' },
-  { text: '命令', link: '/zh-CN/guide/commands' },
-  { text: '示例模板', link: '/zh-CN/guide/example-template' },
-  { text: '模板编写', link: '/zh-CN/template-authoring' },
+const zhSidebar = [
+  {
+    text: '快速上手',
+    items: [
+      { text: '概览', link: '/zh-CN/' },
+      { text: '安装与前置', link: '/zh-CN/getting-started/install' },
+      { text: '快速走查', link: '/zh-CN/guide/usage' },
+    ],
+  },
+  {
+    text: '消费者路径',
+    items: [
+      { text: '1. 安装模板', link: '/zh-CN/consume/quickstart' },
+      { text: '2. 同步、漂移与回滚', link: '/zh-CN/consume/sync-and-drift' },
+      { text: '3. 回馈上游', link: '/zh-CN/consume/contribute-back' },
+    ],
+  },
+  {
+    text: '作者路径',
+    items: [
+      { text: '1. 编写模板', link: '/zh-CN/author/quickstart' },
+      { text: '2. Lint 与质量条', link: '/zh-CN/author/lint' },
+      { text: '3. 发布与维护', link: '/zh-CN/author/publish' },
+      { text: '从代码库起草规则', link: '/zh-CN/author/from-codebase' },
+    ],
+  },
+  {
+    text: '参考',
+    items: [
+      { text: '命令', link: '/zh-CN/guide/commands' },
+      { text: 'Manifest', link: '/zh-CN/guide/manifest' },
+    ],
+  },
+  {
+    text: '概念',
+    items: [
+      { text: '架构', link: '/zh-CN/guide/architecture' },
+      { text: '术语词表', link: '/zh-CN/concepts/glossary' },
+    ],
+  },
+  {
+    text: '贡献',
+    items: [{ text: '适配器', link: '/zh-CN/contribute/adapters' }],
+  },
 ];
 
 export default defineConfig({
@@ -41,13 +117,7 @@ export default defineConfig({
           },
         ],
         sidebar: {
-          '/en/': [
-            { text: 'Guide', items: enGuide },
-            {
-              text: 'Contribute',
-              items: [{ text: 'Adapters', link: '/en/contribute/adapters' }],
-            },
-          ],
+          '/en/': enSidebar,
         },
         socialLinks: [{ icon: 'github', link: 'https://github.com/haoyisun/imwel' }],
         editLink: {
@@ -71,13 +141,7 @@ export default defineConfig({
           },
         ],
         sidebar: {
-          '/zh-CN/': [
-            { text: '指南', items: zhGuide },
-            {
-              text: '贡献',
-              items: [{ text: '适配器', link: '/zh-CN/contribute/adapters' }],
-            },
-          ],
+          '/zh-CN/': zhSidebar,
         },
         socialLinks: [{ icon: 'github', link: 'https://github.com/haoyisun/imwel' }],
         editLink: {

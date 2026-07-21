@@ -122,7 +122,8 @@ Shared-path writes (e.g. several tools → `AGENTS.md`) are **deduped** when con
 
 Prefer shared helpers under `src/adapters/strategies/` for new frontmatter / single-md / skill mappings instead of copying an entire adapter.
 
-## Related
+## Next
 
-- [Architecture](../guide/architecture) — where adapters sit in the pipeline
+- Where adapters sit in the pipeline → [Architecture](../guide/architecture.md)
+- Core terms → [Glossary](../concepts/glossary.md)
 - Built-in implementations: `src/adapters/cursor.ts`, `src/adapters/claude-code.ts`, `src/adapters/extra-adapters.ts`

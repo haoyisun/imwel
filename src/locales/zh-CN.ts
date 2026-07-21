@@ -43,6 +43,9 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'remote.add.usage': '添加模板仓库远程源',
   'remote.add.success': '已添加远程 "{alias}" → {url}',
   'remote.add.exists': '远程别名已存在：{alias}',
+  'remote.add.derivedAlias': '使用本地别名“{alias}”（由 URL 推导；可用 --as 覆盖）。',
+  'remote.add.needUrl':
+    '请提供仓库 URL：`imwel remote add <url>`（自动推导别名）或 `imwel remote add <alias> <url>`。',
   'remote.list.title': '已配置的远程：',
   'remote.list.empty': '尚未配置远程。请运行 `imwel remote add`。',
   'remote.list.entry': '{alias}：{url}（分支：{branch}，directPush：{directPush}）',
@@ -76,6 +79,7 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'init.prompt.syncNow': '重新绑定后立即同步？',
   'init.success': '已初始化项目 "{project}"（分支 "{branch}"）的绑定。',
   'init.noRemotes': '尚未配置远程。请先运行 `imwel remote add`。',
+  'init.autoRemote': '已自动选用唯一配置的远程：{alias}',
   'init.noTools': '未检测到或未选择支持的工具。',
   'init.fetching': '正在获取远程 "{alias}"...',
   'init.unknownTools': '未知工具 id：{tools}。支持：{supported}。',

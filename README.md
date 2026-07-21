@@ -10,9 +10,9 @@ New here? Read the end-to-end [Usage guide](docs/en/guide/usage.md) (or the [com
 
 ```bash
 npx @culock/imwel@latest template init
-imwel remote add org-standards git@github.com:example/imwel-templates.git
+imwel remote add git@github.com:example/imwel-templates.git   # alias derived from the URL
 cd your-project
-imwel init
+imwel init                                                    # single remote is auto-selected
 imwel sync
 ```
 
@@ -95,11 +95,14 @@ npm run docs:build
 
 | Guide | Path |
 |-------|------|
-| Architecture | [docs/en/guide/architecture.md](docs/en/guide/architecture.md) |
-| Manifest | [docs/en/guide/manifest.md](docs/en/guide/manifest.md) |
+| Overview & choose your path | [docs/en/index.md](docs/en/index.md) |
+| Quick walkthrough (both lanes) | [docs/en/guide/usage.md](docs/en/guide/usage.md) |
+| Consumer path (install a template) | [docs/en/consume/quickstart.md](docs/en/consume/quickstart.md) |
+| Author path (author a template) | [docs/en/author/quickstart.md](docs/en/author/quickstart.md) |
 | Commands | [docs/en/guide/commands.md](docs/en/guide/commands.md) |
-| Example template | [docs/en/guide/example-template.md](docs/en/guide/example-template.md) |
-| Template authoring | [docs/en/template-authoring.md](docs/en/template-authoring.md) |
+| Manifest | [docs/en/guide/manifest.md](docs/en/guide/manifest.md) |
+| Architecture | [docs/en/guide/architecture.md](docs/en/guide/architecture.md) |
+| Glossary | [docs/en/concepts/glossary.md](docs/en/concepts/glossary.md) |
 | Adapters (contribute) | [docs/en/contribute/adapters.md](docs/en/contribute/adapters.md) |
 
 简体中文：平行路径见 [`docs/zh-CN/`](docs/zh-CN/)。

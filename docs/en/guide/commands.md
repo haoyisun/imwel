@@ -35,21 +35,25 @@ Validates a **template** repository (expects `.imwel/manifest.yaml`, not a consu
 
 > Template-side lint only flags **empty/placeholder** rules. Orphan-reference and dead-import checks are skipped here because template rules reference the *consumer's* files (absent in the template repo); those run consumer-side in `imwel status`.
 
-In a consumer binding, the CLI directs you to the template repo instead of reporting a fake clean result. See [Template authoring](../template-authoring).
+In a consumer binding, the CLI directs you to the template repo instead of reporting a fake clean result. See [Lint & quality bar](../author/lint.md).
 
 ## `imwel remote`
 
 | Subcommand | Description |
 |------------|-------------|
-| `add <alias> <url>` | Register a template remote |
+| `add <url>` | Register a template remote; the local alias is derived from the URL |
+| `add <alias> <url>` | Register a template remote with an explicit alias (backward-compatible) |
 | `list` | List remotes |
 | `remove <alias>` | Remove a remote (`-y` / `--yes` skips confirmation) |
 | `set <alias>` | Update remote options |
 
 | Flag | Description |
 |------|-------------|
+| `--as <alias>` (on `add`) | Override the alias derived from the URL (single-URL form) |
 | `--direct-push` (on `add`) | Allow direct push to the bound branch (opt-in; not the default) |
 | `--direct-push [value]` (on `set`) | Enable or disable direct push |
+
+When you pass only a URL, imwel derives the alias from the repo name (falling back to `owner-repo`, then a numeric suffix on collision) and prints the chosen alias.
 
 Default upstream path remains **branch + PR/MR**.
 
@@ -61,7 +65,7 @@ Scaffolds a new template repository (manifest, example project, author `AGENTS.m
 |------|-------------|
 | `--dir <path>` | Target directory |
 | `--locale <locale>` | Scaffold locale (`en`, `zh-CN`, …) |
-| `--name <name>` | Repository name |
+| `--name <name>` | Repository name (defaults to the directory name; only asked interactively when you opt into creating a remote repo) |
 | `-y` / `--yes` | Skip confirmation prompts (non-interactive defaults) |
 
 ## `imwel adopt`
@@ -121,7 +125,7 @@ Binds the current directory to one project inside one remote template repository
 |------|-------------|
 | `-y` / `--yes` | Skip confirmation prompts (**does not** invent selections) |
 | `--tools <csv>` | Comma-separated target tool ids (e.g. `cursor,claude-code,codex,trae`) |
-| `--remote <alias>` | Remote alias |
+| `--remote <alias>` | Remote alias (auto-selected when only one remote is configured, so it can be omitted) |
 | `--branch <name>` | Branch name |
 | `--project <name>` | Manifest project name |
 | `--optional <csv>` | Optional Artifact source paths to install |
@@ -205,8 +209,9 @@ imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
 |----------|-------------|
 | `IMWEL_FETCH_THROTTLE_MS` | Override global passive fetch throttle (default 4h). Invalid values fall back to default. Per-remote throttle is not supported. `sync` / `status` always force-refresh. |
 
-## Related
+## Next
 
-- [Architecture](./architecture) — safety defaults and Git model
-- [CONTRIBUTING.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md) — developing the CLI itself
-- npm publish / release notes — see repository README and GitHub Releases when publishing
+- Consumer workflow → [Install a template](../consume/quickstart.md)
+- Author workflow → [Author a template](../author/quickstart.md)
+- Safety defaults and Git model → [Architecture](./architecture.md)
+- Developing the CLI itself → [CONTRIBUTING.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md)

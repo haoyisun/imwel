@@ -282,7 +282,9 @@ async function lintRules(
   const files: { path: string; content: string }[] = [];
   for (const entry of mdFiles) {
     const rel = path.posix.join(conventions.rulesDir, entry.name);
-    files.push({ path: rel, content: await fs.readFile(path.join(rulesDir, entry.name), 'utf8') });
+    const content = await fs.readFile(path.join(rulesDir, entry.name), 'utf8');
+    files.push({ path: rel, content });
+    lintRuleDescription(content, rel, issues);
   }
   for (const issue of checkRuleHealth(files, () => true)) {
     issues.push({
@@ -290,6 +292,37 @@ async function lintRules(
       code: issue.code,
       message: `Rule has no meaningful content (empty or placeholder-only): ${issue.path}`,
       path: issue.path,
+    });
+  }
+}
+
+/**
+ * Rules carry an optional frontmatter overlay (description/globs/alwaysApply).
+ * A missing or non-triggerable description degrades to a filename slug when
+ * rendered to tools, so warn (parity with the skill description check). Warnings
+ * only; empty/placeholder rules are covered separately by `rule.empty`.
+ */
+function lintRuleDescription(content: string, ruleRel: string, issues: LintIssue[]): void {
+  const { frontmatter } = parseFrontmatter(content);
+  const description =
+    typeof frontmatter.description === 'string' ? frontmatter.description.trim() : '';
+
+  if (!description) {
+    issues.push({
+      severity: 'warning',
+      code: 'rule.descriptionMissing',
+      message: `Rule should declare a YAML frontmatter description so tools can trigger it reliably (otherwise it degrades to the filename): ${ruleRel}`,
+      path: ruleRel,
+    });
+    return;
+  }
+
+  if (!looksTriggerable(description)) {
+    issues.push({
+      severity: 'warning',
+      code: 'rule.descriptionNotTriggerable',
+      message: `Rule description should say when it applies (e.g. include "use when" / "when working on"): ${ruleRel}`,
+      path: ruleRel,
     });
   }
 }

@@ -42,6 +42,9 @@ export const en = {
   'remote.add.usage': 'Add a template repository remote',
   'remote.add.success': 'Added remote "{alias}" → {url}',
   'remote.add.exists': 'Remote alias already exists: {alias}',
+  'remote.add.derivedAlias': 'Using local alias "{alias}" (derived from the URL; override with --as).',
+  'remote.add.needUrl':
+    'Provide a repository URL: `imwel remote add <url>` (alias derived) or `imwel remote add <alias> <url>`.',
   'remote.list.title': 'Configured remotes:',
   'remote.list.empty': 'No remotes configured. Run `imwel remote add`.',
   'remote.list.entry': '{alias}: {url} (branch: {branch}, directPush: {directPush})',
@@ -75,6 +78,7 @@ export const en = {
   'init.prompt.syncNow': 'Sync now after rebind?',
   'init.success': 'Initialized binding for project "{project}" on branch "{branch}".',
   'init.noRemotes': 'No remotes configured. Run `imwel remote add` first.',
+  'init.autoRemote': 'Using the only configured remote: {alias}',
   'init.noTools': 'No supported tools detected or selected.',
   'init.fetching': 'Fetching remote "{alias}"...',
   'init.unknownTools': 'Unknown tool id(s): {tools}. Supported: {supported}.',

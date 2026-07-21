@@ -33,19 +33,28 @@ export function renderArtifacts(
   for (const artifact of artifacts) {
     const installedPaths: Record<string, string[]> = {};
     const targetOverrides: Record<string, Record<string, unknown>> = {};
+    // Author-declared overlay (from the artifact's frontmatter) is the cross-tool
+    // default; a consumer's per-tool override takes precedence over it. Only the
+    // consumer override is recorded in the binding so future author-default
+    // changes keep propagating on re-sync.
+    const authorDefault = artifact.targetOverrides as Record<string, unknown> | undefined;
     for (const tool of tools) {
       const adapter = getAdapter(tool);
       if (!adapter) {
         continue;
       }
-      const overrides = existingOverrides?.get(artifact.sourcePath)?.[tool];
-      const rendered = adapter.render(artifact, overrides);
+      const consumerOverride = existingOverrides?.get(artifact.sourcePath)?.[tool];
+      const renderOverrides =
+        authorDefault || consumerOverride
+          ? { ...(authorDefault ?? {}), ...(consumerOverride ?? {}) }
+          : undefined;
+      const rendered = adapter.render(artifact, renderOverrides);
       for (const file of rendered) {
         rawFiles.push({ ...file, sourceAdapterId: tool });
         installedPaths[tool] = [...(installedPaths[tool] ?? []), file.path];
       }
-      if (overrides) {
-        targetOverrides[tool] = overrides;
+      if (consumerOverride) {
+        targetOverrides[tool] = consumerOverride;
       }
     }
     managed.push({

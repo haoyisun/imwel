@@ -41,7 +41,14 @@ projects:
   await writeFile(path.join(dir, 'README.md'), '# Template\n');
   await writeFile(
     path.join(dir, 'example-project', 'rules', 'example-rule.md'),
-    '# Rule\n',
+    `---
+description: Use when editing example-project files to follow the template conventions.
+---
+
+# Rule
+
+Body content.
+`,
   );
   await writeFile(
     path.join(dir, 'example-project', 'skills', 'example-skill', 'SKILL.md'),
@@ -130,6 +137,39 @@ description: A short bland label that never says the trigger condition at all.
     assert.equal(result.issues.filter((i) => i.severity === 'error').length, 0);
     assert.equal(lintExitCode(result, false), 0);
     assert.equal(lintExitCode(result, true), 1);
+  });
+
+  it('warns when a rule has no frontmatter description', async () => {
+    const dir = path.join(root, 'rule-no-desc');
+    await scaffoldCleanTemplate(dir);
+    await writeFile(
+      path.join(dir, 'example-project', 'rules', 'example-rule.md'),
+      '# Rule\n\nBody without any frontmatter description.\n',
+    );
+    const result = await lintTemplateRepo(dir);
+    assert.ok(result.issues.some((i) => i.code === 'rule.descriptionMissing'));
+    assert.equal(result.issues.filter((i) => i.severity === 'error').length, 0);
+    assert.equal(lintExitCode(result, false), 0);
+    assert.equal(lintExitCode(result, true), 1);
+  });
+
+  it('warns when a rule description is not triggerable', async () => {
+    const dir = path.join(root, 'rule-bland-desc');
+    await scaffoldCleanTemplate(dir);
+    await writeFile(
+      path.join(dir, 'example-project', 'rules', 'example-rule.md'),
+      '---\ndescription: A bland label with no trigger condition stated here.\n---\n\n# Rule\n\nBody.\n',
+    );
+    const result = await lintTemplateRepo(dir);
+    assert.ok(result.issues.some((i) => i.code === 'rule.descriptionNotTriggerable'));
+    assert.ok(!result.issues.some((i) => i.code === 'rule.descriptionMissing'));
+  });
+
+  it('does not warn on a rule with a triggerable description', async () => {
+    const dir = path.join(root, 'rule-good-desc');
+    await scaffoldCleanTemplate(dir);
+    const result = await lintTemplateRepo(dir);
+    assert.ok(!result.issues.some((i) => i.code.startsWith('rule.description')));
   });
 
   it('errors on path escape in project path', async () => {

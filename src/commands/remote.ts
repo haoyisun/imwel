@@ -5,16 +5,55 @@ import { addRemote, getRemote, listRemotes, removeRemote, setRemote } from '../c
 import { remoteCacheDir } from '../core/paths.js';
 import { ensureRemoteCache } from '../core/remote-cache.js';
 import { listBoundDirectories } from '../core/binding-registry.js';
+import { deriveRemoteAlias, looksLikeUrl } from '../core/remote-alias.js';
 import { t } from '../locales/index.js';
 
-export async function runRemoteAdd(
-  alias: string,
-  url: string,
-  directPush = false,
-): Promise<number> {
+export interface RemoteAddInput {
+  /** First positional argument: a URL (single-arg form) or an alias (two-arg form). */
+  urlOrAlias: string;
+  /** Second positional argument: the URL, when the alias-first form is used. */
+  url?: string;
+  /** Explicit alias override (`--as`). */
+  as?: string;
+  directPush?: boolean;
+}
+
+/**
+ * Resolve `remote add` arguments into a concrete (alias, url). Supports:
+ * - `add <alias> <url>` — backward-compatible alias-first form.
+ * - `add <url>` — single URL; alias is derived (or taken from `--as`).
+ */
+export async function resolveRemoteAddArgs(
+  input: RemoteAddInput,
+): Promise<{ alias: string; url: string } | { error: string }> {
+  if (input.url !== undefined) {
+    return { alias: input.as ?? input.urlOrAlias, url: input.url };
+  }
+  if (!looksLikeUrl(input.urlOrAlias)) {
+    return { error: t('remote.add.needUrl') };
+  }
+  const url = input.urlOrAlias;
+  if (input.as) {
+    return { alias: input.as, url };
+  }
+  const existing = Object.keys(await listRemotes());
+  return { alias: deriveRemoteAlias(url, existing), url };
+}
+
+export async function runRemoteAdd(input: RemoteAddInput): Promise<number> {
+  const resolved = await resolveRemoteAddArgs(input);
+  if ('error' in resolved) {
+    console.error(resolved.error);
+    return 1;
+  }
+  const { alias, url } = resolved;
+  const derived = input.url === undefined && !input.as;
   try {
-    await addRemote(alias, { url, directPush, defaultBranch: 'main' });
+    await addRemote(alias, { url, directPush: Boolean(input.directPush), defaultBranch: 'main' });
     await ensureRemoteCache(alias, { force: true });
+    if (derived) {
+      console.log(t('remote.add.derivedAlias', { alias }));
+    }
     console.log(t('remote.add.success', { alias, url }));
     return 0;
   } catch (error) {
@@ -93,13 +132,19 @@ export async function runRemoteInteractive(subcommand?: string): Promise<number>
     return runRemoteList();
   }
   if (subcommand === 'add') {
-    const alias = await p.text({ message: t('remote.prompt.alias') });
-    if (p.isCancel(alias)) {
+    const url = await p.text({ message: t('remote.prompt.url') });
+    if (p.isCancel(url)) {
       console.log(t('common.cancelled'));
       return 1;
     }
-    const url = await p.text({ message: t('remote.prompt.url') });
-    if (p.isCancel(url)) {
+    const existing = Object.keys(await listRemotes());
+    const suggested = deriveRemoteAlias(String(url), existing);
+    const alias = await p.text({
+      message: t('remote.prompt.alias'),
+      defaultValue: suggested,
+      placeholder: suggested,
+    });
+    if (p.isCancel(alias)) {
       console.log(t('common.cancelled'));
       return 1;
     }
@@ -108,7 +153,11 @@ export async function runRemoteInteractive(subcommand?: string): Promise<number>
       console.log(t('common.cancelled'));
       return 1;
     }
-    return runRemoteAdd(String(alias), String(url), Boolean(direct));
+    return runRemoteAdd({
+      urlOrAlias: String(alias || suggested),
+      url: String(url),
+      directPush: Boolean(direct),
+    });
   }
   console.error(t('common.error', { message: `Unknown remote subcommand: ${subcommand}` }));
   return 1;

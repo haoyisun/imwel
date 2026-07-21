@@ -35,21 +35,25 @@
 
 > 模板侧 lint 只检测**空壳/占位**规则；孤儿引用、死链 import 在此跳过——模板规则引用的是**消费项目**的文件（模板仓中不存在），这两类检查在消费侧 `imwel status` 运行。
 
-在消费侧 binding 目录中，CLI 会引导你到模板仓，而不是假装检查通过。见 [模板编写](../template-authoring)。
+在消费侧 binding 目录中，CLI 会引导你到模板仓，而不是假装检查通过。见 [Lint 与质量条](../author/lint.md)。
 
 ## `imwel remote`
 
 | 子命令 | 说明 |
 |--------|------|
-| `add <alias> <url>` | 注册模板远程 |
+| `add <url>` | 注册模板远程；本地别名由 URL 推导 |
+| `add <alias> <url>` | 以显式别名注册模板远程（向后兼容） |
 | `list` | 列出远程 |
 | `remove <alias>` | 移除远程（`-y` / `--yes` 跳过确认） |
 | `set <alias>` | 更新远程选项 |
 
 | 选项 | 说明 |
 |------|------|
+| `--as <alias>`（`add`） | 覆盖由 URL 推导的别名（单 URL 形式） |
 | `--direct-push`（`add`） | 允许直推绑定分支（opt-in；非默认） |
 | `--direct-push [value]`（`set`） | 启用或关闭直推 |
+
+仅传 URL 时，imwel 会以仓库名推导别名（冲突时回退为 `owner-repo`，再退化为数字后缀），并打印所选别名。
 
 默认上游路径仍是 **分支 + PR/MR**。
 
@@ -61,7 +65,7 @@
 |------|------|
 | `--dir <path>` | 目标目录 |
 | `--locale <locale>` | 脚手架语言（`en`、`zh-CN` 等） |
-| `--name <name>` | 仓库名 |
+| `--name <name>` | 仓库名（默认取目录名；仅当你选择创建远程仓时才交互询问） |
 | `-y` / `--yes` | 跳过确认（非交互默认） |
 
 ## `imwel adopt`
@@ -121,7 +125,7 @@
 |------|------|
 | `-y` / `--yes` | 跳过确认（**不会**自动填选择） |
 | `--tools <csv>` | 逗号分隔的工具 id（如 `cursor,claude-code,codex,trae`） |
-| `--remote <alias>` | 远程别名 |
+| `--remote <alias>` | 远程别名（仅配置一个远程时自动选用，可省略） |
 | `--branch <name>` | 分支名 |
 | `--project <name>` | manifest project 名 |
 | `--optional <csv>` | 要安装的 optional Artifact 源路径 |
@@ -205,8 +209,9 @@ imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
 |------|------|
 | `IMWEL_FETCH_THROTTLE_MS` | 覆盖全局被动 fetch 节流（默认 4 小时）。非法值回退默认。尚不支持按远程独立节流。`sync` / `status` 始终强制刷新。 |
 
-## 相关
+## 下一步
 
-- [架构](./architecture) — 安全默认与 Git 模型
-- [CONTRIBUTING.zh-CN.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.zh-CN.md) — 开发 CLI 本身
-- npm 发布说明 — 见仓库 README 与 GitHub Releases
+- 消费者工作流 → [安装模板](../consume/quickstart.md)
+- 作者工作流 → [编写模板](../author/quickstart.md)
+- 安全默认与 Git 模型 → [架构](./architecture.md)
+- 开发 CLI 本身 → [CONTRIBUTING.zh-CN.md](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.zh-CN.md)

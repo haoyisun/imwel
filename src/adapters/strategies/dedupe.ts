@@ -5,6 +5,8 @@ export interface PathConflict {
   /** Grouping key (path or path#blockId). */
   key: string;
   adapterIds: string[];
+  /** Distinct source projects contributing to the conflict (cross-source). */
+  projects: string[];
 }
 
 export interface DedupedRenderFiles {
@@ -20,6 +22,7 @@ interface TrackedFile {
   blockId?: string;
   warningLocaleKey?: string;
   sourceAdapterId: string;
+  sourceProject?: string;
 }
 
 function groupKey(file: RenderedFileWrite): string {
@@ -53,6 +56,7 @@ export function dedupeRenderedFiles(
       blockId: file.blockId,
       warningLocaleKey: file.warningLocaleKey,
       sourceAdapterId: file.sourceAdapterId ?? 'unknown',
+      sourceProject: file.sourceProject,
     };
     const list = groups.get(key) ?? [];
     list.push(tracked);
@@ -79,6 +83,7 @@ export function dedupeRenderedFiles(
       path: first.path,
       key,
       adapterIds: [...new Set(group.map((f) => f.sourceAdapterId))],
+      projects: [...new Set(group.map((f) => f.sourceProject).filter((x): x is string => Boolean(x)))],
     });
   }
 

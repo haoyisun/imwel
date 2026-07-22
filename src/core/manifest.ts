@@ -15,11 +15,25 @@ export interface ManifestConventions {
   agentsFile: string;
 }
 
+export type ProjectRole = 'shared' | 'project';
+
 export interface ManifestProject {
   name: string;
   path: string;
+  /**
+   * Default consumption mode declared by the author:
+   * - `shared`: a reusable, read-only module (consumers subscribe, pull-only).
+   * - `project`: a writable project space consumers can bind and contribute back to.
+   * Missing role is treated as `project` for backward compatibility.
+   */
+  role?: ProjectRole;
   optional?: string[];
   conventions?: Partial<ManifestConventions>;
+}
+
+/** Effective role for a project entry (defaults to `project`). */
+export function projectRole(project: ManifestProject): ProjectRole {
+  return project.role ?? 'project';
 }
 
 export interface Manifest {
@@ -57,9 +71,15 @@ export function validateManifest(raw: Partial<Manifest> | null): Manifest {
     if (!project?.name || !project.path) {
       throw new ManifestError(`Project at index ${index} must have name and path`);
     }
+    if (project.role !== undefined && project.role !== 'shared' && project.role !== 'project') {
+      throw new ManifestError(
+        `Project "${project.name}" has invalid role "${project.role}" (expected "shared" or "project")`,
+      );
+    }
     return {
       name: project.name,
       path: project.path.replace(/\\/g, '/'),
+      role: project.role,
       optional: project.optional?.map((p) => p.replace(/\\/g, '/')),
       conventions: project.conventions,
     };

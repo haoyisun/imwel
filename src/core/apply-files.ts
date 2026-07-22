@@ -11,6 +11,8 @@ export interface RenderedFileWrite {
   blockId?: string;
   warningLocaleKey?: string;
   sourceAdapterId?: string;
+  /** Manifest project this file was rendered from (for cross-source conflicts). */
+  sourceProject?: string;
 }
 
 function ensureYamlListItem(existing: string, key: string, item: string): string {

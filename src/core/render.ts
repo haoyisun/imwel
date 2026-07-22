@@ -50,7 +50,7 @@ export function renderArtifacts(
           : undefined;
       const rendered = adapter.render(artifact, renderOverrides);
       for (const file of rendered) {
-        rawFiles.push({ ...file, sourceAdapterId: tool });
+        rawFiles.push({ ...file, sourceAdapterId: tool, sourceProject: artifact.project });
         installedPaths[tool] = [...(installedPaths[tool] ?? []), file.path];
       }
       if (consumerOverride) {
@@ -59,6 +59,7 @@ export function renderArtifacts(
     }
     managed.push({
       sourcePath: artifact.sourcePath,
+      project: artifact.project ?? '',
       type: artifact.type,
       optional: artifact.optional,
       localEdit: false,

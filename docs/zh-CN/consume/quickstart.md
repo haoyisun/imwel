@@ -21,18 +21,37 @@ imwel remote add org-standards git@github.com:example/imwel-templates.git
 
 全部子命令见 [`imwel remote`](../guide/commands.md#imwel-remote)。
 
+你可以注册**多个**远程（例如一个公司级标准仓、一个团队仓）；每次 `imwel remote add` 只是再加一个别名。但一个绑定只指向一个远程 —— 由 `imwel init` 选定。
+
 ## 2. 绑定项目并安装 Artifact
 
 ```bash
 cd your-project
-imwel init            # 交互式选择工具、branch、project
+imwel init            # 交互式选择工具、branch、只读模块 + 可写项目
 ```
 
 若只配置了一个远程,`imwel init` 会自动选用它（无需 `--remote`）；配置多个时交互选择或传 `--remote <alias>`。
 
-`imwel init` 会把所选 project 的 Artifact 渲染到每个所选工具的原生位置（见[适配器](../contribute/adapters.md)）,记录[绑定](../concepts/glossary.md),并在 `.imwel/history/` 下创建隐藏历史仓。
+一个绑定可从远程安装两类内容：
 
-CI / 非交互场景请显式传选择 flag —— 见[非交互 / CI](../guide/commands.md#非交互-ci)。
+- **只读模块**（`role: shared`）—— 可复用的标准（如 Python 或 Vue 3 包），你安装并保持同步，但不回推改动。可安装任意数量。
+- **一个可写项目**（`role: project`）—— 你自己项目的 Artifact，可编辑并用 `imwel push` 回推。每个目录至多一个。
+
+选择使用切换列表（空格勾选/取消），应用前会展示新增/移除 diff 并要求二次确认。`imwel init` 会把所选 Artifact 渲染到每个所选工具的原生位置（见[适配器](../contribute/adapters.md)）,记录[绑定](../concepts/glossary.md),并在 `.imwel/history/` 下创建隐藏历史仓。
+
+CI / 非交互场景请显式传选择 flag（`--module`、`--project`）—— 见[非交互 / CI](../guide/commands.md#非交互-ci)。
+
+## 3. 之后调整模块
+
+无需整目录换绑即可增删/冻结模块：
+
+```bash
+imwel modules         # 切换已装/可装模块，查看 diff，确认
+```
+
+移除模块会删除其渲染文件。若你手工改过某模块的文件，`imwel sync` 不会静默覆盖 —— 它会让你选择**丢弃**、**冻结**（保留副本、停止同步）或**卸载**该模块。
+
+> **换绑是整体覆盖。** 在已绑定目录上重跑 `imwel init` 会替换整套选择（工具、模块、可写项目），对既有 Artifact 的本地修改会被覆盖。请先推送你想保留的内容（`imwel push` / `imwel propose`），或改用 `imwel modules` 做增量模块调整。
 
 ## 下一步
 

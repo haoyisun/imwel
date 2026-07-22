@@ -1,7 +1,8 @@
 import * as p from '@clack/prompts';
 import { adapters } from '../adapters/index.js';
 import { discoverArtifacts } from '../core/artifacts.js';
-import { readBinding, writeBinding } from '../core/binding.js';
+import type { Artifact } from '../core/artifact-types.js';
+import { readBinding, writeBinding, writableProjectName, type BoundProject } from '../core/binding.js';
 import { applyRenderedFiles } from '../core/apply-files.js';
 import { listRemotes } from '../core/config.js';
 import {
@@ -10,9 +11,10 @@ import {
   parseCsv,
 } from '../core/cli-flags.js';
 import { ensureHistoryRepo, commitInstalledFiles } from '../core/history.js';
-import { readManifest } from '../core/manifest.js';
+import { readManifest, resolveConventions, projectRole } from '../core/manifest.js';
 import { branchCommit, checkoutBranch, ensureRemoteCache, listBranches } from '../core/remote-cache.js';
 import { renderArtifacts } from '../core/render.js';
+import { selectWithDiffConfirm } from '../core/select-diff.js';
 import { runSync } from './sync.js';
 import { t } from '../locales/index.js';
 
@@ -21,7 +23,10 @@ export interface InitOptions {
   tools?: string;
   remote?: string;
   branch?: string;
+  /** Writable project (role: project); at most one. */
   project?: string;
+  /** CSV of read-only modules (role: shared) to subscribe to. */
+  module?: string;
   /** CSV of optional source paths, or `false` when `--no-optional` is set. */
   optional?: string | false;
 }
@@ -32,6 +37,7 @@ function hasSelectionFlags(opts: InitOptions): boolean {
       opts.remote ||
       opts.branch ||
       opts.project ||
+      opts.module ||
       opts.optional !== undefined,
   );
 }
@@ -51,8 +57,6 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
     console.error(t('init.noRemotes'));
     return 1;
   }
-  // When exactly one remote is configured, select it by default so callers
-  // don't have to pass --remote (or pick from a one-item list).
   const soleRemote = remoteAliases.length === 1 ? remoteAliases[0] : undefined;
   const effectiveRemote = opts.remote ?? soleRemote;
 
@@ -65,7 +69,6 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
       '--tools': opts.tools,
       '--remote': effectiveRemote,
       '--branch': opts.branch,
-      '--project': opts.project,
       ...optionalStrategyMissing,
     });
     if (missing !== null) {
@@ -77,7 +80,10 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   let rebind = false;
   if (existing) {
     console.log(
-      t('init.alreadyBound', { remote: existing.remote, project: existing.project }),
+      t('init.alreadyBound', {
+        remote: existing.remote,
+        project: existing.projects.map((p2) => p2.name).join(', '),
+      }),
     );
     if (opts.yes) {
       rebind = true;
@@ -97,8 +103,12 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   let tools: string[] = [];
   let remote = '';
   let branch = '';
-  let project = '';
+  let moduleNames: string[] = [];
+  let writableName: string | undefined;
   let optionalSet = new Set<string>();
+
+  const existingModules = existing?.projects.filter((p2) => p2.mode === 'subscribed').map((p2) => p2.name) ?? [];
+  const existingWritable = existing ? writableProjectName(existing) : undefined;
 
   if (nonInteractive) {
     tools = parseCsv(opts.tools);
@@ -119,7 +129,13 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
       return 1;
     }
     branch = opts.branch!;
-    project = opts.project!;
+    moduleNames = parseCsv(opts.module);
+    const writableList = parseCsv(opts.project);
+    if (writableList.length > 1) {
+      console.error(t('init.tooManyWritable', { projects: writableList.join(', ') }));
+      return 1;
+    }
+    writableName = writableList[0];
     if (opts.optional !== false) {
       optionalSet = new Set(parseCsv(opts.optional as string));
     }
@@ -131,19 +147,17 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
         detected: await adapter.detect(projectDir),
       })),
     );
-    const selectedTools = (await p.multiselect({
+    const toolResult = await selectWithDiffConfirm({
       message: t('init.prompt.tools'),
-      options: detected.map((d) => ({
-        value: d.value,
-        label: d.label + (d.detected ? '' : ''),
-      })),
+      items: detected.map((d) => ({ value: d.value, label: d.label })),
+      installed: existing?.tools ?? [],
       required: true,
-    })) as string[];
-    if (p.isCancel(selectedTools) || selectedTools.length === 0) {
+    });
+    if (!toolResult || toolResult.selected.length === 0) {
       console.error(t('init.noTools'));
       return 1;
     }
-    tools = selectedTools;
+    tools = toolResult.selected;
 
     if (soleRemote) {
       remote = soleRemote;
@@ -191,41 +205,102 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   const commit = await branchCommit(cacheDir, branch);
 
   const manifest = await readManifest(cacheDir);
+  const sharedProjects = manifest.projects.filter((proj) => projectRole(proj) === 'shared');
+  const writableProjects = manifest.projects.filter((proj) => projectRole(proj) === 'project');
 
   if (nonInteractive) {
-    if (!manifest.projects.some((proj) => proj.name === project)) {
-      console.error(t('init.unknownProject', { project }));
-      return 1;
+    for (const name of moduleNames) {
+      if (!sharedProjects.some((proj) => proj.name === name)) {
+        console.error(t('init.unknownModule', { module: name }));
+        return 1;
+      }
+    }
+    if (writableName !== undefined) {
+      const found = manifest.projects.find((proj) => proj.name === writableName);
+      if (!found) {
+        console.error(t('init.unknownProject', { project: writableName }));
+        return 1;
+      }
+      if (projectRole(found) !== 'project') {
+        console.error(t('init.notWritable', { project: writableName }));
+        return 1;
+      }
     }
   } else {
-    const selectedProject = (await p.select({
-      message: t('init.prompt.project'),
-      options: manifest.projects.map((proj) => ({ value: proj.name, label: proj.name })),
-      initialValue: existing?.project,
-    })) as string;
-    if (p.isCancel(selectedProject)) {
-      console.log(t('common.cancelled'));
-      return 1;
+    // Modules (read-only), then the single writable project.
+    const orderedModules = [
+      ...existingModules.filter((n) => sharedProjects.some((proj) => proj.name === n)),
+      ...sharedProjects.map((proj) => proj.name).filter((n) => !existingModules.includes(n)),
+    ];
+    if (orderedModules.length > 0) {
+      const moduleResult = await selectWithDiffConfirm({
+        message: t('init.prompt.modules'),
+        items: orderedModules.map((name) => ({ value: name, label: name })),
+        installed: existingModules,
+      });
+      if (!moduleResult) {
+        console.log(t('common.cancelled'));
+        return 1;
+      }
+      moduleNames = moduleResult.selected;
     }
-    project = selectedProject;
+
+    if (writableProjects.length > 0) {
+      const noneValue = '\u0000none';
+      const selectedWritable = (await p.select({
+        message: t('init.prompt.project'),
+        options: [
+          { value: noneValue, label: '—' },
+          ...writableProjects.map((proj) => ({ value: proj.name, label: proj.name })),
+        ],
+        initialValue: existingWritable ?? noneValue,
+      })) as string;
+      if (p.isCancel(selectedWritable)) {
+        console.log(t('common.cancelled'));
+        return 1;
+      }
+      writableName = selectedWritable === noneValue ? undefined : selectedWritable;
+    }
   }
 
-  const projectEntry = manifest.projects.find((proj) => proj.name === project)!;
-  const conventions = { ...manifest.conventions, ...(projectEntry.conventions ?? {}) };
-  const allArtifacts = await discoverArtifacts(cacheDir, projectEntry, conventions);
+  const selectedProjectNames = [...moduleNames];
+  if (writableName) {
+    selectedProjectNames.push(writableName);
+  }
+  if (selectedProjectNames.length === 0) {
+    console.error(t('init.noSelection'));
+    return 1;
+  }
+
+  // Discover artifacts for every selected project (tagged with its project name).
+  const boundProjects: BoundProject[] = [
+    ...moduleNames.map((name) => ({ name, mode: 'subscribed' as const })),
+    ...(writableName ? [{ name: writableName, mode: 'linked' as const }] : []),
+  ];
+
+  let allArtifacts: Artifact[] = [];
+  for (const name of selectedProjectNames) {
+    const { project, conventions } = resolveConventions(manifest, name);
+    allArtifacts = allArtifacts.concat(await discoverArtifacts(cacheDir, project, conventions));
+  }
   const optionalArtifacts = allArtifacts.filter((a) => a.optional);
 
   if (!nonInteractive && optionalArtifacts.length > 0) {
     const selected = (await p.multiselect({
       message: t('init.prompt.optional'),
-      options: optionalArtifacts.map((a) => ({ value: a.sourcePath, label: a.sourcePath })),
+      options: optionalArtifacts.map((a) => ({
+        value: `${a.project}\u0000${a.sourcePath}`,
+        label: `${a.project} · ${a.sourcePath}`,
+      })),
     })) as string[];
     if (!p.isCancel(selected)) {
-      optionalSet = new Set(selected);
+      optionalSet = new Set(selected.map((v) => v.split('\u0000')[1]!));
     }
   }
 
-  const artifacts = allArtifacts.filter((a) => !a.optional || optionalSet.has(a.sourcePath));
+  const artifacts = allArtifacts.filter(
+    (a) => !a.optional || optionalSet.has(a.sourcePath),
+  );
   const { files, managed, conflicts, warningLocaleKeys } = renderArtifacts(artifacts, tools);
   if (conflicts.length) {
     for (const conflict of conflicts) {
@@ -247,7 +322,7 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   const binding = {
     remote,
     branch,
-    project,
+    projects: boundProjects,
     tools,
     lastSyncedCommit: commit,
     lastSyncedHistoryCommit: historyCommit,
@@ -263,7 +338,11 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   ) {
     console.log(t('adapter.codex.skillsHint'));
   }
-  console.log(t('init.success', { project, branch }));
+  if (writableName) {
+    console.log(t('init.success', { project: writableName, branch }));
+  } else {
+    console.log(t('init.successModulesOnly', { modules: moduleNames.join(', '), branch }));
+  }
 
   if (rebind && !nonInteractive && !opts.yes) {
     const syncNow = await p.confirm({ message: t('init.prompt.syncNow'), initialValue: true });

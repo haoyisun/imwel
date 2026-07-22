@@ -124,6 +124,17 @@ async function lintProject(
   const { conventions } = resolveConventions(manifest, project.name);
   const projectDir = path.join(repoRoot, project.path);
 
+  // An undeclared role silently defaults to a writable project. Nudge authors to
+  // be explicit so a project meant as a read-only module is not left pushable.
+  if (project.role === undefined) {
+    issues.push({
+      severity: 'warning',
+      code: 'project.roleUndeclared',
+      message: `Project "${project.name}" does not declare a role; it defaults to a writable project (role: project). Set role: shared to publish it as a read-only module.`,
+      path: project.path,
+    });
+  }
+
   if (pathEscapes(repoRoot, project.path)) {
     issues.push({
       severity: 'error',

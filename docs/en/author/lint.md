@@ -12,7 +12,7 @@ imwel lint --strict   # CI: warnings fail too
 ```
 
 - **Errors** — install-breaking (invalid manifest, missing project path, skill without `SKILL.md`, path escape).
-- **Warnings** — style / best practice (rule/skill `description` missing, too short/long, or not triggerable per agentskills / Cursor guidance).
+- **Warnings** — style / best practice (rule/skill `description` missing, too short/long, or not triggerable per agentskills / Cursor guidance; a project that does not declare a [`role`](../guide/manifest.md#project-roles-modules-vs-projects) — it silently defaults to a writable project).
 
 In a consumer binding, the CLI points you to the template repo instead of reporting a fake clean result. Full flags: [`imwel lint`](../guide/commands.md#imwel-lint).
 

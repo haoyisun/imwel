@@ -39,10 +39,35 @@
 |------|------|------|
 | `name` | **是** | `imwel init` / 绑定使用的 project id |
 | `path` | **是** | 相对模板仓根的目录 |
+| `role` | 否 | `shared`（只读模块）或 `project`（可写项目）。缺省为 `project`。见下文。 |
 | `optional` | 否 | 安装时可选的 Artifact **源路径**列表（相对该 project 的 path） |
 | `conventions` | 否 | 仅对本 project 覆盖根级 `conventions` 的部分字段 |
 
 某 project 的解析结果 = 根级 `conventions` 与该 project 的 `conventions` 合并（同名键以 project 为准）。
+
+### 项目角色：模块 vs 项目
+
+`role` 让作者声明**该 project 期望如何被消费**：
+
+- **`role: project`**（默认）—— *可写项目*：团队绑定它、在本地编辑其 Artifact，并可用 `imwel push` 回推改动。一个消费目录**至多绑定一个**可写项目。
+- **`role: shared`** —— *只读模块*：可复用的标准或组件（如 Python 风格包、Vue 3 约定包），可被多个项目安装并保持同步，但**不**回推本地改动。一个消费者可在其唯一可写项目之外安装**任意数量**的模块。
+
+只读这一约束是**客户端侧**的 —— imwel 只是拒绝对模块 Artifact 执行 `imwel push`。它**不是**访问控制机制；谁能真正写入模板仓，由你的 Git 宿主权限与分支保护治理。通过 `imwel propose`（一次有意的、经审阅的 PR/MR）仍可回馈模块。
+
+无效的 `role` 值会导致 `imwel lint` / manifest 校验失败。
+
+```yaml
+projects:
+  - name: python-standards
+    path: modules/python
+    role: shared            # 可复用、pull-only 的模块
+  - name: vue3-standards
+    path: modules/vue3
+    role: shared
+  - name: checkout-service
+    path: projects/checkout
+    role: project           # 团队拥有的可写项目
+```
 
 ### optional 与必需 Artifact
 
@@ -72,7 +97,7 @@ projects:
 
 一个模板仓库**可以声明多个 project** — 例如 monorepo 式模板，为 `backend` 与 `frontend` 各自提供一套规则/技能包。`projects` 是列表，每个 project 一个条目即可。
 
-每个消费目录通过 `imwel init --project <name>` 绑定到**其中一个** project（见 [命令](./commands.md#imwel-init)）；要消费第二个 project，在另一个目录再次运行 `imwel init`。绑定是按目录的，因此 monorepo 可将多个子目录分别映射到同一模板仓的多个 project。
+每个消费目录**至多绑定一个可写项目**（`role: project`，通过 `imwel init --project <name>`），外加任意数量的**只读模块**（`role: shared`，通过 `imwel init --module <csv>` 或 `imwel modules`）（见 [命令](./commands.md#imwel-init)）。要拥有第二个可写项目，在另一个目录再次运行 `imwel init`。绑定是按目录的，因此 monorepo 可将多个子目录分别映射到同一模板仓的多个 project。
 
 每个 project 还可按键覆盖根级 `conventions`：
 

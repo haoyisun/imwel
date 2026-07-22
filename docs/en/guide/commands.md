@@ -119,7 +119,7 @@ Both only write to isolated review folders — you then consolidate with `imwel 
 
 ## `imwel init`
 
-Binds the current directory to one project inside one remote template repository and installs Artifacts for selected tools.
+Binds the current directory to one remote template repository and installs Artifacts for selected tools. A binding can hold **at most one writable project** (`role: project`) plus any number of **read-only modules** (`role: shared`) — see [Manifest › project roles](./manifest.md#project-roles-modules-vs-projects). Interactive selection uses a toggle → diff → second-confirm flow for tools and modules.
 
 | Flag | Description |
 |------|-------------|
@@ -127,15 +127,30 @@ Binds the current directory to one project inside one remote template repository
 | `--tools <csv>` | Comma-separated target tool ids (e.g. `cursor,claude-code,codex,trae`) |
 | `--remote <alias>` | Remote alias (auto-selected when only one remote is configured, so it can be omitted) |
 | `--branch <name>` | Branch name |
-| `--project <name>` | Manifest project name |
+| `--project <name>` | Writable project name (`role: project`; **at most one**) |
+| `--module <csv>` | Read-only module names (`role: shared`) to install |
 | `--optional <csv>` | Optional Artifact source paths to install |
 | `--no-optional` | Install no optional Artifacts |
 
-Non-interactive mode requires selection flags; missing required flags exit with code **1**.
+At least one of `--project` or `--module` must select something. Re-running `imwel init` on a bound directory **rebinds**: the whole selection (tools, modules, writable project) is replaced, so local edits to previously-installed Artifacts are overwritten. Non-interactive mode requires selection flags; missing required flags exit with code **1**.
+
+## `imwel modules`
+
+Adjusts the read-only modules installed in the current binding without touching the writable project. Interactive mode lists every module the branch declares (`role: shared`), pre-checks the installed ones, and applies changes only after a diff + second confirmation.
+
+| Flag | Description |
+|------|-------------|
+| `-y` / `--yes` | Skip confirmation prompts (**does not** invent selections) |
+| `--add <csv>` | Module names to install |
+| `--remove <csv>` | Module names to uninstall (removes their rendered files) |
+| `--freeze <csv>` | Installed module names to freeze (stop syncing, keep the local copy) |
+| `--unfreeze <csv>` | Installed module names to unfreeze |
+
+Newly added modules install their **required** Artifacts only; run `imwel sync` afterwards to pull the latest content. To add a module's optional Artifacts, rebind via `imwel init`.
 
 ## `imwel sync`
 
-Fetches upstream and applies Artifact updates (with conflict handling via the history repo).
+Fetches upstream and applies Artifact updates (with conflict handling via the history repo). Walks every bound project; **frozen** modules are skipped.
 
 | Flag | Description |
 |------|-------------|
@@ -143,6 +158,8 @@ Fetches upstream and applies Artifact updates (with conflict handling via the hi
 | `--continue` | Continue after manual conflict resolution |
 
 Always force-refreshes remote state (not subject to the passive fetch throttle).
+
+**Read-only module drift.** Modules are pull-only, so imwel never silently overwrites local edits to a module's files. When a subscribed module has local edits, `imwel sync` asks you to choose per module: **discard** local edits and take upstream, **freeze** the module (stop syncing, keep your local copy), or **uninstall** it. Non-interactive `--yes` defaults to **freeze** — it never destroys local edits without consent.
 
 ## `imwel status`
 
@@ -167,7 +184,7 @@ After restore, imwel **deletes managed files that were added after that history 
 
 ## `imwel push`
 
-Reverse-renders local tool files back to canonical Artifacts and opens an upstream proposal (branch + PR/MR by default). Reverse-renders **every** bound tool that has installed paths; conflicting canonical content fails the push.
+Reverse-renders local tool files back to canonical Artifacts and opens an upstream proposal (branch + PR/MR by default). Reverse-renders **every** bound tool that has installed paths; conflicting canonical content fails the push. Only artifacts from the **writable project** are eligible — local edits to read-only modules are never pushed. To contribute back to a module deliberately, use [`imwel propose`](#imwel-propose-file) against that module (a reviewed PR/MR), which is allowed.
 
 | Flag | Description |
 |------|-------------|

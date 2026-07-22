@@ -6,8 +6,9 @@
 |------|------|
 | **模板仓（Template repo）** | 含 `.imwel/manifest.yaml`、列出一个或多个 *project* 及其 Artifact 的普通 Git 仓库。没有特殊服务器 —— 见[架构](../guide/architecture.md#git-即数据库)。 |
 | **Artifact** | 共享内容的单元：**规则**（agents.md 风 Markdown）、**技能**（`SKILL.md` bundle）或 **agents** 说明。见 [Manifest → 发现](../guide/manifest.md#artifact-如何被发现)。 |
-| **Project** | 模板仓内一个具名、可安装的单元（manifest 中的 `name` + `path`）。一个消费目录绑定到一个 project。见 [Manifest → projects](../guide/manifest.md#projects)。 |
-| **绑定（Binding）** | 消费目录的 `.imwel/binding.yaml`，把它关联到某远程模板仓中的一个 project。绑定按目录、而非按仓库 —— 见[架构 → 绑定](../guide/architecture.md)。 |
+| **Project（项目）** | 模板仓内一个具名、可安装的单元（manifest 中的 `name` + `path`）。当 `role: project` 时为**可写项目**，消费者可编辑并回推；一个消费目录至多绑定一个。见 [Manifest → 项目角色](../guide/manifest.md#项目角色-模块-vs-项目)。 |
+| **模块（Module）** | 声明为 `role: shared` 的 project：可复用的**只读**单元（如某语言/框架标准包），消费者安装并保持同步，但不回推本地改动。可在唯一可写项目之外安装任意数量。见 [Manifest → 项目角色](../guide/manifest.md#项目角色-模块-vs-项目)。 |
+| **绑定（Binding）** | 消费目录的 `.imwel/binding.yaml`，把它关联到某远程模板仓 —— 至多一个可写项目外加任意数量的只读模块。绑定按目录、而非按仓库 —— 见[架构 → 绑定](../guide/architecture.md)。 |
 | **适配器（Adapter）** | 每个工具（Cursor、Claude Code、Codex……）的渲染器，把 Artifact 写成该工具原生格式并可读回。见[适配器](../contribute/adapters.md)。 |
 | **约定（Convention）** | manifest 中用于发现 Artifact 的目录/文件名（`rulesDir`、`skillsDir`、`agentsFile`），可按 project 覆盖。见 [Manifest → conventions](../guide/manifest.md#conventions)。 |
 | **Overlay** | 规则顶部一小段 YAML frontmatter（`description` / `globs` / `alwaysApply`），imwel 在渲染时翻译成各工具的原生元数据。见[规则元数据 overlay](../guide/manifest.md#规则元数据-overlay)。 |

@@ -36,13 +36,14 @@ describe('pruneBindingToCommitPaths', () => {
     const binding: Binding = {
       remote: 'r',
       branch: 'main',
-      project: 'p',
+      projects: [{ name: 'p', mode: 'linked' }],
       tools: ['cursor', 'claude-code'],
       lastSyncedCommit: 'abc',
       lastSyncedHistoryCommit: 'def',
       artifacts: [
         {
           sourcePath: 'rules/keep.md',
+          project: 'p',
           type: 'rule',
           optional: false,
           localEdit: false,
@@ -53,6 +54,7 @@ describe('pruneBindingToCommitPaths', () => {
         },
         {
           sourcePath: 'rules/gone.md',
+          project: 'p',
           type: 'rule',
           optional: false,
           localEdit: false,

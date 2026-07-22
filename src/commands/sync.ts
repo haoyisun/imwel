@@ -1,5 +1,7 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import * as p from '@clack/prompts';
-import { readBinding, writeBinding } from '../core/binding.js';
+import { readBinding, writeBinding, type Binding, type BoundProject } from '../core/binding.js';
 import { computeDrift } from '../core/drift.js';
 import { isInteractiveStdin } from '../core/cli-flags.js';
 import { remoteCacheDir } from '../core/paths.js';
@@ -29,12 +31,21 @@ function printRenderSideEffects(
 
 function printPathConflicts(conflicts: PathConflict[]): void {
   for (const conflict of conflicts) {
-    console.error(
-      t('adapter.pathConflict', {
-        path: conflict.path,
-        tools: conflict.adapterIds.join(', '),
-      }),
-    );
+    if (conflict.projects.length > 1) {
+      console.error(
+        t('adapter.pathConflict.sources', {
+          path: conflict.path,
+          sources: conflict.projects.join(', '),
+        }),
+      );
+    } else {
+      console.error(
+        t('adapter.pathConflict', {
+          path: conflict.path,
+          tools: conflict.adapterIds.join(', '),
+        }),
+      );
+    }
   }
   console.error(t('adapter.pathConflict.hint'));
 }
@@ -42,6 +53,86 @@ function printPathConflicts(conflicts: PathConflict[]): void {
 export interface SyncOptions {
   yes?: boolean;
   continue?: boolean;
+}
+
+/**
+ * Read-only modules must never be silently overwritten. When a subscribed
+ * module has local edits, ask the user to discard / freeze / uninstall before
+ * the normal sync proceeds. Returns the (possibly mutated) binding.
+ */
+async function resolveReadOnlyModuleDrift(
+  projectDir: string,
+  binding: Binding,
+  dirtyPaths: string[],
+  yes: boolean,
+): Promise<Binding> {
+  const dirty = new Set(dirtyPaths);
+  const subscribed = binding.projects.filter((bp) => bp.mode === 'subscribed' && !bp.frozen);
+  if (subscribed.length === 0) {
+    return binding;
+  }
+
+  let projects: BoundProject[] = binding.projects;
+  let artifacts = binding.artifacts;
+
+  for (const bound of subscribed) {
+    const moduleArtifacts = binding.artifacts.filter((a) => a.project === bound.name);
+    const modulePaths = moduleArtifacts.flatMap((a) => Object.values(a.installedPaths).flat());
+    const editedPaths = modulePaths.filter((rel) => dirty.has(rel));
+    if (editedPaths.length === 0) {
+      continue;
+    }
+
+    // Non-interactive default: freeze (never destroy local edits without consent).
+    type DriftChoice = 'discard' | 'freeze' | 'uninstall';
+    let choice: DriftChoice = 'freeze';
+    if (!yes && isInteractiveStdin()) {
+      const selected = (await p.select({
+        message: t('sync.moduleDrift.prompt', {
+          module: bound.name,
+          paths: editedPaths.join(', '),
+        }),
+        options: [
+          { value: 'discard', label: t('sync.moduleDrift.discard') },
+          { value: 'freeze', label: t('sync.moduleDrift.freeze') },
+          { value: 'uninstall', label: t('sync.moduleDrift.uninstall') },
+        ],
+        initialValue: 'freeze',
+      })) as string;
+      if (p.isCancel(selected)) {
+        console.log(t('common.cancelled'));
+        continue;
+      }
+      choice = selected as DriftChoice;
+    }
+
+    if (choice === 'discard') {
+      // Delete local edits so the normal sync rewrites them from upstream.
+      for (const rel of editedPaths) {
+        await fs.rm(path.join(projectDir, rel), { force: true });
+      }
+      console.log(t('sync.moduleDrift.discarded', { module: bound.name }));
+    } else if (choice === 'freeze') {
+      projects = projects.map((bp) =>
+        bp.name === bound.name ? { ...bp, frozen: true } : bp,
+      );
+      console.log(t('sync.moduleDrift.frozen', { module: bound.name }));
+    } else {
+      for (const rel of modulePaths) {
+        await fs.rm(path.join(projectDir, rel), { force: true });
+      }
+      projects = projects.filter((bp) => bp.name !== bound.name);
+      artifacts = artifacts.filter((a) => a.project !== bound.name);
+      console.log(t('sync.moduleDrift.uninstalled', { module: bound.name }));
+    }
+  }
+
+  if (projects === binding.projects && artifacts === binding.artifacts) {
+    return binding;
+  }
+  const next: Binding = { ...binding, projects, artifacts };
+  await writeBinding(projectDir, next);
+  return next;
 }
 
 export async function runSync(opts: SyncOptions | boolean = {}): Promise<number> {
@@ -52,7 +143,7 @@ export async function runSync(opts: SyncOptions | boolean = {}): Promise<number>
 
   p.intro(continueMode ? t('sync.continue') : t('sync.title'));
   const projectDir = process.cwd();
-  const binding = await readBinding(projectDir);
+  let binding = await readBinding(projectDir);
   if (!binding) {
     console.error(t('sync.noBinding'));
     return 1;
@@ -82,6 +173,15 @@ export async function runSync(opts: SyncOptions | boolean = {}): Promise<number>
     console.log(t('sync.upToDate'));
     p.outro(t('common.done'));
     return 0;
+  }
+
+  if (drift.localEdited) {
+    binding = await resolveReadOnlyModuleDrift(
+      projectDir,
+      binding,
+      drift.dirtyPaths,
+      Boolean(options.yes),
+    );
   }
 
   const plan = await planSync(cacheDir, binding);

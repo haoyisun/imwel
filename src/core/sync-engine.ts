@@ -27,6 +27,7 @@ function collectInstalledPathsFromManaged(managed: ManagedArtifact[], tools: str
 
 export interface SyncPlanItem {
   sourcePath: string;
+  project: string;
   status: 'added' | 'modified' | 'removed';
 }
 
@@ -42,34 +43,60 @@ export async function planSync(
   selectedOptional?: Set<string>,
 ): Promise<SyncPlan> {
   const manifest = await readManifest(cacheDir);
-  const { project, conventions } = resolveConventions(manifest, binding.project);
-  const projectPrefix = project.path.replace(/\\/g, '/');
-  const diff = await diffNameStatus(binding.lastSyncedCommit, 'HEAD', {
-    cwd: cacheDir,
-    paths: [projectPrefix],
-  });
-  const items: SyncPlanItem[] = diff.map((entry) => {
-    const rel = entry.path.startsWith(`${projectPrefix}/`)
-      ? entry.path.slice(projectPrefix.length + 1)
-      : entry.path;
-    let status: SyncPlanItem['status'] = 'modified';
-    if (entry.status === 'A' || entry.status.startsWith('A')) {
-      status = 'added';
-    } else if (entry.status === 'D' || entry.status.startsWith('D')) {
-      status = 'removed';
+  const items: SyncPlanItem[] = [];
+  const artifacts: Artifact[] = [];
+
+  // Walk every bound project (skipping frozen modules); diff and discover per
+  // project so same-named source paths in different projects never interfere.
+  for (const bound of binding.projects) {
+    if (bound.frozen) {
+      continue;
     }
-    return { sourcePath: rel, status };
-  });
-  const artifacts = await discoverArtifacts(cacheDir, project, conventions, selectedOptional);
-  const { stdout } = await import('./git.js').then((m) => m.runGit(['rev-parse', 'HEAD'], { cwd: cacheDir }));
+    let resolved;
+    try {
+      resolved = resolveConventions(manifest, bound.name);
+    } catch {
+      // Project no longer in manifest; nothing to sync for it.
+      continue;
+    }
+    const { project, conventions } = resolved;
+    const projectPrefix = project.path.replace(/\\/g, '/');
+    const diff = await diffNameStatus(binding.lastSyncedCommit, 'HEAD', {
+      cwd: cacheDir,
+      paths: [projectPrefix],
+    });
+    for (const entry of diff) {
+      const rel = entry.path.startsWith(`${projectPrefix}/`)
+        ? entry.path.slice(projectPrefix.length + 1)
+        : entry.path;
+      let status: SyncPlanItem['status'] = 'modified';
+      if (entry.status === 'A' || entry.status.startsWith('A')) {
+        status = 'added';
+      } else if (entry.status === 'D' || entry.status.startsWith('D')) {
+        status = 'removed';
+      }
+      items.push({ sourcePath: rel, project: bound.name, status });
+    }
+    artifacts.push(...(await discoverArtifacts(cacheDir, project, conventions, selectedOptional)));
+  }
+
+  const { stdout } = await import('./git.js').then((m) =>
+    m.runGit(['rev-parse', 'HEAD'], { cwd: cacheDir }),
+  );
   return { items, artifacts, remoteCommit: stdout.trim() };
 }
 
 export function planRemovals(plan: SyncPlan, binding: Binding): ManagedArtifact[] {
-  const removedSources = new Set(
-    plan.items.filter((item) => item.status === 'removed').map((item) => item.sourcePath),
+  // Match on the composite (project, sourcePath) key so same-named source paths
+  // in different projects don't cross-remove each other.
+  const removedKeys = new Set(
+    plan.items
+      .filter((item) => item.status === 'removed')
+      .map((item) => `${item.project}\u0000${item.sourcePath}`),
   );
-  return binding.artifacts.filter((artifact) => removedSources.has(artifact.sourcePath));
+  return binding.artifacts.filter((artifact) =>
+    removedKeys.has(`${artifact.project}\u0000${artifact.sourcePath}`),
+  );
 }
 
 export interface PendingSyncState {
@@ -127,11 +154,16 @@ export async function writeSyncResults(
       ),
     );
     for (const artifact of plan.artifacts) {
-      const existing = binding.artifacts.find((a) => a.sourcePath === artifact.sourcePath);
+      const artifactProject = artifact.project ?? '';
+      const existing = binding.artifacts.find(
+        (a) => a.sourcePath === artifact.sourcePath && a.project === artifactProject,
+      );
       if (!existing || !binding.lastSyncedHistoryCommit) {
         continue;
       }
-      const managedEntry = managed.find((m) => m.sourcePath === artifact.sourcePath);
+      const managedEntry = managed.find(
+        (m) => m.sourcePath === artifact.sourcePath && m.project === artifactProject,
+      );
       if (!managedEntry) {
         continue;
       }
@@ -181,11 +213,17 @@ export async function writeSyncResults(
 
   const writtenPaths = await applyRenderedFiles(projectDir, files);
   const historyCommit = await commitInstalledFiles(projectDir, writtenPaths, 'imwel sync');
+  // Frozen modules are excluded from the sync plan, so their artifacts are not
+  // in `managed`; preserve the recorded entries so status/unfreeze keep working.
+  const frozenProjects = new Set(
+    binding.projects.filter((bp) => bp.frozen).map((bp) => bp.name),
+  );
+  const preserved = binding.artifacts.filter((a) => frozenProjects.has(a.project));
   const updatedBinding: Binding = {
     ...binding,
     lastSyncedCommit: plan.remoteCommit,
     lastSyncedHistoryCommit: historyCommit,
-    artifacts: managed,
+    artifacts: [...managed, ...preserved],
   };
   await writeYamlFile(pendingSyncPath(projectDir), null as unknown as PendingSyncState);
   try {

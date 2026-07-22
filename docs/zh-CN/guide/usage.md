@@ -21,12 +21,13 @@ git push -u origin main             # ← 发布靠普通 git，不是 imwel 命
 ## 消费者泳道 —— 你安装他人的规则
 
 ```bash
-imwel remote add <template-repo-url> # 别名由 URL 推导
+imwel remote add <template-repo-url> # 别名由 URL 推导（可添加多个远程）
 cd your-project
-imwel init                          # 选工具/branch/project；单个远程会自动选用
+imwel init                          # 选工具/branch、只读模块 + 一个可写项目
+imwel modules                       # 之后增删/冻结模块（切换 → diff → 二次确认）
 imwel sync                          # 拉取上游更新（带漂移预览）
 # 漂移：imwel status → imwel sync / imwel rollback
-imwel push                          # 把本地改动以分支 + PR/MR 反馈上游
+imwel push                          # 把可写项目的本地改动以分支 + PR/MR 反馈上游
 ```
 
 逐步：[安装模板](../consume/quickstart.md) → [同步、漂移与回滚](../consume/sync-and-drift.md) → [回馈上游](../consume/contribute-back.md)。

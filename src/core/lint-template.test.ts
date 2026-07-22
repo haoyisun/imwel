@@ -34,6 +34,7 @@ async function scaffoldCleanTemplate(dir: string): Promise<void> {
 projects:
   - name: example-project
     path: example-project
+    role: project
     optional:
       - skills/example-skill
 `,
@@ -170,6 +171,37 @@ description: A short bland label that never says the trigger condition at all.
     await scaffoldCleanTemplate(dir);
     const result = await lintTemplateRepo(dir);
     assert.ok(!result.issues.some((i) => i.code.startsWith('rule.description')));
+  });
+
+  it('warns when a project does not declare a role', async () => {
+    const dir = path.join(root, 'role-undeclared');
+    await scaffoldCleanTemplate(dir);
+    // Rewrite the manifest without a role to trigger the nudge.
+    await writeFile(
+      path.join(dir, '.imwel', 'manifest.yaml'),
+      `conventions:
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+projects:
+  - name: example-project
+    path: example-project
+    optional:
+      - skills/example-skill
+`,
+    );
+    const result = await lintTemplateRepo(dir);
+    assert.ok(result.issues.some((i) => i.code === 'project.roleUndeclared'));
+    assert.equal(result.issues.filter((i) => i.severity === 'error').length, 0);
+    assert.equal(lintExitCode(result, false), 0);
+    assert.equal(lintExitCode(result, true), 1);
+  });
+
+  it('does not warn roleUndeclared when role is declared', async () => {
+    const dir = path.join(root, 'role-declared');
+    await scaffoldCleanTemplate(dir);
+    const result = await lintTemplateRepo(dir);
+    assert.ok(!result.issues.some((i) => i.code === 'project.roleUndeclared'));
   });
 
   it('errors on path escape in project path', async () => {

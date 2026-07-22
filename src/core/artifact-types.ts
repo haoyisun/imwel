@@ -7,6 +7,8 @@ export interface BundleFile {
 
 export interface Artifact {
   sourcePath: string;
+  /** Manifest project this artifact was discovered from. */
+  project?: string;
   type: ArtifactType;
   optional: boolean;
   canonicalContent: string;

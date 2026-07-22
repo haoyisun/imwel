@@ -39,10 +39,35 @@ If `conventions` is omitted or partial, missing keys use the defaults above.
 |-------|----------|-------------|
 | `name` | **Yes** | Project id used by `imwel init` / binding |
 | `path` | **Yes** | Directory relative to the template repo root |
+| `role` | No | `shared` (read-only module) or `project` (writable project). Missing role defaults to `project`. See below. |
 | `optional` | No | List of Artifact **source paths** (relative to the project path) that are optional at install time |
 | `conventions` | No | Partial override of root `conventions` for this project only |
 
 Resolved conventions for a project = root `conventions` merged with that project’s `conventions` override (project wins per key).
+
+### Project roles: modules vs projects
+
+`role` lets an author declare **how a project is meant to be consumed**:
+
+- **`role: project`** (default) — a *writable project*: a team binds it, edits its Artifacts locally, and can push edits back with `imwel push`. A consumer directory binds **at most one** writable project.
+- **`role: shared`** — a *read-only module*: reusable standards or components (e.g. a Python style pack, a Vue 3 convention pack) that many projects install and keep in sync but do **not** push local edits back to. A consumer can install **any number** of modules alongside its one writable project.
+
+The read-only guardrail is **client-side** — imwel simply refuses `imwel push` for module artifacts. It is **not** an access-control mechanism; who may actually write to the template repo is governed by your Git host's permissions and branch protection. Contributing back to a module is still possible via `imwel propose` (a deliberate, reviewed PR/MR).
+
+An invalid `role` value fails `imwel lint` / manifest validation.
+
+```yaml
+projects:
+  - name: python-standards
+    path: modules/python
+    role: shared            # reusable, pull-only module
+  - name: vue3-standards
+    path: modules/vue3
+    role: shared
+  - name: checkout-service
+    path: projects/checkout
+    role: project           # writable project a team owns
+```
 
 ### Optional vs required Artifacts
 
@@ -72,7 +97,7 @@ projects:
 
 A single template repository **can declare several projects** — for example a monorepo-style template that ships a separate rules/skills pack for a `backend` and a `frontend`. `projects` is a list, so add one entry per project.
 
-Each consumer directory binds to **exactly one** project via `imwel init --project <name>` (see [Commands](./commands.md#imwel-init)); to consume a second project, run `imwel init` again in another directory. Bindings are per-directory, so a monorepo maps multiple sub-directories to multiple projects in the same template repo.
+Each consumer directory binds **at most one writable project** (`role: project`) via `imwel init --project <name>`, plus any number of **read-only modules** (`role: shared`) via `imwel init --module <csv>` or `imwel modules` (see [Commands](./commands.md#imwel-init)). To own a second writable project, run `imwel init` again in another directory. Bindings are per-directory, so a monorepo maps multiple sub-directories to multiple projects in the same template repo.
 
 Each project may also override root `conventions` per key:
 

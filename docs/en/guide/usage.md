@@ -21,12 +21,13 @@ Step-by-step: [Author a template](../author/quickstart.md) → [Lint & quality b
 ## Consumer lane — you install someone's rules
 
 ```bash
-imwel remote add <template-repo-url> # alias is derived from the URL
+imwel remote add <template-repo-url> # alias is derived from the URL (add several if needed)
 cd your-project
-imwel init                          # pick tools/branch/project; single remote is auto-selected
+imwel init                          # pick tools/branch, read-only modules + one writable project
+imwel modules                       # add/remove/freeze modules later (toggle → diff → confirm)
 imwel sync                          # pull upstream updates (with drift preview)
 # drift: imwel status → imwel sync / imwel rollback
-imwel push                          # send local edits back as a branch + PR/MR
+imwel push                          # send writable-project edits back as a branch + PR/MR
 ```
 
 Step-by-step: [Install a template](../consume/quickstart.md) → [Sync, drift & rollback](../consume/sync-and-drift.md) → [Contribute changes back](../consume/contribute-back.md).

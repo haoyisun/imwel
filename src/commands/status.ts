@@ -17,7 +17,16 @@ export async function runStatus(): Promise<number> {
     return 1;
   }
   console.log(t('status.remote', { remote: binding.remote, branch: binding.branch }));
-  console.log(t('status.project', { project: binding.project }));
+  const writable = binding.projects.filter((p) => p.mode === 'linked').map((p) => p.name);
+  const modules = binding.projects
+    .filter((p) => p.mode === 'subscribed')
+    .map((p) => (p.frozen ? t('status.moduleFrozen', { name: p.name }) : p.name));
+  if (writable.length > 0) {
+    console.log(t('status.project', { project: writable.join(', ') }));
+  }
+  if (modules.length > 0) {
+    console.log(t('status.modules', { modules: modules.join(', ') }));
+  }
   console.log(t('status.tools', { tools: binding.tools.join(', ') }));
   console.log(t('status.lastSynced', { sha: binding.lastSyncedCommit.slice(0, 8) }));
 

@@ -12,6 +12,7 @@ import {
 } from './commands/remote.js';
 import { runTemplateInit } from './commands/template.js';
 import { runInit, type InitOptions } from './commands/init.js';
+import { runModules, type ModulesOptions } from './commands/modules.js';
 import { runAdopt, type AdoptOptions } from './commands/adopt.js';
 import { runScan, type ScanOptions } from './commands/scan.js';
 import { runSkillInstall, type SkillInstallOptions } from './commands/skill.js';
@@ -119,7 +120,8 @@ async function main(): Promise<void> {
     .option('--tools <csv>', 'Comma-separated target tool ids')
     .option('--remote <alias>', 'Remote alias')
     .option('--branch <name>', 'Branch name')
-    .option('--project <name>', 'Manifest project name')
+    .option('--project <name>', 'Writable manifest project name (role: project; at most one)')
+    .option('--module <csv>', 'Comma-separated read-only module names (role: shared) to install')
     .option('--optional <csv>', 'Comma-separated optional artifact source paths to install')
     .option('--no-optional', 'Install no optional artifacts')
     .action(
@@ -129,6 +131,7 @@ async function main(): Promise<void> {
         remote?: string;
         branch?: string;
         project?: string;
+        module?: string;
         optional?: string;
         noOptional?: boolean;
       }) => {
@@ -138,11 +141,24 @@ async function main(): Promise<void> {
           remote: opts.remote,
           branch: opts.branch,
           project: opts.project,
+          module: opts.module,
           optional: opts.noOptional ? false : opts.optional,
         };
         process.exit(await runInit(initOpts));
       },
     );
+
+  program
+    .command('modules')
+    .description('Add, remove, or freeze read-only modules for this binding')
+    .option('-y, --yes', 'Skip confirmation prompts (does not invent selections)')
+    .option('--add <csv>', 'Comma-separated module names to install')
+    .option('--remove <csv>', 'Comma-separated module names to uninstall')
+    .option('--freeze <csv>', 'Comma-separated installed module names to freeze')
+    .option('--unfreeze <csv>', 'Comma-separated installed module names to unfreeze')
+    .action(async (opts: ModulesOptions) => {
+      process.exit(await runModules(opts));
+    });
 
   program
     .command('adopt')

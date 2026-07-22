@@ -4,8 +4,20 @@ import { bindingFilePath } from './paths.js';
 import { readYamlFile, writeYamlFile } from './yaml-file.js';
 import type { ArtifactType } from './artifact-types.js';
 
+export type BindingMode = 'linked' | 'subscribed';
+
+export interface BoundProject {
+  name: string;
+  /** `linked` = writable (push/propose); `subscribed` = read-only module (pull-only). */
+  mode: BindingMode;
+  /** When true, a subscribed module is skipped during sync (kept as a local copy). */
+  frozen?: boolean;
+}
+
 export interface ManagedArtifact {
   sourcePath: string;
+  /** Name of the manifest project this artifact originates from. */
+  project: string;
   type: ArtifactType;
   optional: boolean;
   localEdit: boolean;
@@ -16,15 +28,72 @@ export interface ManagedArtifact {
 export interface Binding {
   remote: string;
   branch: string;
-  project: string;
+  /** Bound projects, each with its mode. At most one may be `linked`. */
+  projects: BoundProject[];
   tools: string[];
   lastSyncedCommit: string;
   lastSyncedHistoryCommit: string;
   artifacts: ManagedArtifact[];
 }
 
+/** Legacy binding shape (pre multi-project): a single `project` string. */
+interface LegacyBinding {
+  remote: string;
+  branch: string;
+  project?: string;
+  projects?: BoundProject[];
+  tools: string[];
+  lastSyncedCommit: string;
+  lastSyncedHistoryCommit: string;
+  artifacts: Array<Omit<ManagedArtifact, 'project'> & { project?: string }>;
+}
+
+/**
+ * Normalize a raw (possibly legacy) binding into the current shape:
+ * - legacy `project: string` → `projects: [{ name, mode: 'linked' }]`
+ * - artifacts missing `project` are attributed to the sole/writable project
+ */
+export function normalizeBinding(raw: LegacyBinding): Binding {
+  let projects: BoundProject[];
+  if (Array.isArray(raw.projects) && raw.projects.length > 0) {
+    projects = raw.projects.map((bp) => ({
+      name: bp.name,
+      mode: bp.mode === 'subscribed' ? 'subscribed' : 'linked',
+      ...(bp.frozen ? { frozen: true } : {}),
+    }));
+  } else {
+    projects = [{ name: raw.project ?? '', mode: 'linked' }];
+  }
+  const fallbackProject =
+    projects.find((p) => p.mode === 'linked')?.name ?? projects[0]?.name ?? '';
+  const artifacts: ManagedArtifact[] = (raw.artifacts ?? []).map((a) => ({
+    ...a,
+    project: a.project ?? fallbackProject,
+  }));
+  return {
+    remote: raw.remote,
+    branch: raw.branch,
+    projects,
+    tools: raw.tools,
+    lastSyncedCommit: raw.lastSyncedCommit,
+    lastSyncedHistoryCommit: raw.lastSyncedHistoryCommit,
+    artifacts,
+  };
+}
+
+/** The single writable (`linked`) project name, if any. */
+export function writableProjectName(binding: Binding): string | undefined {
+  return binding.projects.find((p) => p.mode === 'linked')?.name;
+}
+
+/** Look up the mode of a bound project by name. */
+export function projectMode(binding: Binding, projectName: string): BindingMode | undefined {
+  return binding.projects.find((p) => p.name === projectName)?.mode;
+}
+
 export async function readBinding(projectDir: string): Promise<Binding | null> {
-  return readYamlFile<Binding>(bindingFilePath(projectDir));
+  const raw = await readYamlFile<LegacyBinding>(bindingFilePath(projectDir));
+  return raw ? normalizeBinding(raw) : null;
 }
 
 export async function writeBinding(projectDir: string, binding: Binding): Promise<void> {

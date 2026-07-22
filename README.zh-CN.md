@@ -27,8 +27,9 @@ imwel sync
 | `imwel adopt` | 将项目中散落的工具规则归并为 canonical Artifact 到 `.imwel/adopted/`（无需 binding/remote）；`--from` 经确定性质量闸采纳 `.imwel/drafts/` 中 review 过的 AI 草稿 |
 | `imwel scan` | 确定性地生成项目指纹到 `.imwel/fingerprint.yaml`（语言、工具链、现有规则位置，Git 仓库时附带变更热点/共变的历史信号）—— 无 LLM |
 | `imwel skill install` | 将 imwel 第一方 skill（`imwel-extract`、`imwel-audit`）安装进所选工具（非受管，不被 sync 跟踪） |
-| `imwel init` | 将当前目录绑定到模板项目 |
-| `imwel sync` | 拉取上游制品更新 |
+| `imwel init` | 将当前目录绑定到模板仓 —— 至多一个可写项目（`role: project`）外加任意数量的只读模块（`role: shared`） |
+| `imwel modules` | 为当前绑定增删/冻结只读模块 |
+| `imwel sync` | 拉取上游制品更新（跳过已冻结模块；绝不静默覆盖只读模块的本地修改） |
 | `imwel status` | 报告远程与本地漂移，并附确定性规则健康检查（空壳规则、死链导入、孤儿路径引用） |
 | `imwel rollback` | 恢复到先前的安装状态（会删除该点之后新增的管理文件） |
 | `imwel push` | 将本地编辑推送到上游（默认分支 + PR；对所有绑定工具反向渲染） |

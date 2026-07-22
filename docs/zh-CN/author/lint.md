@@ -12,7 +12,7 @@ imwel lint --strict   # CI：警告也失败
 ```
 
 - **Errors** —— 装坏类（无效 manifest、项目 path 缺失、skill 缺 `SKILL.md`、路径逃逸）。
-- **Warnings** —— 风格 / 最佳实践（规则/skill `description` 缺失、过短/过长、或不可触发;对齐 agentskills / Cursor 指导）。
+- **Warnings** —— 风格 / 最佳实践（规则/skill `description` 缺失、过短/过长、或不可触发,对齐 agentskills / Cursor 指导;project 未声明 [`role`](../guide/manifest.md#项目角色-模块-vs-项目) —— 会静默默认为可写项目）。
 
 在消费侧绑定目录,CLI 会指引到模板仓,而不会报告假成功。完整选项见 [`imwel lint`](../guide/commands.md#imwel-lint)。
 

@@ -107,6 +107,7 @@ export async function discoverArtifacts(
         : undefined;
       artifacts.push({
         sourcePath: root,
+        project: project.name,
         type: 'skill',
         optional: skillOptional,
         canonicalContent: skillMd?.content ?? '',
@@ -125,6 +126,7 @@ export async function discoverArtifacts(
     const { body, overrides } = parseRuleOverlay(content);
     artifacts.push({
       sourcePath: rel.replace(/\\/g, '/'),
+      project: project.name,
       type,
       optional,
       canonicalContent: body,

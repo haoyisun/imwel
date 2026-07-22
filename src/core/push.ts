@@ -70,10 +70,18 @@ export async function collectEditCandidates(
 ): Promise<PushCandidate[]> {
   const candidates: PushCandidate[] = [];
   const manifest = await readManifest(await ensureRemoteCache(binding.remote, { force: true }));
-  const { project } = resolveConventions(manifest, binding.project);
   const dirty = new Set(await listDirtyPaths(projectDir, collectInstalledPaths(binding)));
+  // Only artifacts from a writable (linked) project are push candidates;
+  // read-only (subscribed) module edits are never pushed.
+  const writableProjects = new Set(
+    binding.projects.filter((p) => p.mode === 'linked').map((p) => p.name),
+  );
 
   for (const artifact of binding.artifacts) {
+    if (!writableProjects.has(artifact.project)) {
+      continue;
+    }
+    const { project } = resolveConventions(manifest, artifact.project);
     const toolsWithPaths = binding.tools.filter(
       (tool) => (artifact.installedPaths[tool]?.length ?? 0) > 0,
     );

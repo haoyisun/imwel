@@ -126,6 +126,35 @@ describe('setupLintAutomation', () => {
       await fs.rm(cDir, { recursive: true, force: true });
     }
   });
+
+  it('appends the activation section to README.md once', async () => {
+    const rDir = await makeTempDir('imwel-lintauto-readme-');
+    try {
+      const readme = path.join(rDir, 'README.md');
+      await fs.writeFile(readme, '# My Template\n\nBody.\n', 'utf8');
+      const note = '## Commit-time lint\n\nActivate: git config core.hooksPath .githooks';
+      const r1 = await setupLintAutomation(rDir, {
+        hostCli: null,
+        activateLocally: false,
+        readmePath: readme,
+        readmeActivationNote: note,
+      });
+      assert.equal(r1.readmeUpdated, true);
+      const r2 = await setupLintAutomation(rDir, {
+        hostCli: null,
+        activateLocally: false,
+        readmePath: readme,
+        readmeActivationNote: note,
+      });
+      assert.equal(r2.readmeUpdated, false);
+      const content = await fs.readFile(readme, 'utf8');
+      assert.match(content, /core\.hooksPath \.githooks/);
+      const occurrences = (content.match(/core\.hooksPath \.githooks/g) ?? []).length;
+      assert.equal(occurrences, 1);
+    } finally {
+      await fs.rm(rDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('shouldHintLintHookActivation', () => {

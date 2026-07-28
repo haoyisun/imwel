@@ -76,6 +76,7 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'template.init.lintAutomation.hookSkipped':
     '已存在 .githooks/pre-commit —— 未覆盖。',
   'template.init.lintAutomation.contributing': '已在 CONTRIBUTING.md 追加激活说明。',
+  'template.init.lintAutomation.readme': '已在 README.md 追加 hook 激活说明。',
   'template.init.prompt.preparePackageJson':
     '是否生成一个最小 package.json（含 `prepare` 脚本），让 `npm install` 在 clone 后自动激活 hook？',
   'template.init.preparePackageJson.written':
@@ -104,6 +105,8 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
     '已本地激活 .githooks/pre-commit（core.hooksPath → .githooks）。取消请运行：`git config --unset core.hooksPath`',
   'lintAutomation.contributingNote':
     '## 提交时 lint（可选）\n\n本仓包含一个运行 `imwel lint` 的 `.githooks/pre-commit` hook。克隆后请一次性激活：\n\n```bash\ngit config core.hooksPath .githooks\n```\n\nCI workflow 也会在 Pull Request 上运行 `imwel lint --strict`。',
+  'lintAutomation.readmeNote':
+    '## 提交时 lint\n\n本仓包含一个每次提交运行 `imwel lint` 的 `.githooks/pre-commit` hook。克隆后请一次性激活：\n\n```bash\ngit config core.hooksPath .githooks\n```\n\n运行 `imwel lint` 也会自动激活该 hook。CI workflow 会在 Pull Request 上运行 `imwel lint --strict`。',
 
   'init.title': '将当前目录绑定到模板项目',
   'init.alreadyBound': '此目录已绑定到远程 "{remote}" / 项目 "{project}"。',

@@ -75,6 +75,7 @@ export const en = {
   'template.init.lintAutomation.hookSkipped':
     'Existing .githooks/pre-commit found — not overwritten.',
   'template.init.lintAutomation.contributing': 'Contributing activation note added to CONTRIBUTING.md.',
+  'template.init.lintAutomation.readme': 'Hook activation section added to README.md.',
   'template.init.prompt.preparePackageJson':
     'Generate a minimal package.json with a `prepare` script so `npm install` auto-activates the hook after clone?',
   'template.init.preparePackageJson.written':
@@ -105,6 +106,8 @@ export const en = {
     'Activated .githooks/pre-commit locally (core.hooksPath → .githooks). Unset with: `git config --unset core.hooksPath`',
   'lintAutomation.contributingNote':
     '## Commit-time lint (optional)\n\nThis repo ships a `.githooks/pre-commit` hook that runs `imwel lint`. After cloning, activate it once:\n\n```bash\ngit config core.hooksPath .githooks\n```\n\nA CI workflow also runs `imwel lint --strict` on pull requests.',
+  'lintAutomation.readmeNote':
+    '## Commit-time lint\n\nThis repo ships a `.githooks/pre-commit` hook that runs `imwel lint` on every commit. After cloning, activate it once:\n\n```bash\ngit config core.hooksPath .githooks\n```\n\nRunning `imwel lint` also auto-activates the hook. A CI workflow runs `imwel lint --strict` on pull requests.',
 
   'init.title': 'Bind this directory to a template project',
   'init.alreadyBound': 'This directory is already bound to remote "{remote}" / project "{project}".',

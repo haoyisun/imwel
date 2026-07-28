@@ -118,12 +118,17 @@ export async function runTemplateInit(
         activateLocally: initGit,
         contributingPath: path.join(absDir, 'CONTRIBUTING.md'),
         activationNote: t('lintAutomation.contributingNote'),
+        readmePath: path.join(absDir, 'README.md'),
+        readmeActivationNote: t('lintAutomation.readmeNote'),
       });
       if (automation.hookSkippedExisting) {
         info(t('template.init.lintAutomation.hookSkipped'));
       }
       if (automation.contributingUpdated) {
         info(t('template.init.lintAutomation.contributing'));
+      }
+      if (automation.readmeUpdated) {
+        info(t('template.init.lintAutomation.readme'));
       }
       info(
         automation.ciFile

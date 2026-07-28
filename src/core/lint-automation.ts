@@ -55,6 +55,7 @@ export interface LintAutomationResult {
   /** Relative path of the CI workflow file written, or null when skipped. */
   ciFile: string | null;
   contributingUpdated: boolean;
+  readmeUpdated: boolean;
 }
 
 export interface SetupLintAutomationOptions {
@@ -65,6 +66,10 @@ export interface SetupLintAutomationOptions {
   contributingPath?: string;
   /** Localized activation note line to append to CONTRIBUTING.md. */
   activationNote?: string;
+  /** Absolute path to README.md to append a short hook-activation section to (optional). */
+  readmePath?: string;
+  /** Localized README section (Markdown) to append when the hook is written. */
+  readmeActivationNote?: string;
 }
 
 /**
@@ -84,6 +89,7 @@ export async function setupLintAutomation(
     activatedLocally: false,
     ciFile: null,
     contributingUpdated: false,
+    readmeUpdated: false,
   };
 
   const hookDir = path.join(repoDir, '.githooks');
@@ -125,6 +131,21 @@ export async function setupLintAutomation(
         'utf8',
       );
       result.contributingUpdated = true;
+    }
+  }
+
+  if (options.readmePath && options.readmeActivationNote) {
+    const existing = await pathExists(options.readmePath)
+      ? await fs.readFile(options.readmePath, 'utf8')
+      : '';
+    if (existing && !existing.includes('core.hooksPath .githooks')) {
+      const sep = existing.endsWith('\n') ? '\n' : '\n\n';
+      await fs.writeFile(
+        options.readmePath,
+        `${existing}${sep}${options.readmeActivationNote}\n`,
+        'utf8',
+      );
+      result.readmeUpdated = true;
     }
   }
 

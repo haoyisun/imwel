@@ -9,6 +9,7 @@ docs/.vitepress/cache/
 .idea/
 .claudecode
 .codegraph
+.agents
 
 # Local AI / OpenSpec planning (keep on disk, do not publish)
 /.cursor/

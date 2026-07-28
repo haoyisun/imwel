@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { resolveLocale } from './core/locale.js';
-import { setActiveLocale } from './locales/index.js';
+import { setActiveLocale, t } from './locales/index.js';
 import { runPassiveCheckIfDue } from './core/passive-check.js';
 import { runDoctor } from './commands/doctor.js';
 import {
@@ -13,6 +13,7 @@ import {
 import { runTemplateInit } from './commands/template.js';
 import { runInit, type InitOptions } from './commands/init.js';
 import { runModules, type ModulesOptions } from './commands/modules.js';
+import { runTools, type ToolsOptions } from './commands/tools.js';
 import { runAdopt, type AdoptOptions } from './commands/adopt.js';
 import { runScan, type ScanOptions } from './commands/scan.js';
 import { runSkillInstall, type SkillInstallOptions } from './commands/skill.js';
@@ -22,9 +23,12 @@ import { runRollback, type RollbackOptions } from './commands/rollback.js';
 import { runPush, type PushOptions } from './commands/push.js';
 import { runPropose, type ProposeOptions } from './commands/propose.js';
 import { runLint } from './commands/lint.js';
+import { runBindingShow, type BindingShowOptions } from './commands/binding.js';
 import type { SupportedLocale } from './core/locale.js';
 
 async function main(): Promise<void> {
+  const langIndex = process.argv.indexOf('--lang');
+  setActiveLocale(resolveLocale(langIndex >= 0 ? process.argv[langIndex + 1] : undefined));
   const program = new Command();
   program
     .name('imwel')
@@ -35,7 +39,7 @@ async function main(): Promise<void> {
       const locale = resolveLocale(lang);
       setActiveLocale(locale);
       const sub = thisCommand.args[0];
-      if (sub !== 'sync' && sub !== 'status') {
+      if (sub !== 'sync' && sub !== 'status' && sub !== 'binding') {
         await runPassiveCheckIfDue();
       }
     });
@@ -99,20 +103,35 @@ async function main(): Promise<void> {
   const template = program.command('template').description('Template repository commands');
   template
     .command('init')
-    .option('--dir <path>', 'Target directory')
+    .option('--dir <path>', 'Target directory (output dir for --from-project)')
     .option('--locale <locale>', 'Scaffold locale')
     .option('--name <name>', 'Repository name')
+    .option('--from-project', 'Generate a template repo from the current project\'s existing tool artifacts')
+    .option('--topic <slug>', 'Topic slug for the generated template dir name (--from-project)')
     .option('-y, --yes', 'Skip confirmation prompts (non-interactive defaults)')
-    .action(async (opts: { dir?: string; locale?: string; name?: string; yes?: boolean }) => {
-      process.exit(
-        await runTemplateInit(
-          opts.dir,
-          opts.locale as SupportedLocale | undefined,
-          opts.name,
-          { yes: Boolean(opts.yes) },
-        ),
-      );
-    });
+    .action(
+      async (opts: {
+        dir?: string;
+        locale?: string;
+        name?: string;
+        fromProject?: boolean;
+        topic?: string;
+        yes?: boolean;
+      }) => {
+        process.exit(
+          await runTemplateInit(
+            opts.dir,
+            opts.locale as SupportedLocale | undefined,
+            opts.name,
+            {
+              yes: Boolean(opts.yes),
+              fromProject: Boolean(opts.fromProject),
+              topic: opts.topic,
+            },
+          ),
+        );
+      },
+    );
 
   program
     .command('init')
@@ -124,6 +143,8 @@ async function main(): Promise<void> {
     .option('--module <csv>', 'Comma-separated read-only module names (role: shared) to install')
     .option('--optional <csv>', 'Comma-separated optional artifact source paths to install')
     .option('--no-optional', 'Install no optional artifacts')
+    .option('--command-pack', 'Install the imwel command pack (extract/audit/...) into selected tools')
+    .option('--no-command-pack', 'Do not install the imwel command pack')
     .action(
       async (opts: {
         yes?: boolean;
@@ -134,6 +155,7 @@ async function main(): Promise<void> {
         module?: string;
         optional?: string;
         noOptional?: boolean;
+        commandPack?: boolean;
       }) => {
         const initOpts: InitOptions = {
           yes: opts.yes,
@@ -143,6 +165,7 @@ async function main(): Promise<void> {
           project: opts.project,
           module: opts.module,
           optional: opts.noOptional ? false : opts.optional,
+          commandPack: opts.commandPack,
         };
         process.exit(await runInit(initOpts));
       },
@@ -161,12 +184,22 @@ async function main(): Promise<void> {
     });
 
   program
+    .command('tools')
+    .description(t('tools.description'))
+    .option('-y, --yes', t('tools.help.yes'))
+    .option('--add <csv>', t('tools.help.add'))
+    .option('--remove <csv>', t('tools.help.remove'))
+    .option('--delete-output', t('tools.help.deleteOutput'))
+    .action(async (opts: ToolsOptions) => {
+      process.exit(await runTools(opts));
+    });
+
+  program
     .command('adopt')
-    .description('Consolidate existing scattered tool-native rules into canonical artifacts')
+    .description('Render reviewed AI drafts from a draft box into your tools (unmanaged)')
     .option('-y, --yes', 'Skip write confirmation')
-    .option('--out <path>', 'Output directory (default .imwel/adopted)')
-    .option('--tools <csv>', 'Limit to specific tool ids')
-    .option('--from [dir]', 'Adopt AI drafts from a directory (default .imwel/drafts)')
+    .option('--tools <csv>', 'Render target tool ids (default: binding tools, else detected)')
+    .option('--from [box]', 'Draft box to adopt (default .imwel/drafts; a path selects a named box)')
     .action(async (opts: AdoptOptions) => {
       process.exit(await runAdopt(opts));
     });
@@ -201,6 +234,15 @@ async function main(): Promise<void> {
     process.exit(await runStatus());
   });
 
+  const binding = program.command('binding').description(t('binding.description'));
+  binding
+    .command('show')
+    .option('--details', t('binding.help.details'))
+    .option('--json', t('binding.help.json'))
+    .action(async (opts: BindingShowOptions) => {
+      process.exit(await runBindingShow(opts));
+    });
+
   program
     .command('rollback')
     .option('-y, --yes', 'Skip confirmation prompts')
@@ -219,8 +261,8 @@ async function main(): Promise<void> {
     });
 
   program
-    .command('propose <file>')
-    .description('Register a local file as a new artifact candidate')
+    .command('propose [file]')
+    .description('Manage single-target contribution tracking (no file → interactive multiselect)')
     .option('-y, --yes', 'Skip confirmation prompts')
     .option('--remote <alias>', 'Target remote alias')
     .option('--project <name>', 'Target manifest project')
@@ -228,7 +270,7 @@ async function main(): Promise<void> {
     .option('--optional', 'Treat as optional artifact')
     .option('--required', 'Treat as required artifact')
     .option('--tool <id>', 'Source tool adapter for reverse-render')
-    .action(async (file: string, opts: ProposeOptions) => {
+    .action(async (file: string | undefined, opts: ProposeOptions) => {
       process.exit(await runPropose(file, opts));
     });
 

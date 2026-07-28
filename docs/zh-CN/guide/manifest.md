@@ -54,6 +54,8 @@
 
 只读这一约束是**客户端侧**的 —— imwel 只是拒绝对模块 Artifact 执行 `imwel push`。它**不是**访问控制机制；谁能真正写入模板仓，由你的 Git 宿主权限与分支保护治理。通过 `imwel propose`（一次有意的、经审阅的 PR/MR）仍可回馈模块。
 
+> **模块不提供项目级 `agents` 文件。** `agentsFile`（默认 `agents.md`）渲染到消费者**项目根**的单实例说明文件（`AGENTS.md` 等），归那唯一的可写项目所有。模块与可写项目及其他模块**组合**安装，若各自都带 agents 会在此根文件处冲突。因此安装模块时其 `agents` 文件会被**跳过**（`rule` / `skill` 有独立路径,可干净组合,不受影响）；`imwel lint` 会对携带 agents 文件的 `shared` 模块给出 `module.agentsIgnored` warning。请把这类内容放进 rule/skill。
+
 无效的 `role` 值会导致 `imwel lint` / manifest 校验失败。
 
 ```yaml

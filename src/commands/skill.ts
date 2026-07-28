@@ -1,9 +1,7 @@
 import * as p from '@clack/prompts';
 import { adapters } from '../adapters/index.js';
-import { applyRenderedFiles } from '../core/apply-files.js';
 import { exitIfMissingFlags, isInteractiveStdin, parseCsv } from '../core/cli-flags.js';
-import { loadFirstPartySkills } from '../core/first-party-assets.js';
-import { renderArtifacts } from '../core/render.js';
+import { installCommandPack, planCommandPack, supportedToolIds } from '../core/command-pack.js';
 import { t } from '../locales/index.js';
 
 export interface SkillInstallOptions {
@@ -16,19 +14,7 @@ export async function runSkillInstall(opts: SkillInstallOptions = {}): Promise<n
   const projectDir = process.cwd();
   const nonInteractive = !isInteractiveStdin() || Boolean(opts.tools) || Boolean(opts.yes);
 
-  let skills;
-  try {
-    skills = await loadFirstPartySkills();
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    return 1;
-  }
-  if (skills.length === 0) {
-    console.error(t('skill.install.none'));
-    return 1;
-  }
-
-  const supported = new Set(adapters.map((a) => a.id));
+  const supported = supportedToolIds();
   let tools: string[];
   if (nonInteractive) {
     const missing = exitIfMissingFlags({ '--tools': opts.tools });
@@ -66,9 +52,39 @@ export async function runSkillInstall(opts: SkillInstallOptions = {}): Promise<n
     tools = selected;
   }
 
-  const { files, conflicts, warningLocaleKeys } = renderArtifacts(skills, tools);
-  if (conflicts.length) {
-    for (const conflict of conflicts) {
+  const code = await installCommandPackWithFeedback(projectDir, tools, {
+    yes: opts.yes,
+    confirm: true,
+  });
+  if (code === 0) {
+    p.outro(t('common.done'));
+  }
+  return code;
+}
+
+/**
+ * Shared command-pack install used by `imwel skill install` and `imwel init`.
+ * Loads assets, prints the plan, optionally confirms, applies, and reports which
+ * tools got commands vs skill-only.
+ */
+export async function installCommandPackWithFeedback(
+  projectDir: string,
+  tools: string[],
+  opts: { yes?: boolean; confirm?: boolean } = {},
+): Promise<number> {
+  let plan;
+  try {
+    plan = await planCommandPack(tools);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+  if (plan.skills.length === 0) {
+    console.error(t('skill.install.none'));
+    return 1;
+  }
+  if (plan.conflicts.length) {
+    for (const conflict of plan.conflicts) {
       console.error(
         t('adapter.pathConflict', {
           path: conflict.path,
@@ -82,13 +98,16 @@ export async function runSkillInstall(opts: SkillInstallOptions = {}): Promise<n
 
   console.log(
     t('skill.install.plan', {
-      skills: skills.length,
-      files: files.length,
+      skills: plan.skills.length,
+      files: plan.files.length,
       tools: tools.join(', '),
     }),
   );
+  if (plan.skillOnlyTools.length) {
+    console.log(t('commandPack.skillOnly', { tools: plan.skillOnlyTools.join(', ') }));
+  }
 
-  if (!opts.yes && isInteractiveStdin()) {
+  if (opts.confirm && !opts.yes && isInteractiveStdin()) {
     const confirm = await p.confirm({ message: t('skill.install.confirm'), initialValue: true });
     if (p.isCancel(confirm) || !confirm) {
       console.log(t('common.cancelled'));
@@ -96,17 +115,14 @@ export async function runSkillInstall(opts: SkillInstallOptions = {}): Promise<n
     }
   }
 
-  // First-party assets are intentionally unmanaged: no history commit, no binding
-  // entry — so status/sync/push never track them.
-  await applyRenderedFiles(projectDir, files);
-  for (const file of files) {
-    console.log(t('skill.install.written', { path: file.path }));
+  const written = await installCommandPack(projectDir, plan);
+  for (const path of written) {
+    console.log(t('skill.install.written', { path }));
   }
-  for (const key of warningLocaleKeys) {
+  for (const key of plan.warningLocaleKeys) {
     console.warn(t(key as 'adapter.skill.r4Warning'));
   }
-  console.log(t('skill.install.success', { count: skills.length }));
+  console.log(t('skill.install.success', { count: plan.skills.length }));
   console.log(t('skill.install.nextSteps'));
-  p.outro(t('common.done'));
   return 0;
 }

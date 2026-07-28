@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { bindingFilePath } from './paths.js';
-import { readYamlFile, writeYamlFile } from './yaml-file.js';
+import { readYamlFile, writeYamlFileAtomic } from './yaml-file.js';
 import type { ArtifactType } from './artifact-types.js';
 
 export type BindingMode = 'linked' | 'subscribed';
@@ -97,7 +97,7 @@ export async function readBinding(projectDir: string): Promise<Binding | null> {
 }
 
 export async function writeBinding(projectDir: string, binding: Binding): Promise<void> {
-  await writeYamlFile(bindingFilePath(projectDir), binding);
+  await writeYamlFileAtomic(bindingFilePath(projectDir), binding);
 }
 
 export async function bindingExists(projectDir: string): Promise<boolean> {

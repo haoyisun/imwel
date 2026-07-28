@@ -28,4 +28,4 @@
 
 ## 添加新项目
 
-在 `.imwel/manifest.yaml` 的 `projects` 下添加具有唯一 `name` 与 `path` 的条目。
+在 `.imwel/manifest.yaml` 的 `projects` 下添加具有唯一 `name` 与 `path` 的条目。可写项目设 `role: project`（一个消费目录至多绑定一个）；只读模块设 `role: shared`（任意数量的消费者可与其可写项目一并安装）；省略 `role` 时默认为 `project`。参见 `.imwel/manifest.yaml` 中的注释示例。

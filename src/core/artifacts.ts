@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Artifact, ArtifactType } from './artifact-types.js';
-import type { ManifestConventions, ManifestProject } from './manifest.js';
+import { projectRole, type ManifestConventions, type ManifestProject } from './manifest.js';
 import { pathExists } from './fs-utils.js';
 import { parseFrontmatter } from './frontmatter.js';
 import { parseRuleOverlay } from './rule-overlay.js';
@@ -73,10 +73,19 @@ export async function discoverArtifacts(
   const optionalSet = new Set((project.optional ?? []).map((p) => p.replace(/\\/g, '/')));
   const artifacts: Artifact[] = [];
   const seenSkills = new Set<string>();
+  // A shared module composes into a consumer alongside the single writable project
+  // and other modules. Its `agents` file would render to the single project-root
+  // instructions path (AGENTS.md/...), colliding with the writable project. That
+  // root file belongs to the writable project, so modules only contribute rule/skill
+  // artifacts; any `agents` file in a shared module is intentionally not installed.
+  const skipAgents = projectRole(project) === 'shared';
 
   for (const rel of allFiles.sort()) {
     const type = classifyArtifact(rel, conventions);
     if (!type) {
+      continue;
+    }
+    if (type === 'agents' && skipAgents) {
       continue;
     }
     const optional = optionalSet.has(rel);

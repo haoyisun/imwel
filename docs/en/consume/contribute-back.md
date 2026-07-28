@@ -12,13 +12,13 @@ imwel push            # reverse-render local tool files → canonical, open a br
 
 `imwel push` reverse-renders **every** bound tool that has installed paths back into canonical Artifacts; conflicting canonical content fails the push so nothing ambiguous is sent. See [`imwel push`](../guide/commands.md#imwel-push).
 
-## Register a brand-new artifact
+## Track a contribution target
 
 ```bash
-imwel propose <file>  # register a new artifact for the next push
+imwel propose         # choose one project/module, then add or remove tracking
 ```
 
-Use `imwel propose` when you authored a wholly new rule/skill locally and want it included in the next push. See [`imwel propose`](../guide/commands.md#imwel-propose-file).
+Use `imwel propose` when you authored a new local rule/skill, or when you explicitly want to contribute edits to a subscribed module. Existing tracking is preselected; deselecting it removes only the tracking record. Project tracking is removed after a matching upstream Artifact is installed by sync, while module tracking persists until you cancel it. See [`imwel propose`](../guide/commands.md#imwel-propose-file).
 
 > This is the **consumer feedback path**, distinct from maintaining a template repo itself — for that, see the [Author path](../author/quickstart.md).
 

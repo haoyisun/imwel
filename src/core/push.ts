@@ -4,19 +4,52 @@ import { getAdapter } from '../adapters/index.js';
 import { getRemote } from './config.js';
 import type { Binding, ManagedArtifact } from './binding.js';
 import { listDirtyPaths } from './history.js';
-import { collectInstalledPaths } from './history.js';
 import { ensureRemoteCache } from './remote-cache.js';
 import { runGit } from './git.js';
-import type { PendingProposal } from './propose.js';
+import {
+  contributionSourceIdentity,
+  type PendingProposal,
+} from './propose.js';
 import { resolveConventions, readManifest } from './manifest.js';
+import { pathExists } from './fs-utils.js';
+import { toSlug } from '../adapters/slug.js';
 
 export interface PushCandidate {
   sourcePath: string;
+  sourceFiles: string[];
+  canonicalPath: string;
   type: ManagedArtifact['type'];
   optional: boolean;
   canonicalContent: string;
   targetOverrides?: Record<string, Record<string, unknown>>;
   projectPath: string;
+  remote: string;
+  project: string;
+  kind: 'binding' | 'proposal' | 'module-contribution';
+  trackingIdentity?: string;
+}
+
+export interface SkippedPushInput {
+  sourcePath: string;
+  kind: 'binding' | 'proposal';
+  missingPaths: string[];
+  trackingIdentity?: string;
+}
+
+export interface CollectedPushCandidates {
+  candidates: PushCandidate[];
+  skipped: SkippedPushInput[];
+}
+
+async function readUtf8IfPresent(filePath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export class CanonicalConflictError extends Error {
@@ -29,6 +62,29 @@ export class CanonicalConflictError extends Error {
     this.sourcePath = sourcePath;
     this.tools = tools;
   }
+}
+
+export async function matchesPushedCommit(
+  cacheDir: string,
+  projectPath: string,
+  proposal: Pick<PendingProposal, 'canonicalPath' | 'pushed'>,
+  canonicalContent: string,
+): Promise<boolean> {
+  if (!proposal.pushed) {
+    return false;
+  }
+  const previouslyPushed = await import('./git.js').then((git) =>
+    git.showFileAtCommit(
+      proposal.pushed!.commit,
+      path.posix.join(projectPath.replace(/\\/g, '/'), proposal.canonicalPath),
+      { cwd: cacheDir },
+    ),
+  );
+  return (
+    previouslyPushed !== null &&
+    previouslyPushed.replace(/\r\n/g, '\n').trimEnd() ===
+      canonicalContent.replace(/\r\n/g, '\n').trimEnd()
+  );
 }
 
 export interface ToolParseResult {
@@ -68,20 +124,36 @@ export async function collectEditCandidates(
   projectDir: string,
   binding: Binding,
 ): Promise<PushCandidate[]> {
+  return (await collectEditCandidatesWithSkipped(projectDir, binding)).candidates;
+}
+
+export async function collectEditCandidatesWithSkipped(
+  projectDir: string,
+  binding: Binding,
+  proposals: PendingProposal[] = [],
+): Promise<CollectedPushCandidates> {
   const candidates: PushCandidate[] = [];
-  const manifest = await readManifest(await ensureRemoteCache(binding.remote, { force: true }));
-  const dirty = new Set(await listDirtyPaths(projectDir, collectInstalledPaths(binding)));
-  // Only artifacts from a writable (linked) project are push candidates;
-  // read-only (subscribed) module edits are never pushed.
+  const skipped: SkippedPushInput[] = [];
   const writableProjects = new Set(
     binding.projects.filter((p) => p.mode === 'linked').map((p) => p.name),
   );
+  const subscribedProjects = new Set(
+    binding.projects.filter((p) => p.mode === 'subscribed').map((p) => p.name),
+  );
+  const authorizedModules = new Set(
+    proposals
+      .filter((proposal) => proposal.targetRole === 'shared' && proposal.remote === binding.remote)
+      .map((proposal) => `${proposal.project}\u0000${proposal.type}\u0000${proposal.canonicalPath}`),
+  );
+  const eligible: ManagedArtifact[] = [];
 
   for (const artifact of binding.artifacts) {
-    if (!writableProjects.has(artifact.project)) {
+    const moduleAuthorized =
+      subscribedProjects.has(artifact.project) &&
+      authorizedModules.has(`${artifact.project}\u0000${artifact.type}\u0000${artifact.sourcePath}`);
+    if (!writableProjects.has(artifact.project) && !moduleAuthorized) {
       continue;
     }
-    const { project } = resolveConventions(manifest, artifact.project);
     const toolsWithPaths = binding.tools.filter(
       (tool) => (artifact.installedPaths[tool]?.length ?? 0) > 0,
     );
@@ -89,66 +161,206 @@ export async function collectEditCandidates(
       continue;
     }
     const allPaths = toolsWithPaths.flatMap((tool) => artifact.installedPaths[tool] ?? []);
+    const missingPaths: string[] = [];
+    for (const installedPath of allPaths) {
+      if (!(await pathExists(path.join(projectDir, installedPath)))) {
+        missingPaths.push(installedPath);
+      }
+    }
+    if (missingPaths.length > 0) {
+      skipped.push({ sourcePath: artifact.sourcePath, kind: 'binding', missingPaths });
+      continue;
+    }
+    eligible.push(artifact);
+  }
+
+  if (eligible.length === 0) {
+    return { candidates, skipped };
+  }
+
+  const eligiblePaths = eligible.flatMap((artifact) =>
+    binding.tools.flatMap((tool) => artifact.installedPaths[tool] ?? []),
+  );
+  const dirty = new Set(await listDirtyPaths(projectDir, eligiblePaths));
+  const dirtyArtifacts = eligible.filter((artifact) =>
+    binding.tools
+      .flatMap((tool) => artifact.installedPaths[tool] ?? [])
+      .some((installedPath) => dirty.has(installedPath)),
+  );
+  if (dirtyArtifacts.length === 0) {
+    return { candidates, skipped };
+  }
+
+  const cacheDir = await ensureRemoteCache(binding.remote, { force: true });
+  const manifest = await readManifest(cacheDir);
+  for (const artifact of dirtyArtifacts) {
+    const { project } = resolveConventions(manifest, artifact.project);
+    const toolsWithPaths = binding.tools.filter(
+      (tool) => (artifact.installedPaths[tool]?.length ?? 0) > 0,
+    );
+    const allPaths = toolsWithPaths.flatMap((tool) => artifact.installedPaths[tool] ?? []);
     const isDirty = allPaths.some((p) => dirty.has(p));
     if (!isDirty) {
       continue;
     }
 
     const parseResults: ToolParseResult[] = [];
+    let missingDuringRead: string[] = [];
     for (const tool of toolsWithPaths) {
       const adapter = getAdapter(tool);
       if (!adapter) {
         continue;
       }
       const paths = artifact.installedPaths[tool] ?? [];
-      const files = await Promise.all(
-        paths.map(async (rel) => ({
-          path: rel,
-          content: await fs.readFile(path.join(projectDir, rel), 'utf8'),
-        })),
-      );
-      const parsed = adapter.parseExisting(files);
+      const files: Array<{ path: string; content: string }> = [];
+      for (const relativePath of paths) {
+        const content = await readUtf8IfPresent(path.join(projectDir, relativePath));
+        if (content === null) {
+          missingDuringRead.push(relativePath);
+        } else {
+          files.push({ path: relativePath, content });
+        }
+      }
+      if (missingDuringRead.length > 0) {
+        break;
+      }
+      let parseFiles = files;
+      if (adapter.discoverExisting) {
+        const sourceId = toSlug(artifact.sourcePath);
+        const discovered = (await adapter.discoverExisting(projectDir)).find(
+          (item) =>
+            item.slug === sourceId &&
+            item.type === artifact.type &&
+            item.sourceFiles
+              .map((source) => source.replace(/\\/g, '/'))
+              .sort()
+              .join('\u0000') ===
+              paths.map((source) => source.replace(/\\/g, '/')).sort().join('\u0000'),
+        );
+        if (discovered) {
+          parseFiles = discovered.files;
+        }
+      }
+      const parsed = adapter.parseExisting(parseFiles);
       parseResults.push({
         tool,
         canonicalContent: parsed.canonicalContent,
         targetOverrides: parsed.targetOverrides,
       });
     }
+    if (missingDuringRead.length > 0) {
+      skipped.push({
+        sourcePath: artifact.sourcePath,
+        kind: 'binding',
+        missingPaths: missingDuringRead,
+      });
+      continue;
+    }
 
     const merged = mergeMultiToolParseResults(parseResults);
     if (!merged.ok) {
       throw new CanonicalConflictError(artifact.sourcePath, merged.tools);
     }
+    const moduleTracking = proposals.find(
+      (proposal) =>
+        proposal.targetRole === 'shared' &&
+        proposal.remote === binding.remote &&
+        proposal.project === artifact.project &&
+        proposal.type === artifact.type &&
+        proposal.canonicalPath === artifact.sourcePath,
+    );
+    if (
+      moduleTracking &&
+      (await matchesPushedCommit(cacheDir, project.path, moduleTracking, merged.canonicalContent))
+    ) {
+      continue;
+    }
 
     candidates.push({
       sourcePath: artifact.sourcePath,
+      sourceFiles: allPaths,
+      canonicalPath: artifact.sourcePath,
       type: artifact.type,
       optional: artifact.optional,
       canonicalContent: merged.canonicalContent,
       targetOverrides: merged.targetOverrides,
       projectPath: project.path,
+      remote: binding.remote,
+      project: artifact.project,
+      kind: writableProjects.has(artifact.project) ? 'binding' : 'module-contribution',
+      ...(writableProjects.has(artifact.project)
+        ? {}
+        : {
+            trackingIdentity: contributionSourceIdentity(
+              moduleTracking!,
+            ),
+          }),
     });
   }
-  return candidates;
+  return { candidates, skipped };
 }
 
 export async function collectProposalCandidates(
   projectDir: string,
   proposals: PendingProposal[],
 ): Promise<PushCandidate[]> {
+  return (await collectProposalCandidatesWithSkipped(projectDir, proposals)).candidates;
+}
+
+export async function collectProposalCandidatesWithSkipped(
+  projectDir: string,
+  proposals: PendingProposal[],
+): Promise<CollectedPushCandidates> {
   const candidates: PushCandidate[] = [];
+  const skipped: SkippedPushInput[] = [];
   for (const proposal of proposals) {
     const adapter = getAdapter(proposal.tool);
     if (!adapter) {
       continue;
     }
-    const abs = path.join(projectDir, proposal.localPath);
-    const content = await fs.readFile(abs, 'utf8');
-    const parsed = adapter.parseExisting([{ path: proposal.localPath, content }]);
-    const manifest = await readManifest(await ensureRemoteCache(proposal.remote, { force: true }));
+    const missingPaths: string[] = [];
+    const files: Array<{ path: string; content: string }> = [];
+    for (const sourceFile of proposal.sourceFiles) {
+      const content = await readUtf8IfPresent(path.join(projectDir, sourceFile));
+      if (content === null) {
+        missingPaths.push(sourceFile);
+      } else {
+        files.push({ path: sourceFile, content });
+      }
+    }
+    if (missingPaths.length > 0) {
+      skipped.push({
+        sourcePath: proposal.localPath,
+        kind: 'proposal',
+        missingPaths,
+        trackingIdentity: contributionSourceIdentity(proposal),
+      });
+      continue;
+    }
+    let parseFiles = files;
+    if (adapter.discoverExisting) {
+      const discovered = (await adapter.discoverExisting(projectDir)).find(
+        (item) =>
+          item.slug === proposal.sourceId &&
+          item.type === proposal.type &&
+          item.sourceFiles.map((source) => source.replace(/\\/g, '/')).sort().join('\u0000') ===
+            proposal.sourceFiles.map((source) => source.replace(/\\/g, '/')).sort().join('\u0000'),
+      );
+      if (discovered) {
+        parseFiles = discovered.files;
+      }
+    }
+    const parsed = adapter.parseExisting(parseFiles);
+    const cacheDir = await ensureRemoteCache(proposal.remote, { force: true });
+    const manifest = await readManifest(cacheDir);
     const { project } = resolveConventions(manifest, proposal.project);
+    if (await matchesPushedCommit(cacheDir, project.path, proposal, parsed.canonicalContent)) {
+      continue;
+    }
     candidates.push({
-      sourcePath: proposal.localPath,
+      sourcePath: proposal.canonicalPath,
+      sourceFiles: proposal.sourceFiles,
+      canonicalPath: proposal.canonicalPath,
       type: proposal.type,
       optional: proposal.optional,
       canonicalContent: parsed.canonicalContent,
@@ -156,9 +368,13 @@ export async function collectProposalCandidates(
         [proposal.tool]: parsed.targetOverrides ?? {},
       },
       projectPath: project.path,
+      remote: proposal.remote,
+      project: proposal.project,
+      kind: proposal.targetRole === 'shared' ? 'module-contribution' : 'proposal',
+      trackingIdentity: contributionSourceIdentity(proposal),
     });
   }
-  return candidates;
+  return { candidates, skipped };
 }
 
 export function buildCompareUrl(remoteUrl: string, base: string, head: string): string {
@@ -178,6 +394,7 @@ export function buildCompareUrl(remoteUrl: string, base: string, head: string): 
 
 export interface PushResult {
   branch: string;
+  commit: string;
   compareUrl: string;
   directPush: boolean;
 }
@@ -207,7 +424,7 @@ export async function executePush(
   for (const candidate of candidates) {
     const dest = path.posix.join(
       candidate.projectPath.replace(/\\/g, '/'),
-      candidate.sourcePath.replace(/\\/g, '/'),
+      candidate.canonicalPath.replace(/\\/g, '/'),
     );
     const abs = path.join(cacheDir, dest);
     await fs.mkdir(path.dirname(abs), { recursive: true });
@@ -220,6 +437,7 @@ export async function executePush(
     throw new Error('No changes to push');
   }
   await runGit(['commit', '-m', message], { cwd: cacheDir });
+  const commit = (await runGit(['rev-parse', 'HEAD'], { cwd: cacheDir })).stdout.trim();
 
   if (directPush) {
     await runGit(['push', 'origin', binding.branch], { cwd: cacheDir });
@@ -229,6 +447,7 @@ export async function executePush(
 
   return {
     branch,
+    commit,
     compareUrl: buildCompareUrl(remote.url, binding.branch, branch),
     directPush,
   };

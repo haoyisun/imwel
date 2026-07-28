@@ -7,14 +7,18 @@ import { detectHostCli, createRemoteRepo } from '../core/host-cli.js';
 import { runGit } from '../core/git.js';
 import { pathExists } from '../core/fs-utils.js';
 import { isInteractiveStdin } from '../core/cli-flags.js';
+import { generateTemplateFromProject } from '../core/template-from-project.js';
 import { t } from '../locales/index.js';
 
 export async function runTemplateInit(
   targetDir?: string,
   locale?: SupportedLocale,
   name?: string,
-  options: { yes?: boolean } = {},
+  options: { yes?: boolean; fromProject?: boolean; topic?: string } = {},
 ): Promise<number> {
+  if (options.fromProject) {
+    return runTemplateInitFromProject(targetDir, locale, options.topic);
+  }
   const nonInteractive = !isInteractiveStdin() || Boolean(options.yes);
   if (!nonInteractive) {
     p.intro(t('template.init.title'));
@@ -129,5 +133,64 @@ export async function runTemplateInit(
   } else {
     console.log(t('common.done'));
   }
+  return 0;
+}
+
+/**
+ * `imwel template init --from-project`: harvest USER-owned tool artifacts in the
+ * current project and generate a template-repo skeleton into a unique dir. The
+ * semantic refinement (splitting projects, roles, README) is the job of the
+ * `/imwel-create-template` skill; this is the deterministic substrate.
+ */
+async function runTemplateInitFromProject(
+  targetDir: string | undefined,
+  locale: SupportedLocale | undefined,
+  topic: string | undefined,
+): Promise<number> {
+  const projectDir = process.cwd();
+  console.log(t('template.fromProject.title'));
+
+  const result = await generateTemplateFromProject(projectDir, {
+    dir: targetDir ? path.resolve(targetDir) : undefined,
+    topic,
+    locale: locale ?? resolveLocale(),
+  });
+
+  for (const abs of result.writtenPaths) {
+    console.log(t('skill.install.written', { path: path.relative(projectDir, abs) || abs }));
+  }
+
+  if (result.excluded.length) {
+    console.log(t('template.fromProject.excluded', { count: result.excluded.length }));
+    for (const item of result.excluded) {
+      console.log(`  - ${item.path} (${t(item.reasonKey as 'provenance.reason.user')})`);
+    }
+  }
+
+  if (result.conflicts.length) {
+    for (const conflict of result.conflicts) {
+      console.warn(
+        t('template.fromProject.conflict', {
+          slug: conflict.slug,
+          tools: conflict.tools.join(', '),
+        }),
+      );
+    }
+  }
+
+  if (result.artifacts.length === 0 && result.excluded.length === 0) {
+    console.log(t('template.fromProject.empty'));
+    return 0;
+  }
+
+  console.log(
+    t('template.fromProject.success', {
+      count: result.artifacts.length,
+      path: path.relative(projectDir, result.genDir) || result.genDir,
+    }),
+  );
+  console.log(t('template.fromProject.nextSteps', {
+    path: path.relative(projectDir, result.genDir) || result.genDir,
+  }));
   return 0;
 }

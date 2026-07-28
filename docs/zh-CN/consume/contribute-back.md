@@ -12,13 +12,13 @@ imwel push            # 反向渲染本地工具文件 → canonical，开分支
 
 `imwel push` 会对**每个**有安装路径的绑定工具做反向渲染回 canonical Artifact；canonical 内容冲突会使 push 失败,从而不发送任何有歧义的内容。见 [`imwel push`](../guide/commands.md#imwel-push)。
 
-## 登记全新 artifact
+## 追踪贡献目标
 
 ```bash
-imwel propose <file>  # 为下次 push 登记一个全新 artifact
+imwel propose         # 选择一个 project/module，再新增或取消追踪
 ```
 
-当你在本地新写了一条全新规则/技能并希望纳入下次 push 时,用 `imwel propose`。见 [`imwel propose`](../guide/commands.md#imwel-propose-file)。
+当你在本地新写规则/技能，或明确希望贡献订阅模块的编辑时，使用 `imwel propose`。已有追踪会预勾选；取消勾选只移除追踪记录。project tracking 会在 sync 安装匹配的上游 Artifact 后移除，module tracking 则持续到你主动取消。见 [`imwel propose`](../guide/commands.md#imwel-propose-file)。
 
 > 这是**消费侧回馈路径**,与维护模板仓本身不同——后者见[作者路径](../author/quickstart.md)。
 

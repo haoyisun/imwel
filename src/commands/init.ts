@@ -3,7 +3,7 @@ import { adapters } from '../adapters/index.js';
 import { discoverArtifacts } from '../core/artifacts.js';
 import type { Artifact } from '../core/artifact-types.js';
 import { readBinding, writeBinding, writableProjectName, type BoundProject } from '../core/binding.js';
-import { applyRenderedFiles } from '../core/apply-files.js';
+import { applyInspectedRenderedFiles } from '../core/apply-files.js';
 import { listRemotes } from '../core/config.js';
 import {
   exitIfMissingFlags,
@@ -12,9 +12,13 @@ import {
 } from '../core/cli-flags.js';
 import { ensureHistoryRepo, commitInstalledFiles } from '../core/history.js';
 import { readManifest, resolveConventions, projectRole } from '../core/manifest.js';
+import { inspectBindingRenderedFiles } from '../core/managed-write-safety.js';
+import { printPathConflicts } from '../core/print-conflicts.js';
 import { branchCommit, checkoutBranch, ensureRemoteCache, listBranches } from '../core/remote-cache.js';
 import { renderArtifacts } from '../core/render.js';
 import { selectWithDiffConfirm } from '../core/select-diff.js';
+import { installCommandPackWithFeedback } from './skill.js';
+import { confirmRenderedFileWrites } from './write-safety.js';
 import { runSync } from './sync.js';
 import { t } from '../locales/index.js';
 
@@ -29,6 +33,8 @@ export interface InitOptions {
   module?: string;
   /** CSV of optional source paths, or `false` when `--no-optional` is set. */
   optional?: string | false;
+  /** Install the first-party command pack; `false` when `--no-command-pack`. */
+  commandPack?: boolean;
 }
 
 function hasSelectionFlags(opts: InitOptions): boolean {
@@ -250,7 +256,7 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
       const selectedWritable = (await p.select({
         message: t('init.prompt.project'),
         options: [
-          { value: noneValue, label: '—' },
+          { value: noneValue, label: t('init.prompt.project.none') },
           ...writableProjects.map((proj) => ({ value: proj.name, label: proj.name })),
         ],
         initialValue: existingWritable ?? noneValue,
@@ -303,18 +309,15 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   );
   const { files, managed, conflicts, warningLocaleKeys } = renderArtifacts(artifacts, tools);
   if (conflicts.length) {
-    for (const conflict of conflicts) {
-      console.error(
-        t('adapter.pathConflict', {
-          path: conflict.path,
-          tools: conflict.adapterIds.join(', '),
-        }),
-      );
-    }
-    console.error(t('adapter.pathConflict.hint'));
+    printPathConflicts(conflicts);
     return 1;
   }
-  await applyRenderedFiles(projectDir, files);
+  const inspectedFiles = await inspectBindingRenderedFiles(projectDir, files, existing);
+  if (!(await confirmRenderedFileWrites(inspectedFiles, Boolean(opts.yes)))) {
+    console.log(t('common.cancelled'));
+    return 1;
+  }
+  await applyInspectedRenderedFiles(projectDir, inspectedFiles);
   await ensureHistoryRepo(projectDir);
   const writtenPaths = files.map((f) => f.path);
   const historyCommit = await commitInstalledFiles(projectDir, writtenPaths, 'imwel init');
@@ -344,6 +347,8 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
     console.log(t('init.successModulesOnly', { modules: moduleNames.join(', '), branch }));
   }
 
+  await maybeInstallCommandPack(projectDir, tools, opts, nonInteractive);
+
   if (rebind && !nonInteractive && !opts.yes) {
     const syncNow = await p.confirm({ message: t('init.prompt.syncNow'), initialValue: true });
     if (!p.isCancel(syncNow) && syncNow) {
@@ -352,4 +357,41 @@ export async function runInit(opts: InitOptions = {}): Promise<number> {
   }
   p.outro(t('common.done'));
   return 0;
+}
+
+/**
+ * Opt-in install of the first-party command pack after a successful bind. This
+ * step never affects the binding result: any failure is reported with an
+ * actionable "install later" hint and swallowed.
+ */
+async function maybeInstallCommandPack(
+  projectDir: string,
+  tools: string[],
+  opts: InitOptions,
+  nonInteractive: boolean,
+): Promise<void> {
+  if (opts.commandPack === false) {
+    return;
+  }
+  let shouldInstall: boolean;
+  if (nonInteractive) {
+    shouldInstall = opts.commandPack === true;
+  } else if (opts.commandPack === true) {
+    shouldInstall = true;
+  } else {
+    const confirm = await p.confirm({
+      message: t('init.prompt.commandPack', { tools: tools.join(', ') }),
+      initialValue: true,
+    });
+    shouldInstall = !p.isCancel(confirm) && confirm;
+  }
+  if (!shouldInstall) {
+    console.log(t('init.commandPack.skipped'));
+    return;
+  }
+  try {
+    await installCommandPackWithFeedback(projectDir, tools, { yes: true, confirm: false });
+  } catch (error) {
+    console.warn(t('init.commandPack.failed', { error: error instanceof Error ? error.message : String(error) }));
+  }
 }

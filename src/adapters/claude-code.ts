@@ -5,6 +5,7 @@ import type { Artifact } from '../core/artifact-types.js';
 import type { Adapter, ParsedExisting, RenderedFile } from './types.js';
 import { toSlug } from './slug.js';
 import { discoverSingleMdBlocks, discoverSkillBundles } from './strategies/discover.js';
+import { renderCommandFile } from './strategies/command-render.js';
 
 export interface ClaudeCodeOverrides {
   imports?: string[];
@@ -20,6 +21,10 @@ export const claudeCodeAdapter: Adapter = {
     const claudeDir = path.join(projectDir, '.claude');
     const claudeMd = path.join(projectDir, 'CLAUDE.md');
     return (await pathExists(claudeDir)) || (await pathExists(claudeMd));
+  },
+  supportsCommands: true,
+  renderCommand(command): RenderedFile[] {
+    return renderCommandFile(command, '.claude/commands');
   },
   render(artifact, targetOverrides?: Record<string, unknown>): RenderedFile[] {
     if (artifact.type === 'skill') {

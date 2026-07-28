@@ -9,14 +9,21 @@ import {
   type BoundProject,
   type ManagedArtifact,
 } from '../core/binding.js';
-import { applyRenderedFiles } from '../core/apply-files.js';
+import {
+  applyInspectedRenderedFiles,
+  type InspectedRenderedFile,
+} from '../core/apply-files.js';
 import { isInteractiveStdin, parseCsv } from '../core/cli-flags.js';
 import { commitInstalledFiles, ensureHistoryRepo } from '../core/history.js';
 import { readManifest, resolveConventions, projectRole } from '../core/manifest.js';
+import { inspectBindingRenderedFiles, overwriteRisks } from '../core/managed-write-safety.js';
+import { printPathConflicts } from '../core/print-conflicts.js';
 import { checkoutBranch, ensureRemoteCache } from '../core/remote-cache.js';
 import { renderArtifacts } from '../core/render.js';
 import { selectWithDiffConfirm } from '../core/select-diff.js';
 import { t } from '../locales/index.js';
+import type { Artifact } from '../core/artifact-types.js';
+import { confirmRenderedFileWrites } from './write-safety.js';
 
 export interface ModulesOptions {
   yes?: boolean;
@@ -26,24 +33,71 @@ export interface ModulesOptions {
   unfreeze?: string;
 }
 
-async function installModules(
+export interface InstallModulesResult {
+  ok: boolean;
+  managed: ManagedArtifact[];
+}
+
+/**
+ * Install newly-selected modules, but only after rendering them together with
+ * every project that will remain bound (the writable project, plus already-installed
+ * modules not being removed in this same call). This mirrors `imwel init`/`imwel sync`,
+ * which always render the full bound set in one pass so a cross-project path conflict
+ * (same target path, different content, from a different project) is caught here rather
+ * than silently overwritten and only surfaced on a later `imwel sync`.
+ */
+export async function installModules(
   projectDir: string,
   cacheDir: string,
   binding: Binding,
   moduleNames: string[],
-): Promise<ManagedArtifact[]> {
+  remainingProjectNames: string[],
+  authorize: (files: InspectedRenderedFile[]) => Promise<boolean> = async (files) =>
+    overwriteRisks(files).length === 0,
+): Promise<InstallModulesResult> {
   const manifest = await readManifest(cacheDir);
-  const managed: ManagedArtifact[] = [];
+  const newArtifacts: Artifact[] = [];
   for (const name of moduleNames) {
     const { project, conventions } = resolveConventions(manifest, name);
     // Modules install their required artifacts only; optional artifacts can be
     // added by rebinding through `imwel init`.
-    const artifacts = await discoverArtifacts(cacheDir, project, conventions, new Set());
-    const { files, managed: rendered } = renderArtifacts(artifacts, binding.tools);
-    await applyRenderedFiles(projectDir, files);
-    managed.push(...rendered);
+    newArtifacts.push(...(await discoverArtifacts(cacheDir, project, conventions, new Set())));
   }
-  return managed;
+
+  const otherArtifacts: Artifact[] = [];
+  for (const name of remainingProjectNames) {
+    const { project, conventions } = resolveConventions(manifest, name);
+    const selectedOptional = new Set(
+      binding.artifacts
+        .filter((a) => a.project === name && a.optional)
+        .map((a) => a.sourcePath),
+    );
+    otherArtifacts.push(
+      ...(await discoverArtifacts(cacheDir, project, conventions, selectedOptional)),
+    );
+  }
+
+  const { files, managed, conflicts } = renderArtifacts(
+    [...newArtifacts, ...otherArtifacts],
+    binding.tools,
+  );
+  if (conflicts.length > 0) {
+    printPathConflicts(conflicts);
+    return { ok: false, managed: [] };
+  }
+
+  const addedNameSet = new Set(moduleNames);
+  const managedForAdded = managed.filter((m) => addedNameSet.has(m.project));
+  const addedPaths = new Set(
+    managedForAdded.flatMap((m) => Object.values(m.installedPaths).flat()),
+  );
+  const filesForAdded = files.filter((f) => addedPaths.has(f.path));
+  const inspectedFiles = await inspectBindingRenderedFiles(projectDir, filesForAdded, binding);
+  if (!(await authorize(inspectedFiles))) {
+    return { ok: false, managed: [] };
+  }
+  await applyInspectedRenderedFiles(projectDir, inspectedFiles);
+  return { ok: true, managed: managedForAdded };
 }
 
 async function removeModuleFiles(
@@ -135,12 +189,36 @@ export async function runModules(opts: ModulesOptions = {}): Promise<number> {
     return 0;
   }
 
+  // Check for cross-project render conflicts *before* touching disk or the
+  // binding, so a conflicting `--add` aborts the whole invocation atomically
+  // (any requested `--remove`/`--freeze`/`--unfreeze` in the same call is
+  // left un-applied too, and the binding stays exactly as it was).
+  let newManaged: ManagedArtifact[] = [];
+  if (added.length > 0) {
+    const writableName = binding.projects.find((bp) => bp.mode === 'linked')?.name;
+    const remainingProjectNames = [
+      ...(writableName ? [writableName] : []),
+      ...installed.filter((n) => !removed.includes(n)),
+    ];
+    const result = await installModules(
+      projectDir,
+      cacheDir,
+      binding,
+      added,
+      remainingProjectNames,
+      (files) => confirmRenderedFileWrites(files, Boolean(opts.yes)),
+    );
+    if (!result.ok) {
+      return 1;
+    }
+    newManaged = result.managed;
+  }
+
   let artifacts = binding.artifacts;
   if (removed.length > 0) {
     artifacts = await removeModuleFiles(projectDir, binding, removed);
   }
   if (added.length > 0) {
-    const newManaged = await installModules(projectDir, cacheDir, binding, added);
     artifacts = [...artifacts, ...newManaged];
   }
 

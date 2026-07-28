@@ -1,7 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import * as p from '@clack/prompts';
-import { addRemote, getRemote, listRemotes, removeRemote, setRemote } from '../core/config.js';
+import {
+  addRemote,
+  DuplicateRemoteUrlError,
+  getRemote,
+  listRemotes,
+  removeRemote,
+  setRemote,
+} from '../core/config.js';
 import { remoteCacheDir } from '../core/paths.js';
 import { ensureRemoteCache } from '../core/remote-cache.js';
 import { listBoundDirectories } from '../core/binding-registry.js';
@@ -50,13 +57,11 @@ export async function runRemoteAdd(input: RemoteAddInput): Promise<number> {
   const derived = input.url === undefined && !input.as;
   try {
     await addRemote(alias, { url, directPush: Boolean(input.directPush), defaultBranch: 'main' });
-    await ensureRemoteCache(alias, { force: true });
-    if (derived) {
-      console.log(t('remote.add.derivedAlias', { alias }));
-    }
-    console.log(t('remote.add.success', { alias, url }));
-    return 0;
   } catch (error) {
+    if (error instanceof DuplicateRemoteUrlError) {
+      console.error(t('remote.add.duplicateUrl', { alias: error.existingAlias, url }));
+      return 1;
+    }
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('already exists')) {
       console.error(t('remote.add.exists', { alias }));
@@ -65,6 +70,20 @@ export async function runRemoteAdd(input: RemoteAddInput): Promise<number> {
     console.error(t('common.error', { message }));
     return 1;
   }
+  const spinner = p.spinner();
+  spinner.start(t('remote.add.cloning', { alias }));
+  try {
+    await ensureRemoteCache(alias, { force: true });
+  } catch (error) {
+    spinner.stop(t('common.error', { message: error instanceof Error ? error.message : String(error) }));
+    return 1;
+  }
+  spinner.stop(t('common.done'));
+  if (derived) {
+    console.log(t('remote.add.derivedAlias', { alias }));
+  }
+  console.log(t('remote.add.success', { alias, url }));
+  return 0;
 }
 
 export async function runRemoteList(): Promise<number> {

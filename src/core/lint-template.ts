@@ -79,9 +79,12 @@ export async function lintTemplateRepo(
     };
   }
 
+  const artifactNamesByProject: Map<string, ProjectArtifactNames> = new Map();
   for (const project of manifest.projects) {
     await lintProject(context.root, manifest, project, issues);
+    artifactNamesByProject.set(project.name, await collectProjectArtifactNames(context.root, manifest, project));
   }
+  lintCrossProjectArtifactNameCollisions(artifactNamesByProject, issues);
 
   const readmePath = path.join(context.root, 'README.md');
   if (!(await pathExists(readmePath))) {
@@ -163,6 +166,22 @@ async function lintProject(
       path: project.path,
     });
     return;
+  }
+
+  // A shared module composes into a consumer next to the single writable project;
+  // its agents file would collide at the single project-root instructions path and
+  // is intentionally not installed. Warn so the author moves the content into
+  // rule/skill artifacts (which compose cleanly) instead of shipping dead content.
+  if (project.role === 'shared') {
+    const agentsAbs = path.join(projectDir, ...conventions.agentsFile.split('/'));
+    if (await pathExists(agentsAbs)) {
+      issues.push({
+        severity: 'warning',
+        code: 'module.agentsIgnored',
+        message: `Shared module "${project.name}" ships an agents file (${conventions.agentsFile}); it is not installed for modules (it would collide with the writable project's root instructions). Move this content into rule/skill artifacts instead.`,
+        path: path.posix.join(project.path.replace(/\\/g, '/'), conventions.agentsFile),
+      });
+    }
   }
 
   await lintSkills(projectDir, conventions, issues);
@@ -379,6 +398,89 @@ async function lintOptionalPaths(
       }
     }
   }
+}
+
+interface ProjectArtifactNames {
+  rules: Set<string>;
+  skills: Set<string>;
+}
+
+/**
+ * Gather rule-file basenames and skill-directory names for one project, for the
+ * cross-project collision check below. Best-effort: an unreadable/missing dir
+ * just yields an empty set (already reported by lintRules/lintSkills above).
+ */
+async function collectProjectArtifactNames(
+  repoRoot: string,
+  manifest: Manifest,
+  project: ManifestProject,
+): Promise<ProjectArtifactNames> {
+  const { conventions } = resolveConventions(manifest, project.name);
+  const projectDir = path.join(repoRoot, project.path);
+  const rules = new Set<string>();
+  const skills = new Set<string>();
+
+  const rulesDir = path.join(projectDir, conventions.rulesDir);
+  if ((await pathExists(rulesDir)) && (await isDirectory(rulesDir))) {
+    const entries = await fs.readdir(rulesDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name.endsWith('.md')) {
+        rules.add(entry.name.slice(0, -'.md'.length));
+      }
+    }
+  }
+
+  const skillsDir = path.join(projectDir, conventions.skillsDir);
+  if ((await pathExists(skillsDir)) && (await isDirectory(skillsDir))) {
+    const entries = await fs.readdir(skillsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        skills.add(entry.name);
+      }
+    }
+  }
+
+  return { rules, skills };
+}
+
+/**
+ * A rule/skill basename shared by two projects only *might* collide, and only
+ * for consumers who install both — lint cannot know that in advance, so this
+ * stays a warning even under --strict-adjacent policy (still respects --strict
+ * like any other warning). See design.md D3.
+ */
+function lintCrossProjectArtifactNameCollisions(
+  byProject: Map<string, ProjectArtifactNames>,
+  issues: LintIssue[],
+): void {
+  const projectNames = [...byProject.keys()];
+  for (let i = 0; i < projectNames.length; i += 1) {
+    for (let j = i + 1; j < projectNames.length; j += 1) {
+      const nameA = projectNames[i]!;
+      const nameB = projectNames[j]!;
+      const a = byProject.get(nameA)!;
+      const b = byProject.get(nameB)!;
+
+      for (const rule of intersect(a.rules, b.rules)) {
+        issues.push({
+          severity: 'warning',
+          code: 'project.artifactNameCollision',
+          message: `Projects "${nameA}" and "${nameB}" both declare a rule named "${rule}.md"; installing both would collide on the rendered path. Rename one of them if this is unintentional.`,
+        });
+      }
+      for (const skill of intersect(a.skills, b.skills)) {
+        issues.push({
+          severity: 'warning',
+          code: 'project.artifactNameCollision',
+          message: `Projects "${nameA}" and "${nameB}" both declare a skill named "${skill}"; installing both would collide on the rendered path. Rename one of them if this is unintentional.`,
+        });
+      }
+    }
+  }
+}
+
+function intersect(a: Set<string>, b: Set<string>): string[] {
+  return [...a].filter((value) => b.has(value));
 }
 
 function pathEscapes(root: string, relative: string): boolean {

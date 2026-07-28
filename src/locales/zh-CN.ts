@@ -43,6 +43,9 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'remote.add.usage': '添加模板仓库远程源',
   'remote.add.success': '已添加远程 "{alias}" → {url}',
   'remote.add.exists': '远程别名已存在：{alias}',
+  'remote.add.duplicateUrl':
+    '该 URL 已注册在远程别名 "{alias}" 下：{url}。请直接使用该别名，或用 `imwel remote set {alias}` 调整其选项。',
+  'remote.add.cloning': '正在克隆远程 "{alias}"...',
   'remote.add.derivedAlias': '使用本地别名“{alias}”（由 URL 推导；可用 --as 覆盖）。',
   'remote.add.needUrl':
     '请提供仓库 URL：`imwel remote add <url>`（自动推导别名）或 `imwel remote add <alias> <url>`。',
@@ -66,6 +69,14 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'template.init.prompt.remote': '使用 {cli} 创建远程仓库？',
   'template.init.success': '模板仓库已生成于 {path}',
   'template.init.exists': '目录非空：{path}',
+  'template.fromProject.title': '正在基于本项目已有的 AI 工具制品生成模板仓...',
+  'template.fromProject.excluded': '已排除 {count} 个非用户制品（imwel / 第三方工具）：',
+  'template.fromProject.conflict':
+    '“{slug}” 在多个工具间存在冲突：{tools}。内容不一致，已跳过——发布前请手动解决。',
+  'template.fromProject.empty': '未发现可收割的用户制品，未生成任何内容。',
+  'template.fromProject.success': '已生成含 {count} 个制品的模板骨架于 {path}。',
+  'template.fromProject.nextSteps':
+    '下一步：在 {path} 运行 `imwel lint` 校验，然后在 AI 工具中用 /imwel-create-template skill 拆分 project、指定 role、并生成 README/CONTRIBUTING。',
   'template.init.skipExisting': '已跳过已存在文件（未覆盖）：{path}',
 
   'init.title': '将当前目录绑定到模板项目',
@@ -75,6 +86,7 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'init.prompt.remote': '选择远程',
   'init.prompt.branch': '选择分支',
   'init.prompt.project': '选择可写项目（至多一个）',
+  'init.prompt.project.none': '（不绑定项目，仅安装模块）',
   'init.prompt.modules': '选择要安装的只读模块',
   'init.prompt.optional': '选择要安装的可选制品',
   'init.prompt.syncNow': '重新绑定后立即同步？',
@@ -101,6 +113,16 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'select.confirm': '应用这些变更？',
   'select.installed': '{name}（已安装）',
 
+  'writeSafety.plan.title': '计划写入文件：',
+  'writeSafety.plan.absent': '  + {path}（新文件）',
+  'writeSafety.plan.managed-clean': '  ~ {path}（受管且本地未修改）',
+  'writeSafety.plan.managed-dirty': '  ! {path}（受管但有本地修改；将覆盖）',
+  'writeSafety.plan.unmanaged-identical': '  = {path}（非受管内容兼容；将接管）',
+  'writeSafety.plan.unmanaged-different': '  ! {path}（非受管内容不同；将覆盖）',
+  'writeSafety.confirm': '覆盖 {count} 个冲突文件：{paths}？',
+  'writeSafety.nonInteractive':
+    '未提供 --yes，拒绝覆盖冲突文件：{paths}。请检查计划，并仅在确认这些具体覆盖后加 --yes 重试。',
+
   'modules.title': '管理已安装的模块',
   'modules.noBinding': '当前目录无 imwel 绑定。请先运行 `imwel init`。',
   'modules.none': '此模板分支未声明任何只读模块（role: shared）。',
@@ -110,6 +132,37 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'modules.fetching': '正在获取远程 "{alias}"...',
   'modules.syncHint': '运行 `imwel sync` 以拉取已安装模块的最新内容。',
 
+  'tools.title': '管理绑定的 AI 编程工具',
+  'tools.description': '无需重新绑定项目即可增加或移除 AI 编程工具',
+  'tools.help.yes': '显式选择后跳过确认',
+  'tools.help.add': '要增加的工具 id，逗号分隔',
+  'tools.help.remove': '要移除的工具 id，逗号分隔',
+  'tools.help.deleteOutput': '删除已移除工具不再被引用的受管输出',
+  'tools.noBinding': '当前目录无 imwel 绑定。请先运行 `imwel init`。',
+  'tools.prompt.select': '工具（空格切换；已安装项已勾选）',
+  'tools.prompt.removedOutput': '如何处理已移除工具的输出？',
+  'tools.prompt.keep': '保留文件并停止管理（默认）',
+  'tools.prompt.delete': '仅删除不再受管的精确记录路径',
+  'tools.flagsRequired': '请指定 --add <csv> 和/或 --remove <csv>；--yes 仅跳过确认。',
+  'tools.unknown': '未知工具 id：{tools}。支持：{supported}。',
+  'tools.overlap': '同一工具不能同时增加和移除：{tools}。',
+  'tools.empty': '绑定中必须至少保留一个工具。未应用任何变更。',
+  'tools.deleteNeedsRemove': '--delete-output 要求至少移除一个工具。',
+  'tools.noChange': '没有工具变更。',
+  'tools.fetching': '正在获取远程 "{alias}" 以规划工具输出...',
+  'tools.remoteDrift':
+    '远程分支自上次同步后已有变化。新增工具将使用当前远程内容；现有工具输出未被同步。',
+  'tools.plan.title': '计划的工具变更：',
+  'tools.plan.add': '  + 工具 {tool}',
+  'tools.plan.remove': '  - 工具 {tool}',
+  'tools.plan.keep': '  = 保留 {path}（转为非受管）',
+  'tools.plan.delete': '  - 删除 {path}',
+  'tools.plan.shared': '  = 保留 {path}（仍被剩余 binding 引用）',
+  'tools.confirm':
+    '应用工具 +{added}/-{removed}，保留 {kept} 个原输出，并删除 {deleted} 个输出（{paths}）？',
+  'tools.none': '无',
+  'tools.applied': '工具已更新：+{added} / -{removed}；保留 {kept} 个原输出，删除 {deleted} 个。',
+
   'sync.title': '从远程同步制品',
   'sync.fetching': '正在获取远程 "{alias}"...',
   'sync.noBinding': '当前目录无 imwel 绑定。请先运行 `imwel init`。',
@@ -118,6 +171,7 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'sync.plan.added': '  + {path}',
   'sync.plan.modified': '  ~ {path}',
   'sync.plan.removed': '  - {path}',
+  'sync.plan.restore': '  ↻ {path}（项目“{project}”缺失的受管文件；将恢复）',
   'sync.confirm': '将 {count} 项变更应用到本地文件？',
   'sync.conflicts':
     '以下文件存在冲突：{paths}。请解决冲突标记后运行 `imwel sync --continue`。',
@@ -144,6 +198,35 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'status.remoteUpdated': '远程有可用更新。',
   'status.localEdited': '检测到本地手工修改：{paths}',
   'status.clean': '未检测到漂移。',
+
+  'binding.description': '纯本地查看绑定与贡献追踪，不访问网络',
+  'binding.help.details': '显示受管制品和贡献追踪路径',
+  'binding.help.json': '输出稳定、带版本号的 JSON 视图',
+  'binding.section.binding': '绑定（Binding）',
+  'binding.section.contribution': '贡献追踪（Contribution tracking）',
+  'binding.none': '  无。运行 `imwel init` 创建绑定。',
+  'binding.noState': '本地没有绑定或贡献追踪。请先运行 `imwel init` 或 `imwel propose`。',
+  'binding.remote': '  远程：{remote} / {branch}',
+  'binding.linkedProject': '  关联项目：{project}',
+  'binding.linkedProject.none': '  关联项目：无',
+  'binding.modules': '  订阅模块：{modules}',
+  'binding.modules.none': '  订阅模块：无',
+  'binding.moduleFrozen': '{name}（已冻结）',
+  'binding.tools': '  工具：{tools}',
+  'binding.syncRemote': '  上次同步的远程提交：{sha}',
+  'binding.syncHistory': '  上次同步的历史提交：{sha}',
+  'binding.artifactCount': '  受管制品：{count}',
+  'binding.artifact': '  - {path} [{type}，{requirement}] — {role} 项目“{project}”',
+  'binding.installedPath': '      {tool}：{path} [{status}]',
+  'binding.syncHint': '  此处只报告缺失的受管路径。运行 `imwel sync` 恢复。',
+  'binding.contribution.none': '  无。',
+  'binding.contribution.explanation': '  这些记录授权贡献，不代表已安装的绑定状态。',
+  'binding.contributionCount': '  已追踪贡献：{count}',
+  'binding.contribution': '  - {path} [{type}，{requirement}，{status}] → {remote}/{project}（{role}）',
+  'binding.contributionTool': '      来源工具：{tool}',
+  'binding.contributionSource': '      来源：{path} [{status}]',
+  'binding.contributionPush': '      最近推送：{branch} @ {commit}',
+  'binding.proposeHint': '  此处只报告缺失的贡献来源。请使用 `imwel propose` 管理其追踪。',
 
   'health.title': '规则健康：',
   'health.clean': '  所有受管规则均健康。',
@@ -173,25 +256,51 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'push.directPush': '已直接提交到 {branch}（已启用 directPush）。',
   'push.canonicalConflict':
     '制品 "{path}" 在多个工具间的规范正文不一致（{tools}）。请先对齐渲染文件后再重试。',
-  'push.confirm': '将 {count} 个制品推送到上游？',
+  'push.skipped.title': '在创建 Git 分支、提交或推送前已跳过以下输入：',
+  'push.skipped.bindingMissing':
+    '  - {source}：受管本地文件缺失（{paths}），本次不会推送。请运行 `imwel sync` 恢复。',
+  'push.skipped.proposalMissing':
+    '  - {source}：proposal 来源缺失（{paths}），追踪记录已保留。请补回文件后重试；待 contribution tracking 可用后也可取消该追踪。',
+  'push.valid.title': '有效推送候选：',
+  'push.valid.entry': '  + {path}',
+  'push.confirm': '推送 {count} 个有效制品，并跳过 {skipped} 个缺失项？',
+  'push.missing.prompt': '贡献追踪来源缺失。要移除这些追踪，还是取消 push 并补回文件？',
+  'push.missing.remove': '移除缺失来源的追踪并继续',
+  'push.missing.cancel': '取消 push，先补回文件',
+  'push.missing.nonInteractive':
+    '已跳过缺失的贡献来源并保留追踪。请补回后重试，或交互运行 `imwel propose` 取消追踪。',
+  'push.moduleContribution': '已授权的模块贡献（必须显式选择）',
 
-  'propose.title': '登记新制品以供推送',
-  'propose.usage': '将本地文件登记为新制品候选',
+  'propose.title': '管理贡献追踪',
+  'propose.usage': '将本地制品追踪到一个上游贡献目标',
   'propose.prompt.remote': '目标远程',
   'propose.prompt.project': '目标项目',
   'propose.prompt.type': '制品类型',
   'propose.prompt.optional': '作为可选制品？',
   'propose.prompt.tool': '用于反向渲染的源工具适配器',
-  'propose.success': '已登记 {path}，下次运行 `imwel push` 时推送。',
+  'propose.success': '已开始追踪 {path} 的贡献。',
   'propose.fileMissing': '文件不存在：{path}',
   'propose.pathInvalid':
     '路径 "{path}" 不符合类型 "{type}" 的 manifest 约定（期望位于/等于 "{expected}"）。',
   'propose.unknownType': '未知制品类型：{type}。请使用 rule、skill 或 agents。',
   'propose.unknownTool': '未知工具 id：{tool}',
+  'propose.multiselect.needsInteractive':
+    '交互式 `imwel propose`（不带文件）需要 TTY。请改为传文件路径并带选择类 flags。',
+  'propose.multiselect.none': '你的工具里没有可提议的用户制品。',
+  'propose.multiselect.prompt': '选择要登记为 proposal 的制品（空格勾选/取消）',
+  'propose.multiselect.excluded':
+    '已排除：{provenance} 个非用户制品、{binding} 个可写项目受管制品、{target} 个已归属其它目标、{conflict} 个跨工具冲突。',
+  'propose.multiselect.conflict':
+    '无法追踪 {path}：多个工具的 canonical 内容冲突（{tools}）。',
+  'propose.multiselect.tracked': '[已追踪]',
+  'propose.multiselect.untracked': '[未追踪]',
+  'propose.multiselect.summary': '将登记 {count} 个制品为 pending proposal：',
+  'propose.multiselect.confirm': '确认登记为 pending proposal？（不执行任何 Git 操作）',
+  'propose.multiselect.done': '贡献追踪已更新：+{added} / -{removed}。本地文件未改动。',
 
   'passive.driftNotice': '检测到漂移 — 运行 `imwel status` 或 `imwel sync` 查看详情。',
 
-  'adopt.title': '将现有工具规则归并为 canonical Artifact',
+  'adopt.title': '将已 review 的草稿箱渲染进你的 AI 编码工具',
   'adopt.scanning': '正在扫描现有的工具原生规则与技能……',
   'adopt.noneFound': '未发现可归并的现有工具规则或技能。',
   'adopt.plan': '发现 {sources} 份来源文件 → {artifacts} 条 Artifact，{conflicts} 处冲突。',
@@ -212,6 +321,16 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'adopt.drafts.confirm': '将 {count} 份草稿采纳到 {dir}？',
   'adopt.drafts.confirmIssues':
     '将 {count} 份草稿采纳到 {dir}？上方发现 {issues} 处健康问题 —— 请先 review 再继续。',
+  'adopt.drafts.confirmRender': '将 {count} 份草稿渲染进工具（{tools}）作为非受管文件？',
+  'adopt.drafts.confirmRenderIssues':
+    '将 {count} 份草稿渲染进工具（{tools}）？上方发现 {issues} 处健康问题 —— 请先 review 再继续。',
+  'adopt.render.success': '已把 {count} 份草稿渲染进：{tools}（非受管，不被 sync 跟踪）。',
+  'adopt.render.nextSteps':
+    '规则已在你的工具中生效。要打包成模板仓请运行 `imwel template init --from-project`；要贡献到远程用 `imwel propose`。',
+  'adopt.selectBox': '选择要采纳的草稿箱',
+  'adopt.multipleBoxes':
+    '发现多个草稿箱。请用 `imwel adopt --from .imwel/drafts/<box>` 指定其一。草稿箱：{boxes}',
+  'adopt.needTools': '未解析到目标工具（无 --tools、无 binding、未检测到）。请传 `--tools <ids>`。',
 
   'scan.title': '生成项目指纹（确定性，无 LLM）',
   'scan.scanning': '正在扫描项目文件与配置……',
@@ -234,13 +353,25 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'skill.install.success': '已安装 {count} 个第一方 skill。',
   'skill.install.nextSteps':
     '如尚未运行请先 `imwel scan`，然后在你的 AI 工具中调用 `imwel-extract` skill，将草稿起草到 `.imwel/drafts/`。',
+  'commandPack.skillOnly': '这些工具没有 slash 命令机制——只安装了配套 skill：{tools}',
+
+  'init.prompt.commandPack': '将 imwel 命令包（extract/audit/...）安装进：{tools}？',
+  'init.commandPack.skipped': '已跳过命令包。稍后可用 `imwel skill install --tools <ids>` 安装。',
+  'init.commandPack.failed':
+    '命令包安装失败（{error}）。绑定仍然有效；稍后可用 `imwel skill install` 安装。',
+
+  'provenance.reason.mine.marker': '由 imwel 安装（generatedBy: imwel）',
+  'provenance.reason.mine.namespace': '由 imwel 安装（imwel-* 命名空间）',
+  'provenance.reason.foreign.marker': '由其它工具安装（generatedBy 标记）',
+  'provenance.reason.foreign.namespace': '由已知第三方工具安装',
+  'provenance.reason.user': '你自己的项目制品',
 
   'adapter.pathConflict':
     '路径 "{path}" 的渲染结果冲突（工具：{tools}）。内容不一致，该路径未写入。',
   'adapter.pathConflict.hint':
     '请为该共享文件选定一个主导目标（或对齐 targetOverrides）后重试。',
   'adapter.pathConflict.sources':
-    '路径 "{path}" 在多个来源间渲染冲突：{sources}。内容不一致，未写入。通常应由可写项目覆盖只读模块 —— 请对齐后重试。',
+    '路径 "{path}" 在以下 project 间渲染冲突：{sources}。内容不一致，该路径未写入。请检查这些 project 是否有意使用相同的制品名；如果不是，请重命名其中一个源文件后重试。',
   'adapter.skill.r4Warning':
     '警告：该工具没有按需 skills 通道 — 技能已并入常驻说明（always-on）。',
   'adapter.codex.skillsHint':

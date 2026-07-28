@@ -12,8 +12,10 @@ All commands below are implemented in the current CLI. Global option: `--lang <l
 | `imwel template init` | Scaffold a new template repository |
 | `imwel adopt` | Consolidate existing scattered tool rules into canonical artifacts |
 | `imwel init` | Bind the current directory to a template project |
+| `imwel tools` | Add or remove AI coding tools without rebinding |
 | `imwel sync` | Pull upstream Artifact updates |
 | `imwel status` | Report remote and local drift |
+| `imwel binding show` | Inspect local binding and contribution tracking offline |
 | `imwel rollback` | Restore a prior installed state |
 | `imwel push` | Propose local edits upstream (branch + PR by default) |
 | `imwel propose <file>` | Register a new Artifact for the next push |
@@ -55,6 +57,8 @@ In a consumer binding, the CLI directs you to the template repo instead of repor
 
 When you pass only a URL, imwel derives the alias from the repo name (falling back to `owner-repo`, then a numeric suffix on collision) and prints the chosen alias.
 
+`add` rejects a URL that (after normalizing a trailing `.git`/slash and host case) already matches an existing remote's URL under a different alias — it reports the existing alias instead of registering a second mapping. It also shows a spinner for the duration of the clone/fetch that creates the local cache, so the command never appears to hang silently.
+
 Default upstream path remains **branch + PR/MR**.
 
 ## `imwel template init`
@@ -63,26 +67,41 @@ Scaffolds a new template repository (manifest, example project, author `AGENTS.m
 
 | Flag | Description |
 |------|-------------|
-| `--dir <path>` | Target directory |
+| `--dir <path>` | Target directory (output dir when `--from-project`) |
 | `--locale <locale>` | Scaffold locale (`en`, `zh-CN`, …) |
 | `--name <name>` | Repository name (defaults to the directory name; only asked interactively when you opt into creating a remote repo) |
+| `--from-project` | Generate a template repo from the current project's existing tool artifacts (see below) |
+| `--topic <slug>` | Topic slug for the generated dir name (with `--from-project`) |
 | `-y` / `--yes` | Skip confirmation prompts (non-interactive defaults) |
+
+### `imwel template init --from-project`
+
+Cold-start a template repository **from a project that already has AI coding rules** scattered across its tool directories (or freshly drafted+adopted). It harvests your **own** artifacts across all adapters, then generates a structurally valid template skeleton into a unique dir (default `.imwel/generated-templates/<topic>-<timestamp>/`, or `--dir`), so repeated runs never overwrite each other.
+
+- Uses **artifact provenance** to harvest only `USER` artifacts — it **excludes** imwel's own command pack (`imwel-*` / `generatedBy: imwel`) and other tools' installed artifacts (e.g. openspec), and prints what was excluded and why.
+- Cross-tool content conflicts are reported and skipped (resolve by hand before publishing).
+- The skeleton contains `.imwel/manifest.yaml` (one `project`), the harvested `rules/`/`skills/`/`agents.md`, and scaffolded author commands (`/imwel-author`, `/imwel-lint`).
+- The deterministic CLI stops at the skeleton; the **semantic** organization (splitting projects, assigning roles, writing README/CONTRIBUTING) is done by the `/imwel-create-template` skill in your AI tool. Validate with `imwel lint` in the generated dir; publishing stays plain `git`.
 
 ## `imwel adopt`
 
-Scans the current project for existing tool-native rule/skill files across all 14 adapters (`.cursor/rules`, `CLAUDE.md`, `.trae/rules`, `AGENTS.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`, …), reverse-parses them into canonical Artifacts, and writes them under `.imwel/adopted/`. Solves the cold-start problem and consolidates rules that drifted apart across tools.
+Renders a **reviewed draft box** (e.g. one produced by the `imwel-extract` skill) into your AI coding tools' native locations, making those rules/skills active. This is the **local activation** step of the draft loop — it does not produce a canonical staging copy (packaging a template is now [`imwel template init --from-project`](#imwel-template-init-from-project)).
 
-- **Identical content** across tools is merged into one canonical Artifact (silent dedupe).
-- **Conflicting content** is reported per artifact and **skipped** — nothing is overwritten; resolve and re-run.
-- Runs **without a binding or remote**; only reads the scanned files (never modifies them).
+- Runs a deterministic **health gate** (empty rules, dead imports, orphan path references) over the drafts before writing; the issue count is shown in the confirmation and nothing is written silently (non-interactive shells with issues are refused).
+- Rendered files are **unmanaged**: not written to the binding, not committed to `.imwel/history/`, never tracked by `status`/`sync`/`push`.
+- Render **path conflicts** are reported via the standard dedupe path and never overwrite existing files.
+
+Draft-box resolution:
+- `--from <path>` selects a specific box directory (containing `rules/`/`skills/`).
+- Bare `imwel adopt` (or `--from`) looks under `.imwel/drafts/`: the flat legacy layout (`rules/`/`skills/` directly) is adopted as-is; with named per-batch boxes, interactive mode lists them to pick, and non-interactive mode requires an explicit `--from .imwel/drafts/<box>`.
 
 | Flag | Description |
 |------|-------------|
-| `-y` / `--yes` | Skip the write confirmation (does not invent conflict resolutions) |
-| `--out <path>` | Output directory (default `.imwel/adopted`) |
-| `--tools <csv>` | Limit consolidation to specific tool ids |
+| `-y` / `--yes` | Skip the write confirmation (does not bypass the health gate refusal) |
+| `--tools <csv>` | Render target tool ids (default: the binding's tools, else detected tools) |
+| `--from [box]` | Draft box to adopt (default `.imwel/drafts`; a path selects a named box) |
 
-After adopting, review the artifacts, then run `imwel template init` to publish them as a template, or `imwel init` + `imwel propose` to feed a remote.
+In your AI tool you can also invoke the `imwel-adopt` skill, which wraps this command — see [In-tool skills & commands](./in-tool-skills.md). After adopting, the rules are active; to publish them run `imwel template init --from-project`, or feed a remote with `imwel propose`.
 
 ## `imwel scan`
 
@@ -98,7 +117,7 @@ The fingerprint is **not** a managed artifact — it never participates in `sync
 
 ## `imwel skill install`
 
-Installs imwel's own **first-party** skills (shipped with the npm package) into your selected tools, rendering them through the same adapters as template artifacts (skill fidelity ladder + dedupe). Bundled skills:
+Installs imwel's own **first-party command pack** (shipped with the npm package) into your selected tools: a slash command **plus** its backing skill for each member, delivered the way openspec delivers its commands. Tools with a native command mechanism (Cursor `.cursor/commands`, Claude Code `.claude/commands`) get both a `/imwel-*` thin command and the backing skill; tools without one degrade to **skill-only** (the command is skipped and reported). Members:
 
 - `imwel-extract` — drafts project-fit rules/skills from scratch using the scan fingerprint.
 - `imwel-audit` — audits existing rules for semantic drift (rule ↔ code mismatch, rule ↔ rule conflict, missing rules) and writes actionable suggestions to `.imwel/audit/`.
@@ -108,7 +127,7 @@ Installs imwel's own **first-party** skills (shipped with the npm package) into 
 | `--tools <csv>` | Target tool ids (required in non-interactive mode) |
 | `-y` / `--yes` | Skip the write confirmation |
 
-First-party skills are **unmanaged**: they are written to disk but not registered in your binding, not committed to `.imwel/history/`, and never tracked by `status`/`sync`/`push`.
+Command-pack files are **unmanaged**: they carry a `generatedBy: imwel` marker, live under the `imwel-*` namespace, are written to disk but not registered in your binding, not committed to `.imwel/history/`, and never tracked by `status`/`sync`/`push`. `imwel init` can install the pack too — opt-in via a prompt, or `--command-pack` / `--no-command-pack`.
 
 Workflow: run `imwel scan`, then `imwel skill install`, then invoke a skill inside your AI tool:
 
@@ -131,8 +150,35 @@ Binds the current directory to one remote template repository and installs Artif
 | `--module <csv>` | Read-only module names (`role: shared`) to install |
 | `--optional <csv>` | Optional Artifact source paths to install |
 | `--no-optional` | Install no optional Artifacts |
+| `--command-pack` | Install the imwel command pack (extract/audit/...) into the selected tools |
+| `--no-command-pack` | Skip installing the command pack |
 
-At least one of `--project` or `--module` must select something. Re-running `imwel init` on a bound directory **rebinds**: the whole selection (tools, modules, writable project) is replaced, so local edits to previously-installed Artifacts are overwritten. Non-interactive mode requires selection flags; missing required flags exit with code **1**.
+After a successful bind, `imwel init` offers to install the first-party command pack into your selected tools (interactive prompt, or forced by `--command-pack` / skipped by `--no-command-pack`). This step never blocks the bind: if you skip it or it fails, the binding stays valid and you can install later with `imwel skill install`.
+
+At least one of `--project` or `--module` must select something. Re-running `imwel init` on a bound directory **rebinds**: the whole selection (tools, modules, writable project) is replaced. Before init or rebind writes, imwel lists every render target and classifies existing files. A different unmanaged file (for example, your own `.cursor/rules/coding-style.mdc`) is never silently replaced: interactive mode asks for explicit confirmation, while non-interactive mode exits with code **1** unless `--yes` authorizes the listed overwrites. Declining leaves rendered files, history, and the binding unchanged. Shared-file targets such as managed blocks in `AGENTS.md` preserve content outside imwel's block.
+
+## `imwel tools`
+
+Adjusts only the AI coding tools in the current binding. It does not change the remote, branch, writable project, modules, frozen flags, optional Artifact selections, or the separately installed first-party command pack. At least one tool must remain.
+
+Interactive mode puts installed tools first and preselects them, then uses the same toggle → diff → confirmation flow as `init` and `modules`.
+
+| Flag | Description |
+|------|-------------|
+| `--add <csv>` | Tool ids to add |
+| `--remove <csv>` | Tool ids to stop managing |
+| `--delete-output` | Delete exact recorded outputs for removed tools when no remaining managed reference uses the path |
+| `-y` / `--yes` | Skip confirmations after explicit `--add` / `--remove` selections |
+
+Adding a tool force-refreshes the bound branch, rediscovers all non-frozen bound projects with their existing optional selections, and renders them together to catch cross-project conflicts. Only the new tool's outputs are written; existing tool outputs are not synced or rewritten. A conflicting unmanaged target follows the same explicit file-safety plan as `init`.
+
+Removing a tool defaults to **keep**: its `installedPaths` entries are removed from the binding and history, but the files stay on disk as unmanaged files. Deletion requires the separate `--delete-output` choice. Even then, imwel deletes only exact recorded paths with no reference from a remaining tool or Artifact; it never clears a whole tool directory.
+
+```bash
+imwel tools --add claude-code -y
+imwel tools --remove cursor -y                  # keep former Cursor files
+imwel tools --remove cursor --delete-output -y  # delete only unreferenced recorded paths
+```
 
 ## `imwel modules`
 
@@ -148,6 +194,10 @@ Adjusts the read-only modules installed in the current binding without touching 
 
 Newly added modules install their **required** Artifacts only; run `imwel sync` afterwards to pull the latest content. To add a module's optional Artifacts, rebind via `imwel init`.
 
+Before writing, a newly-added module is rendered together with every project that remains bound (the writable project plus other still-installed modules), the same way `imwel init`/`imwel sync` do — so a **cross-project render-path conflict** (e.g. two modules both defining a same-named rule with different content) is caught here instead of being silently overwritten and only surfacing on the next `imwel sync`. On such a conflict, the whole invocation aborts atomically: nothing is written and the binding is unchanged, even if the same call also requested a `--remove`/`--freeze`/`--unfreeze`. Resolve the naming collision in the template repo (rename or consolidate), then re-run.
+
+Module installation uses the same existing-file plan as `imwel init`. If a new module would replace a different unmanaged file, confirm the exact path interactively or pass `--yes` after reviewing the plan; otherwise the entire module operation stops before changing files, history, or binding state.
+
 ## `imwel sync`
 
 Fetches upstream and applies Artifact updates (with conflict handling via the history repo). Walks every bound project; **frozen** modules are skipped.
@@ -161,6 +211,8 @@ Always force-refreshes remote state (not subject to the passive fetch throttle).
 
 **Read-only module drift.** Modules are pull-only, so imwel never silently overwrites local edits to a module's files. When a subscribed module has local edits, `imwel sync` asks you to choose per module: **discard** local edits and take upstream, **freeze** the module (stop syncing, keep your local copy), or **uninstall** it. Non-interactive `--yes` defaults to **freeze** — it never destroys local edits without consent.
 
+**Missing managed files.** Deleting a path recorded by the binding and local history does not uninstall it. `imwel sync` lists the path as a restoration, then re-renders it from the currently bound upstream Artifact only after confirmation. In non-interactive mode, pass `--yes`; without it, no file, history, or binding state changes.
+
 ## `imwel status`
 
 Reports remote vs local drift. Always force-refreshes. After drift, it runs a **rule health** check over the managed rendered files and lists any issues (this never changes the exit code):
@@ -170,6 +222,22 @@ Reports remote vs local drift. Always force-refreshes. After drift, it runs a **
 - **orphan-ref** — a backtick path (e.g. `` `src/foo.ts` ``) references a file that no longer exists.
 
 The checks are deterministic and conservative (no LLM, globs/URLs/commands are ignored) — advisory hints, not blockers.
+
+## `imwel binding show`
+
+Reads only local metadata and path existence. It never fetches, contacts Git, initializes history, changes tracking, or writes files. Unlike `imwel status`, it does not report remote drift or rule health.
+
+The output has separate **Binding** and **Contribution tracking** sections:
+
+- Binding means installed, managed state: remote alias/branch, linked project, subscribed/frozen modules, tools, sync references, and managed Artifact count.
+- Contribution tracking authorizes local sources for a future upstream proposal. It is not proof that those sources are installed or managed by the binding. An Artifact can correctly appear in both sections.
+
+| Flag | Description |
+|------|-------------|
+| `--details` | Show managed Artifact ownership, canonical/installed paths, contribution targets/sources, `present`/`missing` status, and latest pushed Git refs |
+| `--json` | Output only the stable versioned JSON view; implies full detail |
+
+Only remote aliases are displayed, never credential-bearing URLs. Paths are project-relative POSIX paths, and file contents are never read for output. A missing managed path points to `imwel sync`; a missing contribution source points to `imwel propose`. The command still works when only contribution tracking exists. If neither local state exists, it prints the appropriate setup hint without creating `.imwel`.
 
 ## `imwel rollback`
 
@@ -184,7 +252,9 @@ After restore, imwel **deletes managed files that were added after that history 
 
 ## `imwel push`
 
-Reverse-renders local tool files back to canonical Artifacts and opens an upstream proposal (branch + PR/MR by default). Reverse-renders **every** bound tool that has installed paths; conflicting canonical content fails the push. Only artifacts from the **writable project** are eligible — local edits to read-only modules are never pushed. To contribute back to a module deliberately, use [`imwel propose`](#imwel-propose-file) against that module (a reviewed PR/MR), which is allowed.
+Reverse-renders local tool files back to canonical Artifacts and opens an upstream proposal (branch + PR/MR by default). Writable-project edits are included normally. A subscribed-module edit is eligible only when persistent contribution tracking for that module Artifact exists, and it appears as a separate candidate that must be selected explicitly.
+
+Before creating a branch or commit, push checks every local input. A missing binding-owned file is skipped (never treated as an upstream deletion) with an `imwel sync` recovery hint. For a missing contribution source, interactive push offers to remove tracking or cancel so you can restore it; non-interactive push skips it, retains tracking, and exits non-zero. Successful items record the pushed Git branch and commit SHA. Unselected or failed records are unchanged, and content already represented by that Git commit is not pushed again.
 
 | Flag | Description |
 |------|-------------|
@@ -192,9 +262,9 @@ Reverse-renders local tool files back to canonical Artifacts and opens an upstre
 | `--all` | Select all push candidates |
 | `--message <msg>` | Commit message |
 
-## `imwel propose <file>`
+## `imwel propose [file]`
 
-Registers a new Artifact path for the next `push` (validates against manifest conventions).
+Manages contribution tracking for one remote project or module at a time. Tracking is configuration: removing it never deletes or edits the local Artifact.
 
 | Flag | Description |
 |------|-------------|
@@ -205,6 +275,14 @@ Registers a new Artifact path for the next `push` (validates against manifest co
 | `--optional` / `--required` | Optional vs required Artifact |
 | `--tool <id>` | Source tool adapter for reverse-render |
 
+### Interactive multiselect (no file)
+
+Run `imwel propose` **without a file**. First choose the remote and one target project/module. imwel then lists existing tracking first and preselects it, followed by eligible unbound `USER` Artifacts. Space toggles tracking; Enter shows added/removed changes; a second confirmation applies them without any Git or local-file operation. Linked-project managed Artifacts, `MINE`/`FOREIGN` files, items owned by another target, and conflicting cross-tool representations are excluded with a summary.
+
+Tool-native paths are reverse-parsed before tracking. For example, `.cursor/rules/arkts-hooks.mdc` is recorded as the local source while its target path is derived as `rules/arkts-hooks.md` from manifest conventions.
+
+Project tracking remains after push, then `sync` removes it only after the same canonical Artifact is installed into the project binding. Module tracking is persistent across push and sync until you deselect it in `propose`.
+
 ## Non-interactive / CI
 
 `-y` / `--yes` skips **confirmation** prompts only. It never invents answers for selection prompts — pass `--tools`, `--remote`, `--project`, `--to`, `--all`, etc. explicitly.
@@ -213,6 +291,7 @@ Registers a new Artifact path for the next `push` (validates against manifest co
 imwel init -y --tools cursor,claude-code --remote org-standards --branch main \
   --project my-app --no-optional
 
+imwel tools --add codex --remove cursor -y
 imwel sync --yes
 imwel push --yes --all --message "chore: update artifacts"
 imwel rollback --yes --to <history-sha>

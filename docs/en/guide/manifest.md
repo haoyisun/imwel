@@ -54,6 +54,8 @@ Resolved conventions for a project = root `conventions` merged with that project
 
 The read-only guardrail is **client-side** — imwel simply refuses `imwel push` for module artifacts. It is **not** an access-control mechanism; who may actually write to the template repo is governed by your Git host's permissions and branch protection. Contributing back to a module is still possible via `imwel propose` (a deliberate, reviewed PR/MR).
 
+> **Modules do not contribute a project-level `agents` file.** The `agentsFile` (default `agents.md`) renders to the consumer's single **project-root** instructions file (`AGENTS.md`, etc.), which belongs to the one writable project. Modules **compose** into a consumer next to the writable project and other modules, so if each shipped an agents file they would collide at that root file. imwel therefore **skips** a module's `agents` file at install time (`rule` / `skill` artifacts have distinct paths and compose cleanly, so they are unaffected); `imwel lint` emits a `module.agentsIgnored` warning for a `shared` module that ships one. Put that content in a rule/skill instead.
+
 An invalid `role` value fails `imwel lint` / manifest validation.
 
 ```yaml

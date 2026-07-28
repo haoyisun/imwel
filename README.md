@@ -29,11 +29,13 @@ imwel sync
 | `imwel skill install` | Install imwel's first-party skills (`imwel-extract`, `imwel-audit`) into selected tools (unmanaged; not tracked by sync) |
 | `imwel init` | Bind the current directory to a template repo — at most one writable project (`role: project`) plus any number of read-only modules (`role: shared`) |
 | `imwel modules` | Add, remove, or freeze read-only modules for the current binding |
+| `imwel tools` | Add or remove AI coding tools without changing the current remote/project/modules; removed outputs are kept by default |
 | `imwel sync` | Pull upstream artifact updates (skips frozen modules; never silently overwrites read-only module edits) |
 | `imwel status` | Report remote and local drift, plus deterministic rule-health checks (empty rules, dead imports, orphan path references) |
+| `imwel binding show` | Inspect local binding and contribution tracking offline (`--details` / stable `--json`) |
 | `imwel rollback` | Restore a prior installed state (deletes managed files added after that point) |
-| `imwel push` | Propose local edits upstream (branch + PR by default; reverse-renders all bound tools) |
-| `imwel propose <file>` | Register a new artifact for the next push (validates manifest conventions) |
+| `imwel push` | Push project edits and explicitly tracked contributions (branch + PR by default) |
+| `imwel propose [file]` | Add/remove single-target contribution tracking; tool paths map to canonical paths |
 
 ## Authoring templates
 
@@ -56,6 +58,7 @@ imwel init -y --tools cursor,claude-code --remote org-standards --branch main \
   --project my-app --no-optional
 
 # Sync / push / rollback / propose
+imwel tools --add codex --remove cursor -y
 imwel sync --yes
 imwel push --yes --all --message "chore: update artifacts"
 imwel rollback --yes --to <history-sha>

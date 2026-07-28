@@ -1,5 +1,6 @@
 ---
 name: imwel-audit
+generatedBy: imwel
 description: Use this skill when the user wants to audit whether a project's existing AI coding rules still match the codebase. It reads the current rules plus, guided by the `imwel scan` fingerprint (including its Git-history overlay), the relevant code, and flags semantic rot — rules that contradict the code, rules that contradict each other, and conventions that have no rule yet. It writes actionable suggestions to a review folder and never edits managed rules directly.
 ---
 

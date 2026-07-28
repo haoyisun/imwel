@@ -6,12 +6,25 @@ import { computeDrift } from '../core/drift.js';
 import { isInteractiveStdin } from '../core/cli-flags.js';
 import { remoteCacheDir } from '../core/paths.js';
 import { checkoutBranch, ensureRemoteCache } from '../core/remote-cache.js';
-import { planSync, writeSyncResults } from '../core/sync-engine.js';
-import type { PathConflict } from '../adapters/strategies/dedupe.js';
+import { findMissingManagedFiles, planSync, writeSyncResults } from '../core/sync-engine.js';
 import { pathExists } from '../core/fs-utils.js';
 import { pendingSyncPath } from '../core/paths.js';
+import { printPathConflicts } from '../core/print-conflicts.js';
 import { t } from '../locales/index.js';
 import type { LocaleKey } from '../locales/en.js';
+import {
+  graduateProjectContributions,
+  readPendingProposals,
+  writePendingProposals,
+} from '../core/propose.js';
+
+async function graduateContributions(projectDir: string, binding: Binding): Promise<void> {
+  const proposals = await readPendingProposals(projectDir);
+  const remaining = graduateProjectContributions(proposals, binding.remote, binding.artifacts);
+  if (remaining.length !== proposals.length) {
+    await writePendingProposals(projectDir, remaining);
+  }
+}
 
 function printRenderSideEffects(
   warningLocaleKeys: string[],
@@ -29,30 +42,23 @@ function printRenderSideEffects(
   }
 }
 
-function printPathConflicts(conflicts: PathConflict[]): void {
-  for (const conflict of conflicts) {
-    if (conflict.projects.length > 1) {
-      console.error(
-        t('adapter.pathConflict.sources', {
-          path: conflict.path,
-          sources: conflict.projects.join(', '),
-        }),
-      );
-    } else {
-      console.error(
-        t('adapter.pathConflict', {
-          path: conflict.path,
-          tools: conflict.adapterIds.join(', '),
-        }),
-      );
-    }
-  }
-  console.error(t('adapter.pathConflict.hint'));
-}
-
 export interface SyncOptions {
   yes?: boolean;
   continue?: boolean;
+}
+
+export async function authorizeSyncChanges(
+  yes: boolean,
+  interactive: boolean,
+  confirm: () => Promise<boolean>,
+): Promise<boolean> {
+  if (yes) {
+    return true;
+  }
+  if (!interactive) {
+    return false;
+  }
+  return confirm();
 }
 
 /**
@@ -163,29 +169,37 @@ export async function runSync(opts: SyncOptions | boolean = {}): Promise<number>
     const plan = await planSync(cacheDir, binding);
     const result = await writeSyncResults(projectDir, binding, plan, binding.tools, true);
     await writeBinding(projectDir, result.binding);
+    await graduateContributions(projectDir, result.binding);
     console.log(t('sync.success', { sha: result.binding.lastSyncedCommit }));
     p.outro(t('common.done'));
     return 0;
   }
 
   const drift = await computeDrift(projectDir, binding, cacheDir, true);
-  if (!drift.remoteUpdated && !drift.localEdited) {
+  const missingManaged = await findMissingManagedFiles(projectDir, binding);
+  if (!drift.remoteUpdated && !drift.localEdited && missingManaged.length === 0) {
+    await graduateContributions(projectDir, binding);
     console.log(t('sync.upToDate'));
     p.outro(t('common.done'));
     return 0;
   }
 
-  if (drift.localEdited) {
+  const missingPaths = new Set(missingManaged.map((item) => item.path.replace(/\\/g, '/')));
+  const editedPaths = drift.dirtyPaths.filter(
+    (dirtyPath) => !missingPaths.has(dirtyPath.replace(/\\/g, '/')),
+  );
+  if (editedPaths.length > 0) {
     binding = await resolveReadOnlyModuleDrift(
       projectDir,
       binding,
-      drift.dirtyPaths,
+      editedPaths,
       Boolean(options.yes),
     );
   }
 
-  const plan = await planSync(cacheDir, binding);
-  if (plan.items.length === 0 && !drift.remoteUpdated) {
+  const plan = await planSync(cacheDir, binding, undefined, projectDir);
+  if (plan.items.length === 0 && plan.restorations.length === 0 && !drift.remoteUpdated) {
+    await graduateContributions(projectDir, binding);
     console.log(t('sync.upToDate'));
     return 0;
   }
@@ -200,20 +214,27 @@ export async function runSync(opts: SyncOptions | boolean = {}): Promise<number>
           : 'sync.plan.modified';
     console.log(t(key, { path: item.sourcePath }));
   }
+  for (const item of plan.restorations) {
+    console.log(t('sync.plan.restore', { path: item.path, project: item.project }));
+  }
 
-  if (!options.yes) {
-    if (!isInteractiveStdin()) {
-      console.error(t('cli.nonInteractiveConfirmRequired'));
-      return 1;
-    }
+  const interactive = isInteractiveStdin();
+  const authorized = await authorizeSyncChanges(Boolean(options.yes), interactive, async () => {
     const confirm = await p.confirm({
-      message: t('sync.confirm', { count: plan.items.length || plan.artifacts.length }),
+      message: t('sync.confirm', {
+        count: plan.items.length + plan.restorations.length || plan.artifacts.length,
+      }),
       initialValue: true,
     });
-    if (p.isCancel(confirm) || !confirm) {
+    return !p.isCancel(confirm) && confirm;
+  });
+  if (!authorized) {
+    if (!interactive) {
+      console.error(t('cli.nonInteractiveConfirmRequired'));
+    } else {
       console.log(t('common.cancelled'));
-      return 1;
     }
+    return 1;
   }
 
   const result = await writeSyncResults(projectDir, binding, plan, binding.tools, false);
@@ -229,6 +250,7 @@ export async function runSync(opts: SyncOptions | boolean = {}): Promise<number>
     return 1;
   }
   await writeBinding(projectDir, result.binding);
+  await graduateContributions(projectDir, result.binding);
   printRenderSideEffects(
     result.warningLocaleKeys ?? [],
     binding.tools,

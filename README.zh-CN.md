@@ -29,11 +29,13 @@ imwel sync
 | `imwel skill install` | 将 imwel 第一方 skill（`imwel-extract`、`imwel-audit`）安装进所选工具（非受管，不被 sync 跟踪） |
 | `imwel init` | 将当前目录绑定到模板仓 —— 至多一个可写项目（`role: project`）外加任意数量的只读模块（`role: shared`） |
 | `imwel modules` | 为当前绑定增删/冻结只读模块 |
+| `imwel tools` | 不改变当前 remote/project/modules 即可增删 AI 编程工具；移除时默认保留原输出 |
 | `imwel sync` | 拉取上游制品更新（跳过已冻结模块；绝不静默覆盖只读模块的本地修改） |
 | `imwel status` | 报告远程与本地漂移，并附确定性规则健康检查（空壳规则、死链导入、孤儿路径引用） |
+| `imwel binding show` | 离线查看本地绑定与贡献追踪（`--details` / 稳定 `--json`） |
 | `imwel rollback` | 恢复到先前的安装状态（会删除该点之后新增的管理文件） |
-| `imwel push` | 将本地编辑推送到上游（默认分支 + PR；对所有绑定工具反向渲染） |
-| `imwel propose <file>` | 登记新制品供下次 push 使用（校验 manifest 约定） |
+| `imwel push` | 推送项目编辑与显式追踪的贡献（默认分支 + PR） |
+| `imwel propose [file]` | 新增/取消单目标贡献追踪；工具路径映射为 canonical 路径 |
 
 ## 编写模板
 
@@ -56,6 +58,7 @@ imwel init -y --tools cursor,claude-code --remote org-standards --branch main \
   --project my-app --no-optional
 
 # Sync / push / rollback / propose
+imwel tools --add codex --remove cursor -y
 imwel sync --yes
 imwel push --yes --all --message "chore: update artifacts"
 imwel rollback --yes --to <history-sha>

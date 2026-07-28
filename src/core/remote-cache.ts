@@ -41,12 +41,17 @@ export async function ensureRemoteCache(
 
 export async function listBranches(cacheDir: string): Promise<string[]> {
   const { stdout } = await runGit(['branch', '-r', '--format=%(refname:short)'], { cwd: cacheDir });
+  // `git branch -r --format=%(refname:short)` short-names the remote HEAD symbolic
+  // ref (refs/remotes/origin/HEAD) down to the bare remote name ("origin"), not the
+  // literal string "origin/HEAD" — so only entries that are actually prefixed with
+  // "origin/" are real branches; anything else (that bare symref, or any future
+  // symbolic-ref short form) is dropped rather than kept.
   return stdout
     .trim()
     .split('\n')
     .map((b) => b.trim())
-    .filter((b) => b && b !== 'origin/HEAD')
-    .map((b) => (b.startsWith('origin/') ? b.slice('origin/'.length) : b));
+    .filter((b) => b.startsWith('origin/'))
+    .map((b) => b.slice('origin/'.length));
 }
 
 export async function checkoutBranch(cacheDir: string, branch: string): Promise<void> {

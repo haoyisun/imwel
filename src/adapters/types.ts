@@ -28,6 +28,20 @@ export interface DiscoveredArtifact {
   sourceFiles: string[];
 }
 
+/**
+ * A first-party imwel command-pack member: a thin slash-command entry that
+ * points the AI tool at its backing skill. Only tools with a native command
+ * mechanism render these; others fall back to installing the backing skill.
+ */
+export interface FirstPartyCommand {
+  /** Command name, e.g. `imwel-extract` (invoked as `/imwel-extract`). */
+  name: string;
+  /** Backing skill directory name the command loads, e.g. `imwel-extract`. */
+  skillName: string;
+  /** One-line intent shown in the command body. */
+  intent: string;
+}
+
 export interface Adapter {
   id: string;
   detect(projectDir: string): Promise<boolean>;
@@ -39,4 +53,11 @@ export interface Adapter {
    * Optional: adapters without a discovery strategy are skipped by `adopt`.
    */
   discoverExisting?(projectDir: string): Promise<DiscoveredArtifact[]>;
+  /**
+   * Whether this tool has a native slash-command mechanism. When false/absent,
+   * the command pack installs only the backing skill for this tool.
+   */
+  supportsCommands?: boolean;
+  /** Render a first-party command thin entry into this tool's command dir. */
+  renderCommand?(command: FirstPartyCommand): RenderedFile[];
 }

@@ -80,6 +80,24 @@ describe('discoverArtifacts overlay + skill description', () => {
       'Use when scaffolding a component.',
     );
   });
+
+  it('discovers the agents file for a writable project', async () => {
+    await writeFile(root, 'p/agents.md', '# Agents\n');
+    const artifacts = await discoverArtifacts(root, PROJECT, CONVENTIONS);
+    assert.ok(artifacts.some((a) => a.type === 'agents'));
+  });
+
+  it('skips the agents file for a shared module but keeps rules', async () => {
+    await writeFile(root, 'p/agents.md', '# Agents\n');
+    await writeFile(root, 'p/rules/style.md', '---\ndescription: Use when editing.\n---\n\n# Style\n');
+    const artifacts = await discoverArtifacts(
+      root,
+      { ...PROJECT, role: 'shared' },
+      CONVENTIONS,
+    );
+    assert.ok(!artifacts.some((a) => a.type === 'agents'));
+    assert.ok(artifacts.some((a) => a.type === 'rule'));
+  });
 });
 
 describe('renderArtifacts author-default overlay', () => {

@@ -37,7 +37,38 @@ export async function commitInstalledFiles(
   } else {
     await runGit(['add', '-A'], opts);
   }
-  const status = await runGit(['status', '--porcelain'], opts);
+  const status = await runGit(['status', '--porcelain', '--untracked-files=no'], opts);
+  if (!status.stdout.trim()) {
+    const { stdout } = await runGit(['rev-parse', 'HEAD'], opts);
+    return stdout.trim();
+  }
+  await runGit(['commit', '-m', message], opts);
+  const { stdout } = await runGit(['rev-parse', 'HEAD'], opts);
+  return stdout.trim();
+}
+
+/**
+ * Commit a managed-set transition without staging unrelated local edits.
+ * Removed paths are dropped from the hidden history index while their working
+ * tree files may remain on disk as unmanaged files.
+ */
+export async function commitManagedChanges(
+  projectDir: string,
+  writtenPaths: string[],
+  unmanagedPaths: string[],
+  message: string,
+): Promise<string> {
+  await ensureHistoryRepo(projectDir);
+  const opts = historyOptions(projectDir);
+  const written = [...new Set(writtenPaths)];
+  const unmanaged = [...new Set(unmanagedPaths)].filter((item) => !written.includes(item));
+  if (written.length > 0) {
+    await runGit(['add', '--', ...written], opts);
+  }
+  if (unmanaged.length > 0) {
+    await runGit(['rm', '--cached', '--ignore-unmatch', '--', ...unmanaged], opts);
+  }
+  const status = await runGit(['status', '--porcelain', '--untracked-files=no'], opts);
   if (!status.stdout.trim()) {
     const { stdout } = await runGit(['rev-parse', 'HEAD'], opts);
     return stdout.trim();

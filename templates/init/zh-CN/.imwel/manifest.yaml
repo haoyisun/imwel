@@ -10,6 +10,14 @@ conventions:
 projects:
   - name: example-project
     path: example-project
+    # role: shared  -> 只读模块，消费者安装并保持同步，但从不回推本地修改
+    # role: project -> 可写项目，一个消费目录至多绑定一个（省略时默认为此值）
+    role: project
     # 可选制品在安装/同步时会提示用户：
     # optional:
     #   - rules/optional-rule.md
+  # 可再添加 project 以发布可复用的只读模块，与上面的可写项目共存
+  # （例如一个共享的风格/约定包）：
+  # - name: example-module
+  #   path: example-module
+  #   role: shared

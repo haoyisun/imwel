@@ -4,7 +4,7 @@ import { discoverArtifacts } from './artifacts.js';
 import type { Binding, ManagedArtifact } from './binding.js';
 import type { Artifact } from './artifact-types.js';
 import { applyRenderedFiles } from './apply-files.js';
-import { commitInstalledFiles } from './history.js';
+import { commitInstalledFiles, listFilesAtCommit } from './history.js';
 import { threeWayMergeText } from './merge.js';
 import { readManifest, resolveConventions } from './manifest.js';
 import { renderArtifacts } from './render.js';
@@ -12,6 +12,7 @@ import type { PathConflict } from '../adapters/strategies/dedupe.js';
 import { diffNameStatus, showFileAtCommit } from './git.js';
 import { pendingSyncPath } from './paths.js';
 import { readYamlFile, writeYamlFile } from './yaml-file.js';
+import { pathExists } from './fs-utils.js';
 
 function collectInstalledPathsFromManaged(managed: ManagedArtifact[], tools: string[]): string[] {
   const paths = new Set<string>();
@@ -35,12 +36,58 @@ export interface SyncPlan {
   items: SyncPlanItem[];
   artifacts: Artifact[];
   remoteCommit: string;
+  restorations: MissingManagedFile[];
+}
+
+export interface MissingManagedFile {
+  path: string;
+  sourcePath: string;
+  project: string;
+}
+
+export async function findMissingManagedFiles(
+  projectDir: string,
+  binding: Binding,
+): Promise<MissingManagedFile[]> {
+  if (!binding.lastSyncedHistoryCommit) {
+    return [];
+  }
+  const historyPaths = new Set(
+    await listFilesAtCommit(projectDir, binding.lastSyncedHistoryCommit),
+  );
+  const frozenProjects = new Set(
+    binding.projects.filter((bound) => bound.frozen).map((bound) => bound.name),
+  );
+  const missing = new Map<string, MissingManagedFile>();
+  for (const artifact of binding.artifacts) {
+    if (frozenProjects.has(artifact.project)) {
+      continue;
+    }
+    for (const installedPaths of Object.values(artifact.installedPaths)) {
+      for (const installedPath of installedPaths) {
+        const normalizedPath = installedPath.replace(/\\/g, '/');
+        if (
+          historyPaths.has(normalizedPath) &&
+          !(await pathExists(path.join(projectDir, installedPath))) &&
+          !missing.has(normalizedPath)
+        ) {
+          missing.set(normalizedPath, {
+            path: installedPath,
+            sourcePath: artifact.sourcePath,
+            project: artifact.project,
+          });
+        }
+      }
+    }
+  }
+  return [...missing.values()];
 }
 
 export async function planSync(
   cacheDir: string,
   binding: Binding,
   selectedOptional?: Set<string>,
+  projectDir?: string,
 ): Promise<SyncPlan> {
   const manifest = await readManifest(cacheDir);
   const items: SyncPlanItem[] = [];
@@ -83,7 +130,17 @@ export async function planSync(
   const { stdout } = await import('./git.js').then((m) =>
     m.runGit(['rev-parse', 'HEAD'], { cwd: cacheDir }),
   );
-  return { items, artifacts, remoteCommit: stdout.trim() };
+  const removedKeys = new Set(
+    items
+      .filter((item) => item.status === 'removed')
+      .map((item) => `${item.project}\u0000${item.sourcePath}`),
+  );
+  const restorations = projectDir
+    ? (await findMissingManagedFiles(projectDir, binding)).filter(
+        (item) => !removedKeys.has(`${item.project}\u0000${item.sourcePath}`),
+      )
+    : [];
+  return { items, artifacts, remoteCommit: stdout.trim(), restorations };
 }
 
 export function planRemovals(plan: SyncPlan, binding: Binding): ManagedArtifact[] {

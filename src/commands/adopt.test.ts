@@ -16,7 +16,7 @@ async function writeFile(root: string, rel: string, content: string): Promise<vo
   await fs.writeFile(abs, content, 'utf8');
 }
 
-describe('runAdopt --from (drafts)', () => {
+describe('runAdopt --from (render drafts into tools)', () => {
   let root: string;
   let cwd: string;
 
@@ -31,31 +31,51 @@ describe('runAdopt --from (drafts)', () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it('adopts drafts into canonical layout with -y (non-interactive)', async () => {
+  it('renders flat-layout drafts into the selected tool with -y', async () => {
     await writeFile(root, '.imwel/drafts/rules/style.md', '# Style\n\nUse TypeScript everywhere.\n');
 
-    const code = await runAdopt({ from: true, yes: true });
+    const code = await runAdopt({ from: true, yes: true, tools: 'cursor' });
 
     assert.equal(code, 0);
-    assert.ok(existsSync(path.join(root, '.imwel', 'adopted', 'rules', 'style.md')));
+    assert.ok(existsSync(path.join(root, '.cursor', 'rules', 'style.mdc')));
+    // unmanaged: no canonical adopted dir, no binding
+    assert.ok(!existsSync(path.join(root, '.imwel', 'adopted')));
+    assert.ok(!existsSync(path.join(root, '.imwel', 'binding.yaml')));
   });
 
-  it('refuses to write silently when drafts have health issues and no -y (non-interactive)', async () => {
-    // heading-only body → checkRuleHealth flags rule.empty
+  it('renders a named draft box into tools', async () => {
+    await writeFile(root, '.imwel/drafts/api-2026/rules/api.md', '# API\n\nVersion every endpoint.\n');
+
+    const code = await runAdopt({ from: true, yes: true, tools: 'cursor' });
+
+    assert.equal(code, 0);
+    assert.ok(existsSync(path.join(root, '.cursor', 'rules', 'api.mdc')));
+  });
+
+  it('refuses to render silently when drafts have health issues and no -y (non-interactive)', async () => {
     await writeFile(root, '.imwel/drafts/rules/empty-ish.md', '# Title only\n');
 
-    const code = await runAdopt({ from: true });
+    const code = await runAdopt({ from: true, tools: 'cursor' });
 
     assert.equal(code, 1);
-    assert.ok(!existsSync(path.join(root, '.imwel', 'adopted')));
-    // draft content is untouched
+    assert.ok(!existsSync(path.join(root, '.cursor')));
     const draft = await fs.readFile(path.join(root, '.imwel/drafts/rules/empty-ish.md'), 'utf8');
     assert.equal(draft, '# Title only\n');
   });
 
+  it('errors on multiple named boxes in non-interactive mode', async () => {
+    await writeFile(root, '.imwel/drafts/box-a/rules/a.md', '# A\n\nRule A body.\n');
+    await writeFile(root, '.imwel/drafts/box-b/rules/b.md', '# B\n\nRule B body.\n');
+
+    const code = await runAdopt({ from: true, yes: true, tools: 'cursor' });
+
+    assert.equal(code, 1);
+    assert.ok(!existsSync(path.join(root, '.cursor')));
+  });
+
   it('reports no adoptable drafts when the directory is empty', async () => {
-    const code = await runAdopt({ from: true });
+    const code = await runAdopt({ from: true, tools: 'cursor' });
     assert.equal(code, 0);
-    assert.ok(!existsSync(path.join(root, '.imwel', 'adopted')));
+    assert.ok(!existsSync(path.join(root, '.cursor')));
   });
 });

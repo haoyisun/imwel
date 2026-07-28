@@ -16,3 +16,14 @@ export async function writeYamlFile(filePath: string, data: unknown): Promise<vo
   const raw = YAML.stringify(data);
   await fs.writeFile(filePath, raw, 'utf8');
 }
+
+export async function writeYamlFileAtomic(filePath: string, data: unknown): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await fs.writeFile(temporaryPath, YAML.stringify(data), 'utf8');
+    await fs.rename(temporaryPath, filePath);
+  } finally {
+    await fs.rm(temporaryPath, { force: true });
+  }
+}

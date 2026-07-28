@@ -34,6 +34,7 @@ const enSidebar = [
     text: 'Reference',
     items: [
       { text: 'Commands', link: '/en/guide/commands' },
+      { text: 'In-tool skills & commands', link: '/en/guide/in-tool-skills' },
       { text: 'Manifest', link: '/en/guide/manifest' },
     ],
   },
@@ -80,6 +81,7 @@ const zhSidebar = [
     text: '参考',
     items: [
       { text: '命令', link: '/zh-CN/guide/commands' },
+      { text: '工具内 skill 与命令', link: '/zh-CN/guide/in-tool-skills' },
       { text: 'Manifest', link: '/zh-CN/guide/manifest' },
     ],
   },

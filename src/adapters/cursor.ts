@@ -8,7 +8,9 @@ import {
 import type { Artifact } from '../core/artifact-types.js';
 import type { Adapter, ParsedExisting, RenderedFile } from './types.js';
 import { toSlug } from './slug.js';
-import { discoverFrontmatterDir } from './strategies/discover.js';
+import { discoverFrontmatterDir, discoverSkillBundles } from './strategies/discover.js';
+import { renderSkillBundle } from './strategies/skill-render.js';
+import { renderCommandFile } from './strategies/command-render.js';
 
 export interface CursorOverrides {
   globs?: string[];
@@ -21,7 +23,14 @@ export const cursorAdapter: Adapter = {
   async detect(projectDir: string): Promise<boolean> {
     return pathExists(path.join(projectDir, '.cursor'));
   },
+  supportsCommands: true,
+  renderCommand(command): RenderedFile[] {
+    return renderCommandFile(command, '.cursor/commands');
+  },
   render(artifact, targetOverrides?: Record<string, unknown>): RenderedFile[] {
+    if (artifact.type === 'skill') {
+      return renderSkillBundle(artifact, '.cursor/skills');
+    }
     if (artifact.type !== 'rule') {
       return [];
     }
@@ -64,7 +73,10 @@ export const cursorAdapter: Adapter = {
       targetOverrides,
     };
   },
-  discoverExisting(projectDir) {
-    return discoverFrontmatterDir(projectDir, '.cursor/rules', 'mdc');
+  async discoverExisting(projectDir) {
+    return [
+      ...(await discoverFrontmatterDir(projectDir, '.cursor/rules', 'mdc')),
+      ...(await discoverSkillBundles(projectDir, '.cursor/skills')),
+    ];
   },
 };

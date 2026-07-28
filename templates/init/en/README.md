@@ -28,4 +28,4 @@ Consumer-side `imwel propose` / `imwel push` remain available for feeding change
 
 ## Adding a new project
 
-Add an entry under `projects` in `.imwel/manifest.yaml` with a unique `name` and `path`.
+Add an entry under `projects` in `.imwel/manifest.yaml` with a unique `name` and `path`. Set `role: project` for a writable project (a consumer directory binds at most one) or `role: shared` for a read-only module that any number of consumers can install alongside their writable project; omitting `role` defaults to `project`. See the comments in `.imwel/manifest.yaml` for an example.

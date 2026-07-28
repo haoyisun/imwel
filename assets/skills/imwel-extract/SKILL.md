@@ -1,5 +1,6 @@
 ---
 name: imwel-extract
+generatedBy: imwel
 description: Use this skill when the user wants to draft project-fit AI coding rules or skills for a codebase that has few or none yet. It reads the deterministic project fingerprint produced by `imwel scan` (including its Git-history overlay), targeted-reads the key files it points to, and drafts rule/skill artifacts into an isolated review folder — it never edits managed artifacts directly.
 ---
 
@@ -16,16 +17,20 @@ starting set of rules/skills tailored to their actual codebase — not generic b
 
 ## Inputs
 
-- `.imwel/fingerprint.yaml` — the deterministic scan output. If it is missing, tell the user
-  to run `imwel scan` first, then continue.
+- `.imwel/fingerprint.yaml` — the deterministic scan output. **If it is missing, run `imwel scan`
+  yourself** (it is a fast, deterministic, read-only CLI command) and continue in the same session —
+  do not stop and ask the user to run it manually. If it already exists, reuse it by default (only
+  re-run `imwel scan` when the user explicitly asks to refresh).
 - The files the fingerprint points to (manifests, tooling configs, top-level dirs, DB schema,
   existing scattered rule files).
 
 ## Procedure
 
-1. **Read the fingerprint.** Parse `.imwel/fingerprint.yaml`. Note the dominant languages,
+1. **Ensure a fingerprint, then read it.** If `.imwel/fingerprint.yaml` is missing, run
+   `imwel scan` yourself first. Parse it. Note the dominant languages,
    the manifest/build files, the test/lint/format/CI configs, top-level directory layout,
-   DB schema/migration files, and any existing scattered rule-file locations.
+   DB schema/migration files, and any existing scattered rule-file locations. In your final
+   summary, note whether you reused an existing fingerprint or generated a fresh one.
 2. **Use the Git-history overlay to prioritize.** If `history.available` is true, treat it as
    a candidate list, not a conclusion:
    - **Hotspots** (`history.hotspots`) — the files/areas that change most often are the highest
@@ -43,16 +48,25 @@ starting set of rules/skills tailored to their actual codebase — not generic b
 4. **Infer conventions, not guesses.** Base each rule on concrete evidence you read (a lint
    rule that is enabled, a script in the manifest, an actual directory convention, a hotspot's
    real code). If you are unsure, leave a `TODO(verify)` marker rather than inventing one.
-5. **Draft into an isolated folder**, following the Authoring standard below. Write drafts under
-   `.imwel/drafts/` (create it if needed):
-   - Rules: `.imwel/drafts/rules/<slug>.md` — agents.md-flavored Markdown, with a small
+5. **Draft into a uniquely-named draft box**, following the Authoring standard below. Pick a box
+   name of the form `<topic>-<timestamp>` (a short topic slug for this batch plus a timestamp, e.g.
+   `api-conventions-20260724-1830`) so repeated runs never collide, and write this batch under
+   `.imwel/drafts/<box>/` (create it if needed):
+   - Rules: `.imwel/drafts/<box>/rules/<slug>.md` — agents.md-flavored Markdown, with a small
      frontmatter metadata overlay (see "Rule metadata" below). Keep the body plain Markdown.
-   - Skills: `.imwel/drafts/skills/<slug>/SKILL.md` — with a triggerable frontmatter
+   - Skills: `.imwel/drafts/<box>/skills/<slug>/SKILL.md` — with a triggerable frontmatter
      `description`. Put large or rarely-needed detail in linked `reference/*.md` files rather
      than in the SKILL.md body.
 6. **Summarize and self-check.** List what you drafted and the evidence behind each item
    (cite hotspots where relevant). Then run the Self-check below and list any item that does
    not yet meet the standard, so the user can confirm or strengthen it.
+7. **Hand off (three parts).** End with a prominent, three-part handoff — not buried in a
+   footnote:
+   1. **Location** — the exact draft box path (`.imwel/drafts/<box>/`) and the files in it.
+   2. **Review** — ask the user to review each draft, noting the evidence/source you cited.
+   3. **Next step** — once they are happy, run `imwel adopt --from .imwel/drafts/<box>` (or invoke
+      the `imwel-adopt` skill) to render this batch into their tools and make it active; to package
+      a batch into a publishable template repo, use `imwel template init --from-project`.
 
 ## Authoring standard
 
@@ -88,15 +102,17 @@ none:
 - Does each rule have a precise `description`, and a correct trigger intent (path-specific rules
   set `globs`; only truly always-on rules set `alwaysApply: true`)?
 - Is every rule backed by evidence you actually read, with guesses marked `TODO(verify)`?
-- Did you keep everything inside `.imwel/drafts/` and leave managed artifacts untouched?
+- Did you keep everything inside this batch's `.imwel/drafts/<box>/` and leave managed artifacts untouched?
 
 ## Guardrails
 
-- **Drafts are proposals, not managed artifacts.** Everything goes under `.imwel/drafts/`.
-  Never edit files already managed by imwel, and never write outside `.imwel/drafts/`.
+- **Drafts are proposals, not managed artifacts.** Everything goes under this batch's
+  `.imwel/drafts/<box>/`. Never edit files already managed by imwel, and never write outside
+  `.imwel/drafts/`.
 - **No fabrication.** Prefer fewer, well-grounded rules over many speculative ones.
 - **No session hooks, no full scans.** This runs only when invoked; never install session
   hooks or background watchers, and always go through the fingerprint for targeted reads.
-- **Hand back to imwel.** After the user reviews the drafts, they consolidate/publish them via
-  `imwel adopt` (or register individually with `imwel propose`) — do not attempt to wire them
-  into the sync pipeline yourself.
+- **Hand back to imwel.** After the user reviews the drafts, they render them into their tools via
+  `imwel adopt --from .imwel/drafts/<box>` (or the `imwel-adopt` skill), register individual
+  artifacts with `imwel propose`, or package a template with `imwel template init --from-project` —
+  do not attempt to wire them into the sync pipeline yourself.

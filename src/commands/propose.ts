@@ -1,11 +1,21 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import { adapters } from '../adapters/index.js';
+import { readBinding } from '../core/binding.js';
 import { listRemotes } from '../core/config.js';
-import { readManifest, resolveConventions } from '../core/manifest.js';
+import { projectRole, readManifest, resolveConventions } from '../core/manifest.js';
 import { ensureRemoteCache } from '../core/remote-cache.js';
-import { addPendingProposal, buildProposal } from '../core/propose.js';
+import {
+  addPendingProposal,
+  buildProposal,
+  contributionSourceIdentity,
+  contributionTargetIdentity,
+  readPendingProposals,
+  writePendingProposals,
+} from '../core/propose.js';
+import { collectProposeCandidates, deriveCanonicalPath } from '../core/propose-candidates.js';
 import { validateProposalPath } from '../core/propose-validate.js';
+import { selectWithDiffConfirm } from '../core/select-diff.js';
 import {
   exitIfMissingFlags,
   isInteractiveStdin,
@@ -13,6 +23,7 @@ import {
 import { pathExists } from '../core/fs-utils.js';
 import type { ArtifactType } from '../core/artifact-types.js';
 import { t } from '../locales/index.js';
+import { toSlug } from '../adapters/slug.js';
 
 export interface ProposeOptions {
   yes?: boolean;
@@ -41,146 +52,262 @@ function useNonInteractive(opts: ProposeOptions): boolean {
 
 const ARTIFACT_TYPES: ArtifactType[] = ['rule', 'skill', 'agents'];
 
-export async function runPropose(filePath: string, opts: ProposeOptions = {}): Promise<number> {
+export async function runPropose(filePath?: string, opts: ProposeOptions = {}): Promise<number> {
   p.intro(t('propose.title'));
   const projectDir = process.cwd();
-  const rel = path.relative(projectDir, path.resolve(projectDir, filePath)).replace(/\\/g, '/');
-  if (!(await pathExists(path.join(projectDir, rel)))) {
-    console.error(t('propose.fileMissing', { path: rel }));
-    return 1;
-  }
-
   const remotes = Object.keys(await listRemotes());
   if (remotes.length === 0) {
     console.error(t('init.noRemotes'));
     return 1;
   }
-
   const nonInteractive = useNonInteractive(opts);
-  let remote: string;
-  let project: string;
-  let type: ArtifactType;
-  let optional: boolean;
-  let tool: string;
+  if (!filePath && nonInteractive) {
+    console.error(t('propose.multiselect.needsInteractive'));
+    return 1;
+  }
+  if (filePath && !(await pathExists(path.resolve(projectDir, filePath)))) {
+    console.error(t('propose.fileMissing', { path: filePath }));
+    return 1;
+  }
 
-  if (nonInteractive) {
-    const optionalFlag =
-      opts.optional === true || opts.required === true
-        ? 'set'
-        : undefined;
-    const missing = exitIfMissingFlags({
-      '--remote': opts.remote,
-      '--project': opts.project,
-      '--type': opts.type,
-      '--tool': opts.tool,
-      '--optional/--required': optionalFlag,
-    });
-    if (missing !== null) {
-      return missing;
-    }
-    remote = opts.remote!;
-    if (!remotes.includes(remote)) {
-      console.error(t('init.unknownRemote', { alias: remote }));
-      return 1;
-    }
-    project = opts.project!;
-    if (!ARTIFACT_TYPES.includes(opts.type as ArtifactType)) {
-      console.error(t('propose.unknownType', { type: opts.type ?? '' }));
-      return 1;
-    }
-    type = opts.type as ArtifactType;
-    optional = opts.optional === true;
-    tool = opts.tool!;
-    if (!adapters.some((a) => a.id === tool)) {
-      console.error(t('propose.unknownTool', { tool }));
-      return 1;
-    }
-  } else {
-    const selectedRemote = (await p.select({
+  let remote = opts.remote;
+  if (!remote && !nonInteractive) {
+    const selected = await p.select({
       message: t('propose.prompt.remote'),
       options: remotes.map((alias) => ({ value: alias, label: alias })),
-    })) as string;
-    if (p.isCancel(selectedRemote)) {
-      console.log(t('common.cancelled'));
-      return 1;
-    }
-    remote = selectedRemote;
-
-    const cacheDirInteractive = await ensureRemoteCache(remote, { force: true });
-    const manifestInteractive = await readManifest(cacheDirInteractive);
-    const selectedProject = (await p.select({
-      message: t('propose.prompt.project'),
-      options: manifestInteractive.projects.map((proj) => ({
-        value: proj.name,
-        label: proj.name,
-      })),
-    })) as string;
-    if (p.isCancel(selectedProject)) {
-      console.log(t('common.cancelled'));
-      return 1;
-    }
-    project = selectedProject;
-
-    const selectedType = (await p.select({
-      message: t('propose.prompt.type'),
-      options: [
-        { value: 'rule', label: t('artifact.type.rule') },
-        { value: 'skill', label: t('artifact.type.skill') },
-        { value: 'agents', label: t('artifact.type.agents') },
-      ],
-    })) as ArtifactType;
-    if (p.isCancel(selectedType)) {
-      console.log(t('common.cancelled'));
-      return 1;
-    }
-    type = selectedType;
-
-    const optionalAnswer = await p.confirm({
-      message: t('propose.prompt.optional'),
-      initialValue: false,
     });
-    if (p.isCancel(optionalAnswer)) {
+    if (p.isCancel(selected)) {
       console.log(t('common.cancelled'));
       return 1;
     }
-    optional = Boolean(optionalAnswer);
-
-    const selectedTool = (await p.select({
-      message: t('propose.prompt.tool'),
-      options: adapters.map((adapter) => ({
-        value: adapter.id,
-        label: t(`tool.${adapter.id}` as 'tool.cursor'),
-      })),
-    })) as string;
-    if (p.isCancel(selectedTool)) {
-      console.log(t('common.cancelled'));
-      return 1;
-    }
-    tool = selectedTool;
+    remote = String(selected);
+  }
+  if (!remote) {
+    const missing = exitIfMissingFlags({ '--remote': remote });
+    return missing ?? 1;
+  }
+  if (!remotes.includes(remote)) {
+    console.error(t('init.unknownRemote', { alias: remote }));
+    return 1;
   }
 
   const cacheDir = await ensureRemoteCache(remote, { force: true });
   const manifest = await readManifest(cacheDir);
-  if (!manifest.projects.some((proj) => proj.name === project)) {
-    console.error(t('init.unknownProject', { project }));
-    return 1;
+  let project = opts.project;
+  if (!project && !nonInteractive) {
+    const selected = await p.select({
+      message: t('propose.prompt.project'),
+      options: manifest.projects.map((item) => ({
+        value: item.name,
+        label: `${item.name} (${projectRole(item)})`,
+      })),
+    });
+    if (p.isCancel(selected)) {
+      console.log(t('common.cancelled'));
+      return 1;
+    }
+    project = String(selected);
   }
-  const { conventions } = resolveConventions(manifest, project);
-  const validation = validateProposalPath(rel, type, conventions);
-  if (!validation.ok) {
-    console.error(
-      t('propose.pathInvalid', {
-        path: rel,
-        type,
-        expected: validation.expected ?? '',
-      }),
-    );
-    return 1;
+  if (!project) {
+    const missing = exitIfMissingFlags({ '--project': project });
+    return missing ?? 1;
+  }
+  const resolved = resolveConventions(manifest, project);
+  const binding = await readBinding(projectDir);
+  const proposals = await readPendingProposals(projectDir);
+
+  if (filePath) {
+    const optionalFlag = opts.optional === true || opts.required === true ? 'set' : undefined;
+    if (nonInteractive) {
+      const missing = exitIfMissingFlags({
+        '--type': opts.type,
+        '--tool': opts.tool,
+        '--optional/--required': optionalFlag,
+      });
+      if (missing !== null) {
+        return missing;
+      }
+    }
+    let type = opts.type as ArtifactType | undefined;
+    if (!type && !nonInteractive) {
+      const selected = await p.select({
+        message: t('propose.prompt.type'),
+        options: ARTIFACT_TYPES.map((value) => ({
+          value,
+          label: t(`artifact.type.${value}` as 'artifact.type.rule'),
+        })),
+      });
+      if (p.isCancel(selected)) {
+        console.log(t('common.cancelled'));
+        return 1;
+      }
+      type = selected as ArtifactType;
+    }
+    if (!ARTIFACT_TYPES.includes(type as ArtifactType)) {
+      console.error(t('propose.unknownType', { type: type ?? '' }));
+      return 1;
+    }
+    let tool = opts.tool;
+    if (!tool && !nonInteractive) {
+      const selected = await p.select({
+        message: t('propose.prompt.tool'),
+        options: adapters.map((adapter) => ({ value: adapter.id, label: adapter.id })),
+      });
+      if (p.isCancel(selected)) {
+        console.log(t('common.cancelled'));
+        return 1;
+      }
+      tool = String(selected);
+    }
+    const adapter = adapters.find((item) => item.id === tool);
+    if (!adapter) {
+      console.error(t('propose.unknownTool', { tool: tool ?? '' }));
+      return 1;
+    }
+    let optional = opts.optional === true;
+    if (!optionalFlag && !nonInteractive) {
+      const answer = await p.confirm({
+        message: t('propose.prompt.optional'),
+        initialValue: false,
+      });
+      if (p.isCancel(answer)) {
+        console.log(t('common.cancelled'));
+        return 1;
+      }
+      optional = Boolean(answer);
+    }
+    const rel = path.relative(projectDir, path.resolve(projectDir, filePath)).replace(/\\/g, '/');
+    let sourceFiles = [rel];
+    let canonicalContent = '';
+    let slug = toSlug(rel);
+    if (adapter.discoverExisting) {
+      const discovered = (await adapter.discoverExisting(projectDir)).find((item) =>
+        item.sourceFiles.map((source) => source.replace(/\\/g, '/')).includes(rel),
+      );
+      if (discovered) {
+        sourceFiles = discovered.sourceFiles;
+        canonicalContent = adapter.parseExisting(discovered.files).canonicalContent;
+        slug = discovered.slug;
+      }
+    }
+    if (!canonicalContent) {
+      const content = await import('node:fs/promises').then((fs) =>
+        fs.readFile(path.join(projectDir, rel), 'utf8'),
+      );
+      canonicalContent = adapter.parseExisting([{ path: rel, content }]).canonicalContent;
+    }
+    const canonicalPath = deriveCanonicalPath(type!, slug, resolved.conventions);
+    const validation = validateProposalPath(canonicalPath, type!, resolved.conventions);
+    if (!validation.ok || !canonicalContent.trim()) {
+      console.error(
+        t('propose.pathInvalid', {
+          path: canonicalPath,
+          type: type!,
+          expected: validation.expected ?? '',
+        }),
+      );
+      return 1;
+    }
+    try {
+      await addPendingProposal(
+        projectDir,
+        buildProposal(
+          sourceFiles,
+          remote,
+          project,
+          projectRole(resolved.project),
+          type!,
+          canonicalPath,
+          optional,
+          tool!,
+          slug,
+        ),
+      );
+    } catch (error) {
+      console.error(t('common.error', { message: (error as Error).message }));
+      return 1;
+    }
+    console.log(t('propose.success', { path: canonicalPath }));
+    p.outro(t('common.done'));
+    return 0;
   }
 
-  const proposal = buildProposal(rel, remote, project, type, optional, tool);
-  await addPendingProposal(projectDir, proposal);
-  console.log(t('propose.success', { path: rel }));
+  const summary = await collectProposeCandidates(
+    projectDir,
+    adapters,
+    binding,
+    proposals,
+    { remote, project: resolved.project, conventions: resolved.conventions },
+    cacheDir,
+  );
+  if (summary.candidates.length === 0) {
+    console.log(t('propose.multiselect.none'));
+    return 0;
+  }
+  console.log(
+    t('propose.multiselect.excluded', {
+      provenance: summary.excluded.provenance,
+      binding: summary.excluded.linkedBinding,
+      target: summary.excluded.otherTarget,
+      conflict: summary.excluded.conflict,
+    }),
+  );
+  for (const conflict of summary.conflicts) {
+    console.error(
+      t('propose.multiselect.conflict', {
+        path: conflict.canonicalPath,
+        tools: conflict.tools.join(', '),
+      }),
+    );
+  }
+  const tracked = summary.candidates.filter((item) => item.tracked);
+  const result = await selectWithDiffConfirm({
+    message: t('propose.multiselect.prompt'),
+    items: summary.candidates.map((candidate) => ({
+      value: contributionSourceIdentity(candidate),
+      label: `${candidate.canonicalPath} [${candidate.status}]`,
+      hint: `${candidate.tool}: ${candidate.sourceFiles.join(', ')}`,
+    })),
+    installed: tracked.map(contributionSourceIdentity),
+  });
+  if (!result) {
+    console.log(t('common.cancelled'));
+    return 1;
+  }
+  const currentTarget = `${remote}\u0000${project}`;
+  const kept = proposals.filter(
+    (proposal) =>
+      contributionTargetIdentity(proposal) !== currentTarget ||
+      !result.removed.includes(contributionSourceIdentity(proposal)),
+  );
+  for (const identity of result.added) {
+    const candidate = summary.candidates.find(
+      (item) => contributionSourceIdentity(item) === identity,
+    );
+    if (!candidate) {
+      continue;
+    }
+    kept.push(
+      buildProposal(
+        candidate.sourceFiles,
+        remote,
+        project,
+        projectRole(resolved.project),
+        candidate.type,
+        candidate.canonicalPath,
+        candidate.optional,
+        candidate.tool,
+        candidate.sourceId,
+      ),
+    );
+  }
+  await writePendingProposals(projectDir, kept);
+  console.log(
+    t('propose.multiselect.done', {
+      added: result.added.length,
+      removed: result.removed.length,
+    }),
+  );
   p.outro(t('common.done'));
   return 0;
 }

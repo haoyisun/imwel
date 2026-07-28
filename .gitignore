@@ -14,5 +14,6 @@ docs/.vitepress/cache/
 /.cursor/
 /openspec/
 
-# Local-only publish runbook (not shared)
+# Local-only runbooks (not shared)
 /发布指南.md
+/本地安装指南.md

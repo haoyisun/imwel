@@ -204,6 +204,114 @@ projects:
     assert.ok(!result.issues.some((i) => i.code === 'project.roleUndeclared'));
   });
 
+  it('warns when a shared module ships an agents file', async () => {
+    const dir = path.join(root, 'module-agents');
+    await writeFile(
+      path.join(dir, '.imwel', 'manifest.yaml'),
+      `conventions:
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+projects:
+  - name: python-std
+    path: modules/python
+    role: shared
+`,
+    );
+    await writeFile(path.join(dir, 'README.md'), '# x\n');
+    await writeFile(
+      path.join(dir, 'modules', 'python', 'rules', 'style.md'),
+      '---\ndescription: Use when editing Python files to follow the style guide.\n---\n\n# Style\n\nBody.\n',
+    );
+    await writeFile(path.join(dir, 'modules', 'python', 'agents.md'), '# Agents\n');
+    const result = await lintTemplateRepo(dir);
+    assert.ok(result.issues.some((i) => i.code === 'module.agentsIgnored'));
+    assert.equal(result.issues.filter((i) => i.severity === 'error').length, 0);
+    assert.equal(lintExitCode(result, false), 0);
+    assert.equal(lintExitCode(result, true), 1);
+  });
+
+  it('does not warn module.agentsIgnored for a writable project with agents', async () => {
+    const dir = path.join(root, 'project-agents');
+    await scaffoldCleanTemplate(dir);
+    const result = await lintTemplateRepo(dir);
+    assert.ok(!result.issues.some((i) => i.code === 'module.agentsIgnored'));
+  });
+
+  it('warns when two shared modules declare a same-named rule file', async () => {
+    const dir = path.join(root, 'cross-module-rule-collision');
+    await writeFile(
+      path.join(dir, '.imwel', 'manifest.yaml'),
+      `conventions:
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+projects:
+  - name: python-std
+    path: modules/python
+    role: shared
+  - name: code-std
+    path: modules/code
+    role: shared
+`,
+    );
+    await writeFile(path.join(dir, 'README.md'), '# x\n');
+    const ruleContent =
+      '---\ndescription: Use when editing files to follow the security guide.\n---\n\n# Security\n\nBody.\n';
+    await writeFile(path.join(dir, 'modules', 'python', 'rules', 'security.md'), ruleContent);
+    await writeFile(path.join(dir, 'modules', 'code', 'rules', 'security.md'), ruleContent);
+    const result = await lintTemplateRepo(dir);
+    const collision = result.issues.find((i) => i.code === 'project.artifactNameCollision');
+    assert.ok(collision);
+    assert.match(collision!.message, /python-std/);
+    assert.match(collision!.message, /code-std/);
+    assert.match(collision!.message, /security/);
+    assert.equal(result.issues.filter((i) => i.severity === 'error').length, 0);
+    assert.equal(lintExitCode(result, false), 0);
+    assert.equal(lintExitCode(result, true), 1);
+  });
+
+  it('warns when a writable project and a module declare a same-named skill dir', async () => {
+    const dir = path.join(root, 'cross-project-skill-collision');
+    await writeFile(
+      path.join(dir, '.imwel', 'manifest.yaml'),
+      `conventions:
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+projects:
+  - name: example-project
+    path: example-project
+    role: project
+  - name: python-std
+    path: modules/python
+    role: shared
+`,
+    );
+    await writeFile(path.join(dir, 'README.md'), '# x\n');
+    await writeFile(
+      path.join(dir, 'example-project', 'skills', 'shared-skill', 'SKILL.md'),
+      GOOD_SKILL,
+    );
+    await writeFile(
+      path.join(dir, 'modules', 'python', 'skills', 'shared-skill', 'SKILL.md'),
+      GOOD_SKILL,
+    );
+    const result = await lintTemplateRepo(dir);
+    const collision = result.issues.find((i) => i.code === 'project.artifactNameCollision');
+    assert.ok(collision);
+    assert.match(collision!.message, /shared-skill/);
+    assert.equal(lintExitCode(result, false), 0);
+    assert.equal(lintExitCode(result, true), 1);
+  });
+
+  it('does not warn artifactNameCollision when no names collide', async () => {
+    const dir = path.join(root, 'no-collision');
+    await scaffoldCleanTemplate(dir);
+    const result = await lintTemplateRepo(dir);
+    assert.ok(!result.issues.some((i) => i.code === 'project.artifactNameCollision'));
+  });
+
   it('errors on path escape in project path', async () => {
     const dir = path.join(root, 'escape');
     await writeFile(

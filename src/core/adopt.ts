@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Adapter } from '../adapters/types.js';
 import type { ArtifactType } from './artifact-types.js';
 import { mergeMultiToolParseResults, type ToolParseResult } from './push.js';
+import { classifyProvenance } from './provenance.js';
 
 export interface ConsolidatedArtifact {
   slug: string;
@@ -27,6 +28,18 @@ export interface ConsolidateResult {
   sourceCount: number;
   /** Tool ids that contributed at least one discovered artifact. */
   toolIds: string[];
+  /** Source files skipped because they are not USER-owned (MINE/FOREIGN). */
+  excluded: { path: string; reasonKey: string }[];
+}
+
+export interface ConsolidateOptions {
+  /**
+   * When true, skip artifacts whose source is not the user's own (imwel-installed
+   * or third-party-tool artifacts), using `artifact-provenance`. Used by
+   * `template init --from-project` so generated templates never sweep in
+   * imwel's command pack or other tooling's files.
+   */
+  onlyUser?: boolean;
 }
 
 interface Group {
@@ -45,10 +58,12 @@ interface Group {
 export async function consolidateExisting(
   projectDir: string,
   adapterList: Adapter[],
+  options: ConsolidateOptions = {},
 ): Promise<ConsolidateResult> {
   const groups = new Map<string, Group>();
   const allSourceFiles = new Set<string>();
   const toolIds = new Set<string>();
+  const excluded: { path: string; reasonKey: string }[] = [];
 
   for (const adapter of adapterList) {
     if (!adapter.discoverExisting) {
@@ -59,6 +74,17 @@ export async function consolidateExisting(
       const parsed = adapter.parseExisting(item.files);
       if (!parsed.canonicalContent.trim()) {
         continue;
+      }
+      if (options.onlyUser) {
+        const ref = {
+          path: item.sourceFiles[0] ?? item.files[0]?.path ?? item.slug,
+          content: item.files[0]?.content,
+        };
+        const result = classifyProvenance(ref);
+        if (result.provenance !== 'USER') {
+          excluded.push({ path: ref.path, reasonKey: result.reasonKey });
+          continue;
+        }
       }
       toolIds.add(adapter.id);
       item.sourceFiles.forEach((s) => allSourceFiles.add(s));
@@ -108,6 +134,7 @@ export async function consolidateExisting(
     conflicts,
     sourceCount: allSourceFiles.size,
     toolIds: [...toolIds],
+    excluded,
   };
 }
 

@@ -4,15 +4,9 @@
 
 即便没有模板,imwel 也能帮你从真实项目起步与维护规则。
 
-## 归并散落规则
+## 收编你已有的规则
 
-把你已经散落在各工具里的规则拉进 canonical Artifact：
-
-```bash
-imwel adopt           # 把 .cursor/rules、CLAUDE.md、AGENTS.md…… 归并到 .imwel/adopted/
-```
-
-跨工具相同内容会被合并；跨工具冲突会被报告并跳过（不覆盖任何内容）。无需绑定或远程即可运行。见 [`imwel adopt`](../guide/commands.md#imwel-adopt)。
+已经在各工具里攒了规则？用下方的 [`imwel template init --from-project`](#从当前项目生成模板仓)一步把它们变成可分享的模板仓。它只收割你自己的制品，跳过 imwel 与其它工具的文件。
 
 ## 生成项目指纹
 
@@ -38,25 +32,39 @@ imwel scan            # 写出 .imwel/fingerprint.yaml
 imwel skill install   # 安装 imwel-extract 与 imwel-audit（非受管）
 ```
 
-- `imwel-extract` 借指纹把贴合项目的规则草稿写到 `.imwel/drafts/`。它会利用 Git 历史信号（热点作规则候选、共变作跨文件线索）,并遵循创作标准 —— 渐进式披露、带 do/don't 示例的短规则、精确可触发的描述 —— 收尾前对草稿自检。
+- `imwel-extract` 借指纹把贴合项目的规则草稿写到命名草稿箱 `.imwel/drafts/<主题>-<时间戳>/`（指纹缺失时它会自行运行 `imwel scan`）。它会利用 Git 历史信号（热点作规则候选、共变作跨文件线索）,遵循创作标准，并以三段式交接收尾（草稿箱位置、review 提示、下一步 `imwel adopt --from <box>`）。
 - `imwel-audit` 审计现有规则的语义脱节（规则↔代码、规则↔规则、缺失规则）到 `.imwel/audit/`。高频热点却无规则覆盖是强"缺失规则"信号；历史不可用/低置信时退回纯规则↔代码、规则↔规则判断。
 
 第一方 skill 是**非受管**的：写入磁盘,但从不被绑定、历史或 `sync`/`status`/`push` 跟踪。
 
-## 采纳 review 过的草稿
+## 激活 review 过的草稿
+
+`imwel-extract` 把每批写进命名草稿箱 `.imwel/drafts/<主题>-<时间戳>/`。review 完某箱后，把它渲染进工具：
 
 ```bash
-imwel adopt --from            # 采纳 .imwel/drafts（可用 --from <dir> 覆盖目录）
+imwel adopt --from .imwel/drafts/<box>    # 把该批渲染进工具（非受管）
 ```
 
-一道确定性质量闸（空壳规则、死链导入、孤儿路径引用）会先在草稿上运行,问题数会显示在确认提示里 —— 绝不静默写入。非交互 shell 下需加 `-y`。
+写入前先跑确定性质量闸（空壳规则、死链导入、孤儿路径引用），问题数显示在确认里 —— 绝不静默写入（非交互且有问题时拒绝）。渲染的文件是**非受管**的（不被 sync/status/push 跟踪）。你也可在 AI 工具里调用 `imwel-adopt` skill（包装本命令）。见 [`imwel adopt`](../guide/commands.md#imwel-adopt) 与[工具内 skill 与命令](../guide/in-tool-skills.md)。
+
+## 从当前项目生成模板仓
+
+当项目里已经有了你想要的规则（已采纳，或本就散落在各工具里），一步把它们变成可分享的模板仓库：
+
+```bash
+imwel template init --from-project      # 把你自己的制品收割成骨架
+```
+
+它只收割**你的**制品—— imwel 自己的命令包和其它工具装的文件（如 openspec）会经制品来源识别排除并打印为已跳过。骨架落在唯一的 `.imwel/generated-templates/<主题>-<时间戳>/` 目录（或 `--dir`），含 `.imwel/manifest.yaml`、收割到的 `rules`/`skills`/`agents.md`，以及脚手架的 `/imwel-author` + `/imwel-lint`。语义组织——拆 project、指定 role、写 README——请在 AI 工具中调用 `/imwel-create-template` skill，然后在生成目录跑 `imwel lint` 校验。见 [`imwel template init --from-project`](../guide/commands.md#imwel-template-init-from-project)。
 
 ## 维护闭环
 
 ```
-imwel scan → 在 AI 工具中跑 imwel-extract / imwel-audit → review 草稿 →
-imwel adopt --from（或 imwel propose）→ imwel push
+imwel scan（或由 imwel-extract 自动运行）→ 在 AI 工具中跑 imwel-extract / imwel-audit →
+review 命名草稿箱 → imwel adopt --from <box>   # 本地激活
 ```
+
+review 后有两个方向：**本地激活**（`imwel adopt` 渲染进工具，非受管）与**打包/上游**（`imwel template init --from-project` 生成模板，或 `imwel propose` + `imwel push` 贡献远程）。
 
 ## 下一步
 

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Adapter } from '../adapters/types.js';
+import type { Adapter, DiscoveredArtifact } from '../adapters/types.js';
 import type { ArtifactType } from './artifact-types.js';
 import type { Binding } from './binding.js';
 import { classifyProvenance } from './provenance.js';
@@ -38,6 +38,8 @@ export interface ProposeCandidateSummary {
     conflict: number;
   };
 }
+
+export type ProposeDiscoveries = ReadonlyMap<string, readonly DiscoveredArtifact[]>;
 
 function normalized(value: string): string {
   return value.replace(/\\/g, '/').replace(/^\.\//, '');
@@ -78,6 +80,7 @@ async function proposalStatus(
   projectDir: string,
   proposal: PendingProposal,
   adapter: Adapter | undefined,
+  discovered: readonly DiscoveredArtifact[] | undefined,
   cacheDir: string,
   projectPath: string,
 ): Promise<ProposeCandidate['status']> {
@@ -102,16 +105,16 @@ async function proposalStatus(
     return 'clean';
   }
   let parseFiles = files;
-  if (adapter.discoverExisting) {
-    const discovered = (await adapter.discoverExisting(projectDir)).find(
+  if (discovered) {
+    const matchingArtifact = discovered.find(
       (item) =>
         item.slug === proposal.sourceId &&
         item.type === proposal.type &&
         item.sourceFiles.map(normalized).sort().join('\u0000') ===
           proposal.sourceFiles.map(normalized).sort().join('\u0000'),
     );
-    if (discovered) {
-      parseFiles = discovered.files;
+    if (matchingArtifact) {
+      parseFiles = matchingArtifact.files;
     }
   }
   const current = adapter.parseExisting(parseFiles).canonicalContent;
@@ -140,6 +143,7 @@ export async function collectProposeCandidates(
   proposals: PendingProposal[],
   target: { remote: string; project: ManifestProject; conventions: ManifestConventions },
   cacheDir: string,
+  precomputedDiscoveries?: ProposeDiscoveries,
 ): Promise<ProposeCandidateSummary> {
   const targetIdentity = `${target.remote}\u0000${target.project.name}`;
   const bindingRoles = bindingPathRoles(binding);
@@ -162,6 +166,10 @@ export async function collectProposeCandidates(
       projectDir,
       proposal,
       adapter,
+      adapter
+        ? (precomputedDiscoveries?.get(adapter.id) ??
+          (adapter.discoverExisting ? await adapter.discoverExisting(projectDir) : undefined))
+        : undefined,
       cacheDir,
       target.project.path,
     );
@@ -175,8 +183,11 @@ export async function collectProposeCandidates(
         })),
       );
       let parseFiles = files;
-      if (adapter.discoverExisting) {
-        const discovered = (await adapter.discoverExisting(projectDir)).find(
+      const discoveredArtifacts =
+        precomputedDiscoveries?.get(adapter.id) ??
+        (adapter.discoverExisting ? await adapter.discoverExisting(projectDir) : undefined);
+      if (discoveredArtifacts) {
+        const discovered = discoveredArtifacts.find(
           (item) =>
             item.slug === proposal.sourceId &&
             item.type === proposal.type &&
@@ -210,7 +221,8 @@ export async function collectProposeCandidates(
     if (!adapter.discoverExisting) {
       continue;
     }
-    const discovered = await adapter.discoverExisting(projectDir);
+    const discovered =
+      precomputedDiscoveries?.get(adapter.id) ?? (await adapter.discoverExisting(projectDir));
     for (const item of discovered) {
       const sourceFiles = item.sourceFiles.map(normalized).sort();
       const primary = sourceFiles[0] ?? normalized(item.files[0]?.path ?? '');

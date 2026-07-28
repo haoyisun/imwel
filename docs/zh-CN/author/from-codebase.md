@@ -1,72 +1,99 @@
 # 从代码库起草规则
 
-> **作者路径** —— 冷启动与规则保鲜。前置：[安装与前置](../getting-started/install.md)。无论你是否已有模板仓,都适用。
+> **作者路径** —— 冷启动与规则保鲜。前置：[安装与前置](../getting-started/install.md)。无论你是否已有模板仓，都适用。
 
-即便没有模板,imwel 也能帮你从真实项目起步与维护规则。
+你有一个真实项目，想为它配 AI 编程规则。imwel 提供两个操作表面，本页端到端走一遍整个流程。
 
-## 收编你已有的规则
+## 你会用到两个表面
 
-已经在各工具里攒了规则？用下方的 [`imwel template init --from-project`](#从当前项目生成模板仓)一步把它们变成可分享的模板仓。它只收割你自己的制品，跳过 imwel 与其它工具的文件。
+| 表面 | 在哪里 | 是什么 |
+|------|--------|--------|
+| **imwel CLI** | 终端 | `imwel scan`、`imwel skill install`、`imwel adopt`、`imwel template init` |
+| **Slash 命令** | AI 工具聊天 | `/imwel-extract`、`/imwel-audit`、`/imwel-adopt`、`/imwel-create-template` |
 
-## 生成项目指纹
+Slash 命令是 `imwel skill install` 装入的薄包装 —— 它们在 AI 工具聊天里替你调用 CLI 命令。哪个表面顺手用哪个；下面的步骤给每一步标注了 `(终端)` 或 `(slash 命令)`。
 
-为 AI 起草规则构建一份确定性、无 LLM 的项目地图：
+所有第一方命令包文件以及 `imwel adopt` 渲染出的规则都是**非受管**的：写入磁盘，但从不被 `sync` / `status` / `push` 跟踪。
+
+## 流程一览
+
+```
+imwel scan (终端)                # 给项目建指纹
+  → /imwel-extract (slash)       # 把规则草稿写进 .imwel/drafts/<box>/
+  → review 命名草稿箱
+  → imwel adopt --from <box>     # 本地激活（终端）
+                                 # 或 /imwel-adopt (slash)
+```
+
+两个入口：
+
+- **A. 冷启动** —— 项目几乎没有规则。走完整循环。
+- **B. 已有散落规则** —— 跳过起草，用 `imwel template init --from-project` 直接收编成模板仓。
+
+## A. 冷启动：从零起草规则
+
+### 1. 给项目建指纹（终端）
 
 ```bash
 imwel scan            # 写出 .imwel/fingerprint.yaml
 ```
 
-当项目是 Git 仓库时,`scan` 还会把一层 **Git 历史信号**挖进指纹的可选 `history` 段：变更**热点**（改动最频繁的文件）与**共变**（总是一起改动的文件）—— 这些正是最值得写成规则的地方。该层是叠加的,且优雅降级：
+一份确定性、无 LLM 的项目地图（语言构成、manifest/build 文件、测试/lint/CI 配置、散落的工具规则文件位置）。当项目是 Git 仓库时，`scan` 会加一层可选的 `history` 信号 —— 变更热点与共变 —— 按提交数量从 `normal` 到 `low` 到 `none` 优雅降级。`scan` 会打印当前处于哪一级。见 [`imwel scan`](../guide/commands.md#imwel-scan)。
 
-- **满血** —— 提交足够多的仓库：完整历史信号（`confidence: normal`）。
-- **低置信** —— 新仓或浅克隆、提交很少：有信号但标记 `confidence: low`（当作线索,而非结论）。
-- **兜底** —— 无 `.git` 或无提交：跳过历史（`available: false`）,仍产出文件树指纹,并提示可运行 `git init`。
-
-`scan` 会打印当前处于哪一级。历史挖掘是只读的,shell out 到系统 `git`,且仅在你运行 `imwel scan` 时触发 —— 不与任何 AI 工具会话绑定。见 [`imwel scan`](../guide/commands.md#imwel-scan)。
-
-## 用第一方 skill 起草与审计
-
-把 imwel 自带的 skill 安装到工具,再在 AI 工具中调用：
+### 2. 安装第一方 skill（终端，一次性）
 
 ```bash
-imwel skill install   # 安装 imwel-extract 与 imwel-audit（非受管）
+imwel skill install   # 安装 /imwel-extract 与 /imwel-audit
 ```
 
-- `imwel-extract` 借指纹把贴合项目的规则草稿写到命名草稿箱 `.imwel/drafts/<主题>-<时间戳>/`（指纹缺失时它会自行运行 `imwel scan`）。它会利用 Git 历史信号（热点作规则候选、共变作跨文件线索）,遵循创作标准，并以三段式交接收尾（草稿箱位置、review 提示、下一步 `imwel adopt --from <box>`）。
-- `imwel-audit` 审计现有规则的语义脱节（规则↔代码、规则↔规则、缺失规则）到 `.imwel/audit/`。高频热点却无规则覆盖是强"缺失规则"信号；历史不可用/低置信时退回纯规则↔代码、规则↔规则判断。
+把 imwel 的命令包装进你的工具：有命令机制的工具得到 `/imwel-*` slash 命令加背后的 skill，没有的工具只装 skill。见 [`imwel skill install`](../guide/commands.md#imwel-skill-install) 与[工具内 skill 与命令](../guide/in-tool-skills.md)。
 
-第一方 skill 是**非受管**的：写入磁盘,但从不被绑定、历史或 `sync`/`status`/`push` 跟踪。
+### 3. 在 AI 工具里起草规则（slash 命令）
 
-## 激活 review 过的草稿
-
-`imwel-extract` 把每批写进命名草稿箱 `.imwel/drafts/<主题>-<时间戳>/`。review 完某箱后，把它渲染进工具：
-
-```bash
-imwel adopt --from .imwel/drafts/<box>    # 把该批渲染进工具（非受管）
+```
+/imwel-extract
 ```
 
-写入前先跑确定性质量闸（空壳规则、死链导入、孤儿路径引用），问题数显示在确认里 —— 绝不静默写入（非交互且有问题时拒绝）。渲染的文件是**非受管**的（不被 sync/status/push 跟踪）。你也可在 AI 工具里调用 `imwel-adopt` skill（包装本命令）。见 [`imwel adopt`](../guide/commands.md#imwel-adopt) 与[工具内 skill 与命令](../guide/in-tool-skills.md)。
+读取指纹（缺失时自行运行 `imwel scan`），按指纹定向读取关键文件，把贴合项目的规则草稿写进**命名草稿箱** `.imwel/drafts/<主题>-<时间戳>/`。以三段式交接收尾：草稿箱位置、review 提示、下一步。见[工具内 skill 与命令](../guide/in-tool-skills.md)。
 
-## 从当前项目生成模板仓
+### 4. review 草稿箱
 
-当项目里已经有了你想要的规则（已采纳，或本就散落在各工具里），一步把它们变成可分享的模板仓库：
+打开 `.imwel/drafts/<box>/`，读草稿，删掉或改掉不想要的。此刻还没有任何东西被渲染进你的工具。
+
+### 5. 激活 review 过的草稿
+
+两个方向，每个方向都能从两个表面进入：
+
+| 方向 | 终端 | Slash 命令 |
+|------|------|-----------|
+| **本地激活** —— 立刻把该批渲染进你的工具 | `imwel adopt --from <box>` | `/imwel-adopt` |
+| **打包/上游** —— 把你的制品变成可发布的模板仓 | `imwel template init --from-project` | `/imwel-create-template` |
+
+`imwel adopt` 写入前先跑确定性健康闸（空壳规则、死链导入、孤儿路径引用），问题数会显示出来，绝不静默写入。见 [`imwel adopt`](../guide/commands.md#imwel-adopt) 与 [`imwel template init --from-project`](../guide/commands.md#imwel-template-init-from-project)。
+
+## B. 已有散落规则：收编成模板仓
+
+如果项目里已经有了规则（散落在各工具目录，或你刚起草+采纳完），一步把它们变成可分享的模板仓：
 
 ```bash
 imwel template init --from-project      # 把你自己的制品收割成骨架
 ```
 
-它只收割**你的**制品—— imwel 自己的命令包和其它工具装的文件（如 openspec）会经制品来源识别排除并打印为已跳过。骨架落在唯一的 `.imwel/generated-templates/<主题>-<时间戳>/` 目录（或 `--dir`），含 `.imwel/manifest.yaml`、收割到的 `rules`/`skills`/`agents.md`，以及脚手架的 `/imwel-author` + `/imwel-lint`。语义组织——拆 project、指定 role、写 README——请在 AI 工具中调用 `/imwel-create-template` skill，然后在生成目录跑 `imwel lint` 校验。见 [`imwel template init --from-project`](../guide/commands.md#imwel-template-init-from-project)。
+它只收割**你的**制品 —— imwel 自己的命令包和其它工具装的文件（如 openspec）会经制品来源识别排除并打印为已跳过。骨架落在 `.imwel/generated-templates/<主题>-<时间戳>/`（或 `--dir`），含 `.imwel/manifest.yaml`、收割到的 `rules`/`skills`/`agents.md`，以及脚手架的 `/imwel-author` + `/imwel-lint`。语义组织 —— 拆 project、指定 role、写 README —— 请在 AI 工具中调用 `/imwel-create-template`，然后在生成目录跑 `imwel lint` 校验。
 
-## 维护闭环
+## 保持规则新鲜
+
+随着代码库演进，重复跑这个循环：
 
 ```
-imwel scan（或由 imwel-extract 自动运行）→ 在 AI 工具中跑 imwel-extract / imwel-audit →
-review 命名草稿箱 → imwel adopt --from <box>   # 本地激活
+imwel scan → /imwel-extract（起草新规则）→ review → imwel adopt
+/imwel-audit（审计现有规则的脱节）→ 在源头修复 → 重新 adopt
 ```
 
-review 后有两个方向：**本地激活**（`imwel adopt` 渲染进工具，非受管）与**打包/上游**（`imwel template init --from-project` 生成模板，或 `imwel propose` + `imwel push` 贡献远程）。
+`/imwel-audit` 检查规则↔代码不一致、规则↔规则冲突、缺失规则（高频热点却无规则覆盖是强"缺失规则"信号），把结论写进 `.imwel/audit/`。仅显式调用 —— imwel 绝不挂钩你的 AI 工具会话。见[工具内 skill 与命令](../guide/in-tool-skills.md)。
 
 ## 下一步
 
 - 把采纳的制品变成模板 → [编写模板](./quickstart.md)
 - 发布与维护 → [发布与维护](./publish.md)
+- 发布前校验 → [Lint 与质量条](./lint.md)

@@ -74,6 +74,8 @@ Scaffolds a new template repository (manifest, example project, author `AGENTS.m
 | `--topic <slug>` | Topic slug for the generated dir name (with `--from-project`) |
 | `-y` / `--yes` | Skip confirmation prompts (non-interactive defaults) |
 
+Interactively (after the optional git bootstrap), `imwel template init` offers to scaffold **commit-time lint automation** into the new repo: a committed `.githooks/pre-commit` hook running `imwel lint`, a CI workflow (`.github/workflows/imwel-lint.yml` when `gh` is detected, or `.gitlab-ci.yml` when `glab` is), local `core.hooksPath` activation, and a `CONTRIBUTING.md` activation note. Opt in to get all of them; decline to leave the scaffold unchanged. See [Lint & quality bar → Commit-time lint automation](../author/lint.md#commit-time-lint-automation-optional).
+
 ### `imwel template init --from-project`
 
 Cold-start a template repository **from a project that already has AI coding rules** scattered across its tool directories (or freshly drafted+adopted). It harvests your **own** artifacts across all adapters, then generates a structurally valid template skeleton into a unique dir (default `.imwel/generated-templates/<topic>-<timestamp>/`, or `--dir`), so repeated runs never overwrite each other.
@@ -127,6 +129,13 @@ Installs imwel's own **first-party command pack** (shipped with the npm package)
 | `--tools <csv>` | Target tool ids (required in non-interactive mode) |
 | `-y` / `--yes` | Skip the write confirmation |
 
+In an interactive session inside a bound directory with valid entries in `binding.tools`, the
+command first offers to reuse those tools (default: yes). Decline to open the normal tool
+multiselect with them preselected. An empty tool list opens the multiselect directly with nothing
+preselected. If the binding contains an unsupported tool id, imwel warns which id is invalid and
+opens the multiselect directly with the remaining valid tools preselected. An explicit `--tools`
+selection and non-interactive behavior are unchanged.
+
 Command-pack files are **unmanaged**: they carry a `generatedBy: imwel` marker, live under the `imwel-*` namespace, are written to disk but not registered in your binding, not committed to `.imwel/history/`, and never tracked by `status`/`sync`/`push`. `imwel init` can install the pack too — opt-in via a prompt, or `--command-pack` / `--no-command-pack`.
 
 Workflow: run `imwel scan`, then `imwel skill install`, then invoke a skill inside your AI tool:
@@ -155,7 +164,7 @@ Binds the current directory to one remote template repository and installs Artif
 
 After a successful bind, `imwel init` offers to install the first-party command pack into your selected tools (interactive prompt, or forced by `--command-pack` / skipped by `--no-command-pack`). This step never blocks the bind: if you skip it or it fails, the binding stays valid and you can install later with `imwel skill install`.
 
-At least one of `--project` or `--module` must select something. Re-running `imwel init` on a bound directory **rebinds**: the whole selection (tools, modules, writable project) is replaced. Before init or rebind writes, imwel lists every render target and classifies existing files. A different unmanaged file (for example, your own `.cursor/rules/coding-style.mdc`) is never silently replaced: interactive mode asks for explicit confirmation, while non-interactive mode exits with code **1** unless `--yes` authorizes the listed overwrites. Declining leaves rendered files, history, and the binding unchanged. Shared-file targets such as managed blocks in `AGENTS.md` preserve content outside imwel's block.
+At least one of `--project` or `--module` must select something. Re-running `imwel init` on a bound directory **rebinds**: the whole selection (tools, modules, writable project) is replaced. Before init or rebind writes, imwel lists every render target and classifies existing files. The final interactive prompt always offers **confirm and apply**, **go back to change selections**, or **cancel**. Going back restarts at tool selection with all prior choices preselected; cancelling leaves rendered files, history, and the binding unchanged. A different unmanaged file (for example, your own `.cursor/rules/coding-style.mdc`) is never silently replaced: the same final prompt names the conflicting paths, while non-interactive mode exits with code **1** unless `--yes` authorizes the listed overwrites. Shared-file targets such as managed blocks in `AGENTS.md` preserve content outside imwel's block.
 
 ## `imwel tools`
 
@@ -213,6 +222,8 @@ Always force-refreshes remote state (not subject to the passive fetch throttle).
 
 **Missing managed files.** Deleting a path recorded by the binding and local history does not uninstall it. `imwel sync` lists the path as a restoration, then re-renders it from the currently bound upstream Artifact only after confirmation. In non-interactive mode, pass `--yes`; without it, no file, history, or binding state changes.
 
+Before any interactive sync writes files or changes module state, it asks for final confirmation. When the run includes module-drift choices, the prompt offers **confirm and apply**, **go back to change selections**, or **cancel**; going back restarts at the first module-drift choice with prior choices preselected. If the run only contains remote updates or missing-file restorations, there is no earlier choice to revise, so the prompt offers **confirm and apply** or **cancel** only. Cancelling leaves local files, history, and the recorded sync SHA unchanged.
+
 ## `imwel status`
 
 Reports remote vs local drift. Always force-refreshes. After drift, it runs a **rule health** check over the managed rendered files and lists any issues (this never changes the exit code):
@@ -223,21 +234,65 @@ Reports remote vs local drift. Always force-refreshes. After drift, it runs a **
 
 The checks are deterministic and conservative (no LLM, globs/URLs/commands are ignored) — advisory hints, not blockers.
 
+### How to read the output
+
+`imwel status` prints information in this order:
+
+1. **Binding summary**
+   - `Remote: <remote> / <branch>` identifies the remote alias and branch being checked.
+   - `Writable project: <project>` appears when the binding has a linked, writable project.
+   - `Modules (read-only): <modules>` appears when the binding has subscribed modules. A frozen module is marked `(frozen)` and remains at its locally pinned version during sync.
+   - `Tools: <tools>` lists the AI coding tools receiving the rendered Artifacts.
+   - `Last synced commit: <sha>` is the first eight characters of the remote commit recorded by the last successful sync.
+2. **Drift result**
+   - `Remote has updates available.` means the branch now points to a different commit than the recorded last-synced commit. Run `imwel sync` to preview and apply the upstream changes.
+   - `Local hand-edits detected: <paths>` means the listed managed paths differ from the state recorded in local history. Review those edits and decide whether to keep, contribute, or discard them before reconciling with `imwel sync`.
+   - `No drift detected.` appears only when the remote commit is unchanged and no managed path has local edits. No action is needed.
+
+   Remote updates and local edits are independent, so the first two lines can appear together. The clean line appears only when neither condition applies.
+3. **Rule health**
+   - `[empty]` means a managed rule is empty or contains only placeholder text. Add substantive guidance or remove the rule from the template.
+   - `[dead-import]` means an `@path` import cannot be resolved. Correct the import or restore the referenced file.
+   - `[orphan-ref]` means a backtick path points to a missing file. Update or remove the reference, or restore the file if it should still exist.
+
+   These findings are advisory: they do not block the command or change its exit code. If no issue is found, status prints `All managed rules look healthy.`
+
+Use `imwel binding show` for a quick, offline view of locally recorded binding and contribution-tracking state. It reads local metadata and checks path existence without fetching or running rule health. Use `imwel status` when you need to know whether to sync: it always force-refreshes the remote and then checks drift and rule health.
+
 ## `imwel binding show`
 
 Reads only local metadata and path existence. It never fetches, contacts Git, initializes history, changes tracking, or writes files. Unlike `imwel status`, it does not report remote drift or rule health.
 
 The output has separate **Binding** and **Contribution tracking** sections:
 
-- Binding means installed, managed state: remote alias/branch, linked project, subscribed/frozen modules, tools, sync references, and managed Artifact count.
-- Contribution tracking authorizes local sources for a future upstream proposal. It is not proof that those sources are installed or managed by the binding. An Artifact can correctly appear in both sections.
+- Binding means installed, managed state. After the summary, the default tree lists the linked project first, subscribed modules alphabetically, and Artifact types in `rule` → `skill` → `agents` order. Leaves show canonical path, localized type and requirement labels, installed tools, and a localized missing marker where needed.
+- Contribution tracking authorizes local sources for a future upstream proposal. Its tree groups records by target remote/project and then type. It is not proof that those sources are installed or managed by the binding. An Artifact can correctly appear in both sections.
+
+```text
+Binding
+  Remote: team / main
+  Linked project: app
+  ...
+  app (linked)
+  └─ rule
+     └─ rules/app.md (rule · required) → claude-code, cursor
+  shared (subscribed, frozen)
+  └─ rule
+     └─ rules/shared.md (rule · required) → cursor ! missing
+
+Contribution tracking
+  ...
+  team/shared
+  └─ rule
+     └─ rules/shared.md (rule · required) → cursor · pushed · shared
+        └─ Source: .cursor/rules/shared.mdc ! missing
+```
 
 | Flag | Description |
 |------|-------------|
-| `--details` | Show managed Artifact ownership, canonical/installed paths, contribution targets/sources, `present`/`missing` status, and latest pushed Git refs |
-| `--json` | Output only the stable versioned JSON view; implies full detail |
+| `--json` | Output only the unchanged stable `schemaVersion: 1` JSON view |
 
-Only remote aliases are displayed, never credential-bearing URLs. Paths are project-relative POSIX paths, and file contents are never read for output. A missing managed path points to `imwel sync`; a missing contribution source points to `imwel propose`. The command still works when only contribution tracking exists. If neither local state exists, it prints the appropriate setup hint without creating `.imwel`.
+Only remote aliases are displayed, never credential-bearing URLs. Paths are project-relative POSIX paths, and file contents are never read for output. Missing installed paths are counted individually in a stdout warning pointing to `imwel sync`; missing contribution sources produce a stdout warning pointing to `imwel propose`. Tool ids and paths are never translated, and `--json` retains its machine enum values. The command still works when only contribution tracking exists. If neither local state exists, it prints the appropriate setup hint without creating `.imwel`.
 
 ## `imwel rollback`
 
@@ -277,7 +332,9 @@ Manages contribution tracking for one remote project or module at a time. Tracki
 
 ### Interactive multiselect (no file)
 
-Run `imwel propose` **without a file**. First choose the remote and one target project/module. imwel then lists existing tracking first and preselects it, followed by eligible unbound `USER` Artifacts. Space toggles tracking; Enter shows added/removed changes; a second confirmation applies them without any Git or local-file operation. Linked-project managed Artifacts, `MINE`/`FOREIGN` files, items owned by another target, and conflicting cross-tool representations are excluded with a summary.
+Run `imwel propose` **without a file**. First choose the remote. After fetching its manifest, imwel checks every project for eligible candidates and checks the selected remote for pending contribution tracking whose target project is still in that manifest. If both are empty, it exits before the project prompt and explains where tool-native files are normally discovered (for example, `.cursor/rules/*.mdc`) and how to use `imwel propose <path>` for a specific file. If any project has a candidate or manageable pending tracking, target project/module selection continues as before; stale tracking for a deleted or renamed project does not open a selector that cannot manage it.
+
+After target selection, imwel lists existing tracking first and preselects it, followed by eligible unbound `USER` Artifacts. Space toggles tracking; Enter shows added/removed changes; a second confirmation applies them without any Git or local-file operation. Linked-project managed Artifacts, `MINE`/`FOREIGN` files, items owned by another target, and conflicting cross-tool representations are excluded with a summary. File-based and non-interactive flows are unchanged.
 
 Tool-native paths are reverse-parsed before tracking. For example, `.cursor/rules/arkts-hooks.mdc` is recorded as the local source while its target path is derived as `rules/arkts-hooks.md` from manifest conventions.
 
@@ -304,6 +361,7 @@ imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
 | Variable | Description |
 |----------|-------------|
 | `IMWEL_FETCH_THROTTLE_MS` | Override global passive fetch throttle (default 4h). Invalid values fall back to default. Per-remote throttle is not supported. `sync` / `status` always force-refresh. |
+| `NO_COLOR` | Disable ANSI color when the variable is present with any value, including an empty value. Semantic icons remain in the output. |
 
 ## Next
 

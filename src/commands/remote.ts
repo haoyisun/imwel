@@ -10,6 +10,7 @@ import {
   setRemote,
 } from '../core/config.js';
 import { remoteCacheDir } from '../core/paths.js';
+import { error as outputError, info, success, warn } from '../core/cli-output.js';
 import { ensureRemoteCache } from '../core/remote-cache.js';
 import { listBoundDirectories } from '../core/binding-registry.js';
 import { deriveRemoteAlias, looksLikeUrl } from '../core/remote-alias.js';
@@ -50,7 +51,7 @@ export async function resolveRemoteAddArgs(
 export async function runRemoteAdd(input: RemoteAddInput): Promise<number> {
   const resolved = await resolveRemoteAddArgs(input);
   if ('error' in resolved) {
-    console.error(resolved.error);
+    outputError(resolved.error);
     return 1;
   }
   const { alias, url } = resolved;
@@ -59,15 +60,15 @@ export async function runRemoteAdd(input: RemoteAddInput): Promise<number> {
     await addRemote(alias, { url, directPush: Boolean(input.directPush), defaultBranch: 'main' });
   } catch (error) {
     if (error instanceof DuplicateRemoteUrlError) {
-      console.error(t('remote.add.duplicateUrl', { alias: error.existingAlias, url }));
+      outputError(t('remote.add.duplicateUrl', { alias: error.existingAlias, url }));
       return 1;
     }
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('already exists')) {
-      console.error(t('remote.add.exists', { alias }));
+      outputError(t('remote.add.exists', { alias }));
       return 1;
     }
-    console.error(t('common.error', { message }));
+    outputError(t('common.error', { message }));
     return 1;
   }
   const spinner = p.spinner();
@@ -80,9 +81,9 @@ export async function runRemoteAdd(input: RemoteAddInput): Promise<number> {
   }
   spinner.stop(t('common.done'));
   if (derived) {
-    console.log(t('remote.add.derivedAlias', { alias }));
+    info(t('remote.add.derivedAlias', { alias }));
   }
-  console.log(t('remote.add.success', { alias, url }));
+  success(t('remote.add.success', { alias, url }));
   return 0;
 }
 
@@ -90,13 +91,13 @@ export async function runRemoteList(): Promise<number> {
   const remotes = await listRemotes();
   const keys = Object.keys(remotes);
   if (keys.length === 0) {
-    console.log(t('remote.list.empty'));
+    info(t('remote.list.empty'));
     return 0;
   }
-  console.log(t('remote.list.title'));
+  info(t('remote.list.title'));
   for (const alias of keys) {
     const remote = remotes[alias]!;
-    console.log(
+    info(
       t('remote.list.entry', {
         alias,
         url: remote.url,
@@ -111,38 +112,38 @@ export async function runRemoteList(): Promise<number> {
 export async function runRemoteRemove(alias: string, yes = false): Promise<number> {
   const remote = await getRemote(alias);
   if (!remote) {
-    console.error(t('common.notFound', { name: alias }));
+    outputError(t('common.notFound', { name: alias }));
     return 1;
   }
   const bound = await listBoundDirectories(alias);
   if (bound.length > 0) {
-    console.log(t('remote.remove.boundWarning', { count: bound.length, alias }));
+    warn(t('remote.remove.boundWarning', { count: bound.length, alias }), { target: 'stdout' });
   }
   if (!yes) {
     const confirm = await p.confirm({ message: t('remote.remove.confirm', { alias }) });
     if (p.isCancel(confirm) || !confirm) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
   }
   await removeRemote(alias);
   await fs.rm(remoteCacheDir(alias), { recursive: true, force: true });
-  console.log(t('remote.remove.success', { alias }));
+  success(t('remote.remove.success', { alias }));
   return 0;
 }
 
 export async function runRemoteSet(alias: string, directPush?: boolean): Promise<number> {
   const remote = await getRemote(alias);
   if (!remote) {
-    console.error(t('common.notFound', { name: alias }));
+    outputError(t('common.notFound', { name: alias }));
     return 1;
   }
   if (directPush === undefined) {
-    console.error(t('common.error', { message: 'No options provided' }));
+    outputError(t('common.error', { message: 'No options provided' }));
     return 1;
   }
   await setRemote(alias, { directPush });
-  console.log(t('remote.set.success', { alias }));
+  success(t('remote.set.success', { alias }));
   return 0;
 }
 
@@ -153,7 +154,7 @@ export async function runRemoteInteractive(subcommand?: string): Promise<number>
   if (subcommand === 'add') {
     const url = await p.text({ message: t('remote.prompt.url') });
     if (p.isCancel(url)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     const existing = Object.keys(await listRemotes());
@@ -164,12 +165,12 @@ export async function runRemoteInteractive(subcommand?: string): Promise<number>
       placeholder: suggested,
     });
     if (p.isCancel(alias)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     const direct = await p.confirm({ message: t('remote.prompt.directPush'), initialValue: false });
     if (p.isCancel(direct)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     return runRemoteAdd({
@@ -178,6 +179,6 @@ export async function runRemoteInteractive(subcommand?: string): Promise<number>
       directPush: Boolean(direct),
     });
   }
-  console.error(t('common.error', { message: `Unknown remote subcommand: ${subcommand}` }));
+  outputError(t('common.error', { message: `Unknown remote subcommand: ${subcommand}` }));
   return 1;
 }

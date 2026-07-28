@@ -14,6 +14,7 @@ import {
   type InspectedRenderedFile,
 } from '../core/apply-files.js';
 import { isInteractiveStdin, parseCsv } from '../core/cli-flags.js';
+import { error, info, success } from '../core/cli-output.js';
 import { commitInstalledFiles, ensureHistoryRepo } from '../core/history.js';
 import { readManifest, resolveConventions, projectRole } from '../core/manifest.js';
 import { inspectBindingRenderedFiles, overwriteRisks } from '../core/managed-write-safety.js';
@@ -126,7 +127,7 @@ export async function runModules(opts: ModulesOptions = {}): Promise<number> {
   const projectDir = process.cwd();
   const binding = await readBinding(projectDir);
   if (!binding) {
-    console.error(t('modules.noBinding'));
+    error(t('modules.noBinding'));
     return 1;
   }
 
@@ -139,7 +140,7 @@ export async function runModules(opts: ModulesOptions = {}): Promise<number> {
   const manifest = await readManifest(cacheDir);
   const sharedModules = manifest.projects.filter((proj) => projectRole(proj) === 'shared');
   if (sharedModules.length === 0) {
-    console.log(t('modules.none'));
+    info(t('modules.none'));
     return 0;
   }
 
@@ -170,7 +171,7 @@ export async function runModules(opts: ModulesOptions = {}): Promise<number> {
       installed,
     });
     if (!result) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     selected = result.selected;
@@ -185,7 +186,7 @@ export async function runModules(opts: ModulesOptions = {}): Promise<number> {
   const unfreezeSet = new Set(parseCsv(opts.unfreeze));
 
   if (added.length === 0 && removed.length === 0 && freezeSet.size === 0 && unfreezeSet.size === 0) {
-    console.log(t('modules.noChange'));
+    info(t('modules.noChange'));
     return 0;
   }
 
@@ -244,9 +245,9 @@ export async function runModules(opts: ModulesOptions = {}): Promise<number> {
     lastSyncedHistoryCommit: historyCommit,
   });
 
-  console.log(t('modules.applied', { added: added.length, removed: removed.length }));
+  success(t('modules.applied', { added: added.length, removed: removed.length }));
   if (added.length > 0) {
-    console.log(t('modules.syncHint'));
+    info(t('modules.syncHint'));
   }
   p.outro(t('common.done'));
   return 0;

@@ -5,6 +5,7 @@ import { remoteCacheDir } from './paths.js';
 import { ensureRemoteCache } from './remote-cache.js';
 import { resolveFetchThrottleMs } from './throttle.js';
 import { t } from '../locales/index.js';
+import { info } from './cli-output.js';
 
 export async function runPassiveCheckIfDue(
   projectDir = process.cwd(),
@@ -27,7 +28,7 @@ export async function runPassiveCheckIfDue(
     await ensureRemoteCache(binding.remote, { throttleMs });
     const drift = await computeDrift(projectDir, binding, cacheDir, false);
     if (drift.remoteUpdated || drift.localEdited) {
-      console.log(t('passive.driftNotice'));
+      info(t('passive.driftNotice'));
     }
   } catch {
     // non-blocking passive check

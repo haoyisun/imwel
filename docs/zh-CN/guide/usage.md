@@ -4,6 +4,12 @@
 
 imwel 有两条彼此独立的生命周期。按你的角色选择对应泳道。
 
+## 识别命令输出
+
+imwel 分别用 `→`、`✔`、`⚠`、`✖` 标记信息、成功、警告和错误消息，交互式终端还会显示颜色。
+设置 `NO_COLOR`（包括设为空值）可关闭颜色；重定向或管道输出会自动关闭 ANSI 颜色。图标仍会保留，
+因此在 CI 日志中也能看出消息含义。
+
 ## 作者泳道 —— 你发布规则
 
 ```bash
@@ -33,11 +39,13 @@ imwel propose                       # 选择一个目标，新增/取消贡献�
 imwel push                          # 推送项目编辑与显式追踪的贡献
 ```
 
-> **贡献流程：** 运行 `imwel propose`，选择一个远程 project/module，再切换追踪。已有追踪会预勾选；二次确认只应用显示的新增/移除记录，绝不改动本地文件。project tracking 在匹配的 sync 后转入 binding；module tracking 持续到你主动取消。`imwel push` 记录 Git branch/commit，并跳过未变化贡献。也可传路径：`imwel propose <file>`。选项细节见 [命令参考 — propose](./commands.md#imwel-propose-file)。
+> **贡献流程：** 运行 `imwel propose`，选择一个远程 project/module，再切换追踪。已有追踪会预勾选；二次确认只应用显示的新增/移除记录，绝不改动本地文件。project tracking 在匹配的 sync 后转入 binding；module tracking 持续到你主动取消。`imwel push` 记录 Git branch/commit，并跳过未变化贡献。如果所选 remote 既没有可发现的用户制品，也没有目标仍存在于当前 manifest 的待处理追踪，imwel 会在选择 project 前停止，并提示预期发现路径或 `imwel propose <path>`；指向已删除或重命名 project 的 stale tracking 不会阻止该提前退出。也可传路径：`imwel propose <file>`。选项细节见 [命令参考 — propose](./commands.md#imwel-propose-file)。
+
+> **应用前确认：** 交互式 `imwel init` 最后始终提供**确认执行 / 返回修改选择 / 取消**；选择**返回**会从工具选择重新开始，并预选之前的全部选择。交互式 `imwel sync` 仅在本轮存在可重新选择的模块漂移处理时提供**返回**；仅远端更新或缺失文件恢复时只提供**确认执行 / 取消**。两条命令选择**取消**都不会改变文件及 binding/同步状态。详见[命令参考 — init](./commands.md#imwel-init)与[命令参考 — sync](./commands.md#imwel-sync)。
 
 > **调整工具：** 使用 `imwel tools`，不要为此完整重跑 `imwel init` 换绑。增加工具会把当前完整 binding 渲染到新工具，但不重写现有工具输出；移除工具默认保留文件并转为非受管，删除须另行明确选择。选项细节见[命令参考 — tools](./commands.md#imwel-tools)。
 
-> **查看本地状态：** 用 `imwel binding show` 快速、离线地查看 binding 管理了什么，以及 contribution tracking 授权了什么。加 `--details` 查看归属和 `present`/`missing` 路径；用 `--json` 获取稳定、带版本号的机器视图。此命令绝不 fetch 或写入；需要远程漂移和规则健康时仍使用 `imwel status`。选项细节见[命令参考 — binding show](./commands.md#imwel-binding-show)。
+> **查看本地状态：** 用 `imwel binding show` 快速、离线地查看摘要和完整树形清单，了解 binding 管理了什么，以及 contribution tracking 授权了什么。缺失的安装路径和贡献来源默认可见，并附恢复提示；用 `--json` 获取字段不变、稳定且带版本号的机器视图。此命令绝不 fetch 或写入；需要远程漂移和规则健康时仍使用 `imwel status`。选项细节见[命令参考 — binding show](./commands.md#imwel-binding-show)。
 
 逐步：[安装模板](../consume/quickstart.md) → [同步、漂移与回滚](../consume/sync-and-drift.md) → [回馈上游](../consume/contribute-back.md)。
 
@@ -47,6 +55,11 @@ imwel push                          # 推送项目编辑与显式追踪的贡献
 ## 从代码库起步规则
 
 还没有模板?imwel 能归并散落规则、生成项目指纹,并用第一方 skill 起草规则 —— 见[从代码库起草规则](../author/from-codebase.md)。
+
+在已初始化项目中交互运行 `imwel skill install` 且 binding 中有有效工具时，接受默认选项即可复用；
+选择“否”可进入多选，并以这些工具作为预选。空工具列表会直接打开多选。旧 binding 中不再受支持的 id 会被指出并从预选中移除。
+这次性的命令包安装仍是非受管操作，绝不会修改 binding。详见
+[命令参考 — skill install](./commands.md#imwel-skill-install)。
 
 已经在各工具里攒了规则、想据此得到可分享的模板仓?运行 `imwel template init --from-project` 把**你自己的**制品(排除 imwel 与其它工具的文件)收割成骨架,再用 `/imwel-create-template` skill 精修 —— 见 [`imwel template init --from-project`](./commands.md#imwel-template-init-from-project)。
 

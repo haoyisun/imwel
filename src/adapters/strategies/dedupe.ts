@@ -7,6 +7,11 @@ export interface PathConflict {
   adapterIds: string[];
   /** Distinct source projects contributing to the conflict (cross-source). */
   projects: string[];
+  /**
+   * Distinct (project, sourcePath) pairs contributing to the conflict, used to
+   * build an actionable rename hint. Empty when source paths were not recorded.
+   */
+  sourceArtifacts: { project: string; sourcePath: string }[];
 }
 
 export interface DedupedRenderFiles {
@@ -23,6 +28,7 @@ interface TrackedFile {
   warningLocaleKey?: string;
   sourceAdapterId: string;
   sourceProject?: string;
+  sourceArtifactPath?: string;
 }
 
 function groupKey(file: RenderedFileWrite): string {
@@ -57,6 +63,7 @@ export function dedupeRenderedFiles(
       warningLocaleKey: file.warningLocaleKey,
       sourceAdapterId: file.sourceAdapterId ?? 'unknown',
       sourceProject: file.sourceProject,
+      sourceArtifactPath: file.sourceArtifactPath,
     };
     const list = groups.get(key) ?? [];
     list.push(tracked);
@@ -84,6 +91,16 @@ export function dedupeRenderedFiles(
       key,
       adapterIds: [...new Set(group.map((f) => f.sourceAdapterId))],
       projects: [...new Set(group.map((f) => f.sourceProject).filter((x): x is string => Boolean(x)))],
+      sourceArtifacts: [
+        ...new Map(
+          group
+            .filter((f) => f.sourceProject && f.sourceArtifactPath)
+            .map((f) => [`${f.sourceProject}\u0000${f.sourceArtifactPath}`, {
+              project: f.sourceProject!,
+              sourcePath: f.sourceArtifactPath!,
+            }]),
+        ).values(),
+      ],
     });
   }
 

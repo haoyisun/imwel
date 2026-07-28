@@ -66,6 +66,15 @@ export const en = {
   'template.init.prompt.locale': 'Scaffold content locale',
   'template.init.prompt.git': 'Initialize git repository and create initial commit?',
   'template.init.prompt.remote': 'Create remote repository with {cli}?',
+  'template.init.prompt.lintAutomation':
+    'Set up commit-time lint automation (a committed pre-commit hook + a CI workflow that run `imwel lint`)?',
+  'template.init.lintAutomation.done':
+    'Lint automation set up: pre-commit hook at .githooks/pre-commit{ci}, local core.hooksPath activated.',
+  'template.init.lintAutomation.doneNoCi':
+    'Lint automation set up: pre-commit hook at .githooks/pre-commit (no hosting CLI detected — CI workflow skipped), local core.hooksPath activated.',
+  'template.init.lintAutomation.hookSkipped':
+    'Existing .githooks/pre-commit found — not overwritten.',
+  'template.init.lintAutomation.contributing': 'Contributing activation note added to CONTRIBUTING.md.',
   'template.init.success': 'Template repository scaffolded at {path}',
   'template.init.exists': 'Directory is not empty: {path}',
   'template.fromProject.title': 'Generating a template repository from this project\'s existing tool artifacts...',
@@ -78,7 +87,16 @@ export const en = {
     'Generated a template skeleton with {count} artifact(s) at {path}.',
   'template.fromProject.nextSteps':
     'Next: run `imwel lint` in {path} to validate, then use the /imwel-create-template skill in your AI tool to split projects, assign roles, and write README/CONTRIBUTING.',
+  'template.fromProject.lintAutomation.done':
+    'Lint automation files written to {path} (pre-commit hook{ci}). No local activation — run `git init` then `git config core.hooksPath .githooks` there to activate.',
+  'template.fromProject.lintAutomation.doneNoCi':
+    'Lint automation files written to {path} (pre-commit hook; no hosting CLI detected — CI workflow skipped). Run `git init` then `git config core.hooksPath .githooks` there to activate.',
   'template.init.skipExisting': 'Skipped existing file (not overwritten): {path}',
+
+  'lint.hookActivation.hint':
+    'This template repo ships .githooks/ but core.hooksPath is not set. Run `git config core.hooksPath .githooks` to activate commit-time lint.',
+  'lintAutomation.contributingNote':
+    '## Commit-time lint (optional)\n\nThis repo ships a `.githooks/pre-commit` hook that runs `imwel lint`. After cloning, activate it once:\n\n```bash\ngit config core.hooksPath .githooks\n```\n\nA CI workflow also runs `imwel lint --strict` on pull requests.',
 
   'init.title': 'Bind this directory to a template project',
   'init.alreadyBound': 'This directory is already bound to remote "{remote}" / project "{project}".',
@@ -90,6 +108,7 @@ export const en = {
   'init.prompt.project.none': '(skip — modules only)',
   'init.prompt.modules': 'Select read-only modules to install',
   'init.prompt.optional': 'Select optional artifacts to install',
+  'init.confirm': 'Apply {count} planned file write(s) and update the binding?',
   'init.prompt.syncNow': 'Sync now after rebind?',
   'init.success': 'Initialized binding for project "{project}" on branch "{branch}".',
   'init.successModulesOnly': 'Initialized binding with module(s) "{modules}" on branch "{branch}".',
@@ -123,6 +142,9 @@ export const en = {
   'writeSafety.plan.unmanaged-identical': '  = {path} (unmanaged content is compatible; will adopt)',
   'writeSafety.plan.unmanaged-different': '  ! {path} (unmanaged content differs; will overwrite)',
   'writeSafety.confirm': 'Overwrite {count} conflicting file(s): {paths}?',
+  'writeSafety.action.apply': 'Confirm and apply',
+  'writeSafety.action.back': 'Go back to change selections',
+  'writeSafety.action.cancel': 'Cancel',
   'writeSafety.nonInteractive':
     'Refusing to overwrite conflicting file(s) without --yes: {paths}. Review the plan and re-run with --yes to authorize these exact overwrites.',
 
@@ -204,7 +226,6 @@ export const en = {
   'status.clean': 'No drift detected.',
 
   'binding.description': 'Inspect local binding and contribution tracking without network access',
-  'binding.help.details': 'Show managed artifacts and tracked contribution paths',
   'binding.help.json': 'Output the stable versioned JSON view',
   'binding.section.binding': 'Binding',
   'binding.section.contribution': 'Contribution tracking',
@@ -221,21 +242,40 @@ export const en = {
   'binding.syncRemote': '  Last synced remote commit: {sha}',
   'binding.syncHistory': '  Last synced history commit: {sha}',
   'binding.artifactCount': '  Managed artifacts: {count}',
-  'binding.artifact':
-    '  - {path} [{type}, {requirement}] — {role} project "{project}"',
-  'binding.installedPath': '      {tool}: {path} [{status}]',
-  'binding.syncHint': '  Missing managed paths are read-only here. Run `imwel sync` to restore them.',
+  'binding.projectGroup.linked': '{project} (linked)',
+  'binding.projectGroup.subscribed': '{project} (subscribed)',
+  'binding.projectGroup.subscribedFrozen': '{project} (subscribed, frozen)',
+  'binding.enum.type.rule': 'rule',
+  'binding.enum.type.skill': 'skill',
+  'binding.enum.type.agents': 'agents',
+  'binding.enum.requirement.required': 'required',
+  'binding.enum.requirement.optional': 'optional',
+  'binding.enum.status.pending': 'pending',
+  'binding.enum.status.pushed': 'pushed',
+  'binding.enum.role.project': 'project',
+  'binding.enum.role.shared': 'shared',
+  'binding.enum.missing': '! missing',
+  'binding.tree.project': '  {label}',
+  'binding.tree.target': '  {target}',
+  'binding.tree.type': '  {branch} {type}',
+  'binding.tree.artifact':
+    '  {indent}{branch} {path} ({type} · {requirement}) → {tools}',
   'binding.contribution.none': '  None.',
   'binding.contribution.explanation':
     '  These records authorize contributions; they are not installed binding state.',
   'binding.contributionCount': '  Tracked contributions: {count}',
-  'binding.contribution':
-    '  - {path} [{type}, {requirement}, {status}] → {remote}/{project} ({role})',
-  'binding.contributionTool': '      Source tool: {tool}',
-  'binding.contributionSource': '      Source: {path} [{status}]',
-  'binding.contributionPush': '      Latest push: {branch} @ {commit}',
-  'binding.proposeHint':
-    '  Missing contribution sources are read-only here. Manage their tracking with `imwel propose`.',
+  'binding.tree.contribution':
+    '  {indent}{branch} {path} ({type} · {requirement}) → {tool} · {status} · {role}',
+  'binding.tree.contributionSource': 'Source: {path}{missing}',
+  'binding.tree.contributionPush': 'Latest push: {branch} @ {commit}',
+  'binding.tree.detail': '  {indent}{branch} {detail}',
+  'binding.missingArtifacts.one': '1 installed path missing — run `imwel sync` to restore.',
+  'binding.missingArtifacts.many':
+    '{count} installed paths missing — run `imwel sync` to restore.',
+  'binding.missingContributions.one':
+    '1 contribution source missing — manage its tracking with `imwel propose`.',
+  'binding.missingContributions.many':
+    '{count} contribution sources missing — manage their tracking with `imwel propose`.',
 
   'health.title': 'Rule health:',
   'health.clean': '  All managed rules look healthy.',
@@ -297,6 +337,8 @@ export const en = {
   'propose.multiselect.needsInteractive':
     'Interactive `imwel propose` (no file) needs a TTY. Pass a file path with the selection flags instead.',
   'propose.multiselect.none': 'No user-owned artifacts found in your tools to propose.',
+  'propose.multiselect.none.actionable':
+    'No user-authored artifacts were found in your tools\' discovery paths (for example, `.cursor/rules/*.mdc` for Cursor rules). Create the file under a supported discovery path, or propose a specific file directly with `imwel propose <path>`.',
   'propose.multiselect.prompt': 'Select artifacts to register as proposals (space to toggle)',
   'propose.multiselect.excluded':
     'Excluded: {provenance} non-user, {binding} linked-project managed, {target} assigned elsewhere, {conflict} cross-tool conflict(s).',
@@ -361,6 +403,9 @@ export const en = {
   'skill.install.title': 'Install imwel first-party skills',
   'skill.install.none': 'No first-party skills are bundled with this imwel installation.',
   'skill.install.prompt.tools': 'Select tools to install the skill(s) into',
+  'skill.install.binding.reuse': 'Use tools from the current binding ({tools})?',
+  'skill.install.binding.invalidTools':
+    'The current binding contains unsupported tool id(s): {tools}. Select from the supported tools instead.',
   'skill.install.plan': 'Installing {skills} skill(s) → {files} file(s) into: {tools}',
   'skill.install.confirm': 'Write these first-party skill files (unmanaged, not tracked by sync)?',
   'skill.install.written': '  + {path}',
@@ -387,7 +432,9 @@ export const en = {
   'adapter.pathConflict.hint':
     'Pick a single dominant target for that shared file (or align overrides), then re-run.',
   'adapter.pathConflict.sources':
-    'Render conflict for "{path}" across projects: {sources}. Contents differ; nothing was written for this path. Check whether these projects intentionally reuse the same artifact name; if not, rename one of the source files, then re-run.',
+    'Render conflict for "{path}" across projects: {sources}. Contents differ; nothing was written for this path. Check whether these projects intentionally reuse the same artifact name; if not, rename one of the source files, then re-run. {renameHint}',
+  'adapter.pathConflict.renameHint':
+    'Suggestion: in project "{project}", rename "{from}" to "{to}".',
   'adapter.skill.r4Warning':
     'Warning: this tool has no on-demand skills channel — the skill was merged as always-on instructions.',
   'adapter.codex.skillsHint':

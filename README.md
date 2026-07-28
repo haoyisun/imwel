@@ -32,7 +32,7 @@ imwel sync
 | `imwel tools` | Add or remove AI coding tools without changing the current remote/project/modules; removed outputs are kept by default |
 | `imwel sync` | Pull upstream artifact updates (skips frozen modules; never silently overwrites read-only module edits) |
 | `imwel status` | Report remote and local drift, plus deterministic rule-health checks (empty rules, dead imports, orphan path references) |
-| `imwel binding show` | Inspect local binding and contribution tracking offline (`--details` / stable `--json`) |
+| `imwel binding show` | Inspect the complete local binding/contribution tree offline (stable `--json` available) |
 | `imwel rollback` | Restore a prior installed state (deletes managed files added after that point) |
 | `imwel push` | Push project edits and explicitly tracked contributions (branch + PR by default) |
 | `imwel propose [file]` | Add/remove single-target contribution tracking; tool paths map to canonical paths |

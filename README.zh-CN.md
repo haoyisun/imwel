@@ -32,7 +32,7 @@ imwel sync
 | `imwel tools` | 不改变当前 remote/project/modules 即可增删 AI 编程工具；移除时默认保留原输出 |
 | `imwel sync` | 拉取上游制品更新（跳过已冻结模块；绝不静默覆盖只读模块的本地修改） |
 | `imwel status` | 报告远程与本地漂移，并附确定性规则健康检查（空壳规则、死链导入、孤儿路径引用） |
-| `imwel binding show` | 离线查看本地绑定与贡献追踪（`--details` / 稳定 `--json`） |
+| `imwel binding show` | 离线查看完整的本地绑定/贡献树（可用稳定 `--json`） |
 | `imwel rollback` | 恢复到先前的安装状态（会删除该点之后新增的管理文件） |
 | `imwel push` | 推送项目编辑与显式追踪的贡献（默认分支 + PR） |
 | `imwel propose [file]` | 新增/取消单目标贡献追踪；工具路径映射为 canonical 路径 |

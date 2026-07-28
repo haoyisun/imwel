@@ -13,6 +13,8 @@ export interface RenderedFileWrite {
   sourceAdapterId?: string;
   /** Manifest project this file was rendered from (for cross-source conflicts). */
   sourceProject?: string;
+  /** Project-relative source path of the originating artifact (for actionable rename hints). */
+  sourceArtifactPath?: string;
 }
 
 export type RenderedFileSafetyStatus =

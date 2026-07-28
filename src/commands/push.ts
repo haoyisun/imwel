@@ -1,5 +1,6 @@
 import * as p from '@clack/prompts';
 import { readBinding } from '../core/binding.js';
+import { error as outputError, info, success, warn } from '../core/cli-output.js';
 import {
   CanonicalConflictError,
   collectEditCandidatesWithSkipped,
@@ -32,14 +33,15 @@ function printSkippedInputs(skipped: SkippedPushInput[]): void {
   if (skipped.length === 0) {
     return;
   }
-  console.log(t('push.skipped.title'));
+  warn(t('push.skipped.title'), { target: 'stdout' });
   for (const item of skipped) {
     const key = item.kind === 'binding' ? 'push.skipped.bindingMissing' : 'push.skipped.proposalMissing';
-    console.log(
+    warn(
       t(key, {
         source: item.sourcePath,
         paths: item.missingPaths.join(', '),
       }),
+      { target: 'stdout' },
     );
   }
 }
@@ -57,7 +59,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
   const projectDir = process.cwd();
   const binding = await readBinding(projectDir);
   if (!binding) {
-    console.error(t('push.noBinding'));
+    outputError(t('push.noBinding'));
     return 1;
   }
 
@@ -69,7 +71,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
     editResult = await collectEditCandidatesWithSkipped(projectDir, binding, proposals);
   } catch (error) {
     if (error instanceof CanonicalConflictError) {
-      console.error(
+      outputError(
         t('push.canonicalConflict', {
           path: error.sourcePath,
           tools: error.tools.join(', '),
@@ -93,7 +95,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
   let nextProposals = proposals;
   if (missingTracking.length > 0) {
     if (nonInteractive) {
-      console.error(t('push.missing.nonInteractive'));
+      outputError(t('push.missing.nonInteractive'));
     } else {
       const choice = await p.select({
         message: t('push.missing.prompt'),
@@ -104,7 +106,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
         initialValue: 'cancel',
       });
       if (p.isCancel(choice) || choice === 'cancel') {
-        console.log(t('common.cancelled'));
+        info(t('common.cancelled'));
         return 1;
       }
       const removed = new Set(missingTracking.map((item) => item.trackingIdentity));
@@ -123,12 +125,12 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
     }
   }
   if (all.length === 0) {
-    console.log(t('push.noCandidates'));
+    info(t('push.noCandidates'));
     return missingFailure ? 1 : 0;
   }
-  console.log(t('push.valid.title'));
+  info(t('push.valid.title'));
   for (const candidate of all) {
-    console.log(t('push.valid.entry', { path: candidate.sourcePath }));
+    info(t('push.valid.entry', { path: candidate.sourcePath }));
   }
 
   let selected: string[];
@@ -146,7 +148,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
     message = opts.message!;
     if (!opts.yes) {
       if (!isInteractiveStdin()) {
-        console.error(t('cli.nonInteractiveConfirmRequired'));
+        outputError(t('cli.nonInteractiveConfirmRequired'));
         return 1;
       }
       const confirm = await p.confirm({
@@ -154,7 +156,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
         initialValue: true,
       });
       if (p.isCancel(confirm) || !confirm) {
-        console.log(t('common.cancelled'));
+        info(t('common.cancelled'));
         return 1;
       }
     }
@@ -172,7 +174,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
       required: true,
     })) as string[];
     if (p.isCancel(picked) || picked.length === 0) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     selected = picked;
@@ -182,7 +184,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
       defaultValue: 'chore: update imwel artifacts',
     });
     if (p.isCancel(msg)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     message = String(msg);
@@ -193,7 +195,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
         initialValue: true,
       });
       if (p.isCancel(confirm) || !confirm) {
-        console.log(t('common.cancelled'));
+        info(t('common.cancelled'));
         return 1;
       }
     }
@@ -210,7 +212,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
   for (const [remoteAlias, group] of groups) {
     const remote = await getRemote(remoteAlias);
     if (!remote) {
-      console.error(t('init.unknownRemote', { alias: remoteAlias }));
+      outputError(t('init.unknownRemote', { alias: remoteAlias }));
       failedGroup = true;
       continue;
     }
@@ -228,10 +230,10 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
     });
     await writePendingProposals(projectDir, nextProposals);
     if (result.directPush) {
-      console.log(t('push.directPush', { branch: result.branch }));
+      success(t('push.directPush', { branch: result.branch }));
     } else {
-      console.log(t('push.success', { branch: result.branch }));
-      console.log(t('push.compareUrl', { url: result.compareUrl }));
+      success(t('push.success', { branch: result.branch }));
+      info(t('push.compareUrl', { url: result.compareUrl }));
       if (!nonInteractive) {
         const hostCli = await detectHostCli();
         if (hostCli) {
@@ -248,7 +250,7 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
               result.branch,
             );
             if (prUrl) {
-              console.log(t('push.prCreated', { url: prUrl }));
+              success(t('push.prCreated', { url: prUrl }));
             }
           }
         }

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import { adapters } from '../adapters/index.js';
+import { info, success, warn } from '../core/cli-output.js';
 import { buildFingerprint } from '../core/fingerprint.js';
 import { fingerprintPath } from '../core/paths.js';
 import { writeYamlFile } from '../core/yaml-file.js';
@@ -20,7 +21,7 @@ export async function runScan(opts: ScanOptions = {}): Promise<number> {
   spinner.stop(t('common.done'));
 
   const topLang = fingerprint.languages[0];
-  console.log(
+  info(
     t('scan.summary', {
       languages: fingerprint.languages.length,
       topLang: topLang ? `${topLang.ext} (${topLang.files})` : '-',
@@ -31,9 +32,9 @@ export async function runScan(opts: ScanOptions = {}): Promise<number> {
 
   const { history } = fingerprint;
   if (!history.available) {
-    console.log(t('scan.history.none'));
+    info(t('scan.history.none'));
   } else {
-    console.log(
+    info(
       t('scan.history.summary', {
         commits: history.commitsAnalyzed ?? 0,
         confidence: history.confidence ?? 'normal',
@@ -42,13 +43,13 @@ export async function runScan(opts: ScanOptions = {}): Promise<number> {
       }),
     );
     if (history.confidence === 'low') {
-      console.log(t('scan.history.lowConfidence'));
+      warn(t('scan.history.lowConfidence'), { target: 'stdout' });
     }
   }
 
   const outPath = opts.out ? path.resolve(projectDir, opts.out) : fingerprintPath(projectDir);
   await writeYamlFile(outPath, fingerprint);
-  console.log(t('scan.written', { path: path.relative(projectDir, outPath) || outPath }));
+  success(t('scan.written', { path: path.relative(projectDir, outPath) || outPath }));
 
   p.outro(t('common.done'));
   return 0;

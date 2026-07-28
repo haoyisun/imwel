@@ -15,6 +15,7 @@ import {
   type InspectedRenderedFile,
 } from '../core/apply-files.js';
 import { isInteractiveStdin, parseCsv } from '../core/cli-flags.js';
+import { error as outputError, info, success, warn } from '../core/cli-output.js';
 import { commitManagedChanges } from '../core/history.js';
 import { readManifest, resolveConventions } from '../core/manifest.js';
 import { inspectBindingRenderedFiles } from '../core/managed-write-safety.js';
@@ -296,21 +297,21 @@ export async function applyToolsPlan(
 }
 
 function printToolPlan(plan: ToolsChangePlan): void {
-  console.log(t('tools.plan.title'));
+  info(t('tools.plan.title'));
   for (const tool of plan.added) {
-    console.log(t('tools.plan.add', { tool }));
+    info(t('tools.plan.add', { tool }));
   }
   for (const tool of plan.removed) {
-    console.log(t('tools.plan.remove', { tool }));
+    info(t('tools.plan.remove', { tool }));
   }
   for (const targetPath of plan.keepPaths) {
-    console.log(t('tools.plan.keep', { path: targetPath }));
+    info(t('tools.plan.keep', { path: targetPath }));
   }
   for (const targetPath of plan.deletePaths) {
-    console.log(t('tools.plan.delete', { path: targetPath }));
+    info(t('tools.plan.delete', { path: targetPath }));
   }
   for (const targetPath of plan.sharedPaths) {
-    console.log(t('tools.plan.shared', { path: targetPath }));
+    info(t('tools.plan.shared', { path: targetPath }));
   }
 }
 
@@ -319,7 +320,7 @@ async function confirmPlan(plan: ToolsChangePlan, yes: boolean): Promise<boolean
     return true;
   }
   if (!isInteractiveStdin()) {
-    console.error(t('cli.nonInteractiveConfirmRequired'));
+    outputError(t('cli.nonInteractiveConfirmRequired'));
     return false;
   }
   const confirm = await p.confirm({
@@ -337,16 +338,16 @@ async function confirmPlan(plan: ToolsChangePlan, yes: boolean): Promise<boolean
 
 function printSelectionError(error: ToolsSelectionError): void {
   if (error.code === 'unknown') {
-    console.error(
+    outputError(
       t('tools.unknown', {
         tools: error.values.join(', '),
         supported: adapters.map((adapter) => adapter.id).join(', '),
       }),
     );
   } else if (error.code === 'overlap') {
-    console.error(t('tools.overlap', { tools: error.values.join(', ') }));
+    outputError(t('tools.overlap', { tools: error.values.join(', ') }));
   } else {
-    console.error(t('tools.empty'));
+    outputError(t('tools.empty'));
   }
 }
 
@@ -355,7 +356,7 @@ export async function runTools(opts: ToolsOptions = {}): Promise<number> {
   const projectDir = process.cwd();
   const binding = await readBinding(projectDir);
   if (!binding) {
-    console.error(t('tools.noBinding'));
+    outputError(t('tools.noBinding'));
     return 1;
   }
 
@@ -376,13 +377,13 @@ export async function runTools(opts: ToolsOptions = {}): Promise<number> {
       required: true,
     });
     if (!result) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     selection = result;
   } else {
     if (!explicitSelection) {
-      console.error(t('tools.flagsRequired'));
+      outputError(t('tools.flagsRequired'));
       return 1;
     }
     try {
@@ -398,14 +399,14 @@ export async function runTools(opts: ToolsOptions = {}): Promise<number> {
 
   if (selection.added.length === 0 && selection.removed.length === 0) {
     if (opts.deleteOutput) {
-      console.error(t('tools.deleteNeedsRemove'));
+      outputError(t('tools.deleteNeedsRemove'));
       return 1;
     }
-    console.log(t('tools.noChange'));
+    info(t('tools.noChange'));
     return 0;
   }
   if (!isInteractiveStdin() && !opts.yes) {
-    console.error(t('cli.nonInteractiveConfirmRequired'));
+    outputError(t('cli.nonInteractiveConfirmRequired'));
     return 1;
   }
 
@@ -420,7 +421,7 @@ export async function runTools(opts: ToolsOptions = {}): Promise<number> {
       initialValue: 'keep',
     })) as string | symbol;
     if (p.isCancel(choice)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     deleteOutput = choice === 'delete';
@@ -433,7 +434,7 @@ export async function runTools(opts: ToolsOptions = {}): Promise<number> {
   const currentCommit = await branchCommit(cacheDir, binding.branch);
   spinner.stop(t('common.done'));
   if (currentCommit !== binding.lastSyncedCommit) {
-    console.warn(t('tools.remoteDrift'));
+    warn(t('tools.remoteDrift'));
   }
 
   const plan = await planToolsChange(
@@ -452,20 +453,20 @@ export async function runTools(opts: ToolsOptions = {}): Promise<number> {
     plan.writeFiles.length > 0 &&
     !(await confirmRenderedFileWrites(plan.writeFiles, Boolean(opts.yes)))
   ) {
-    console.log(t('common.cancelled'));
+    info(t('common.cancelled'));
     return 1;
   }
   const requiresDetailedConfirm = explicitSelection || deleteOutput;
   if (requiresDetailedConfirm && !(await confirmPlan(plan, Boolean(opts.yes)))) {
-    console.log(t('common.cancelled'));
+    info(t('common.cancelled'));
     return 1;
   }
 
   await applyToolsPlan(projectDir, plan);
   for (const key of plan.warningLocaleKeys) {
-    console.warn(t(key as LocaleKey));
+    warn(t(key as LocaleKey));
   }
-  console.log(
+  success(
     t('tools.applied', {
       added: plan.added.length,
       removed: plan.removed.length,

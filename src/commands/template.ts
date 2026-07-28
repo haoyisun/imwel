@@ -7,7 +7,9 @@ import { detectHostCli, createRemoteRepo } from '../core/host-cli.js';
 import { runGit } from '../core/git.js';
 import { pathExists } from '../core/fs-utils.js';
 import { isInteractiveStdin } from '../core/cli-flags.js';
+import { error, info, success, warn } from '../core/cli-output.js';
 import { generateTemplateFromProject } from '../core/template-from-project.js';
+import { setupLintAutomation } from '../core/lint-automation.js';
 import { t } from '../locales/index.js';
 
 export async function runTemplateInit(
@@ -23,14 +25,14 @@ export async function runTemplateInit(
   if (!nonInteractive) {
     p.intro(t('template.init.title'));
   } else {
-    console.log(t('template.init.title'));
+    info(t('template.init.title'));
   }
 
   let absDir: string;
   if (targetDir) {
     absDir = path.resolve(targetDir);
   } else if (nonInteractive) {
-    console.error(t('cli.missingFlags', { flags: '--dir' }));
+    error(t('cli.missingFlags', { flags: '--dir' }));
     return 1;
   } else {
     const dir = await p.text({
@@ -38,7 +40,7 @@ export async function runTemplateInit(
       defaultValue: process.cwd(),
     });
     if (p.isCancel(dir)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     absDir = path.resolve(String(dir));
@@ -48,7 +50,7 @@ export async function runTemplateInit(
   if (entries.length > 0 && !(entries.length === 1 && entries[0] === '.git')) {
     const nonEmpty = entries.some((e) => e !== '.git');
     if (nonEmpty) {
-      console.error(t('template.init.exists', { path: absDir }));
+      error(t('template.init.exists', { path: absDir }));
       return 1;
     }
   }
@@ -73,7 +75,7 @@ export async function runTemplateInit(
       initialValue: resolveLocale(),
     })) as SupportedLocale;
     if (p.isCancel(prompted)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     selectedLocale = prompted;
@@ -81,7 +83,7 @@ export async function runTemplateInit(
 
   await copyScaffold(absDir, selectedLocale, { name: repoName }, {
     onSkip: (relativePath) => {
-      console.log(t('template.init.skipExisting', { path: relativePath }));
+      info(t('template.init.skipExisting', { path: relativePath }));
     },
   });
 
@@ -106,6 +108,30 @@ export async function runTemplateInit(
 
   if (!nonInteractive) {
     const hostCli = await detectHostCli();
+    const lintAutomation = await p.confirm({
+      message: t('template.init.prompt.lintAutomation'),
+      initialValue: false,
+    });
+    if (!p.isCancel(lintAutomation) && lintAutomation) {
+      const automation = await setupLintAutomation(absDir, {
+        hostCli,
+        activateLocally: initGit,
+        contributingPath: path.join(absDir, 'CONTRIBUTING.md'),
+        activationNote: t('lintAutomation.contributingNote'),
+      });
+      if (automation.hookSkippedExisting) {
+        info(t('template.init.lintAutomation.hookSkipped'));
+      }
+      if (automation.contributingUpdated) {
+        info(t('template.init.lintAutomation.contributing'));
+      }
+      info(
+        automation.ciFile
+          ? t('template.init.lintAutomation.done', { ci: ` + CI at ${automation.ciFile}` })
+          : t('template.init.lintAutomation.doneNoCi'),
+      );
+    }
+
     if (hostCli) {
       const createRemote = await p.confirm({
         message: t('template.init.prompt.remote', { cli: hostCli }),
@@ -127,11 +153,11 @@ export async function runTemplateInit(
     }
   }
 
-  console.log(t('template.init.success', { path: absDir }));
+  success(t('template.init.success', { path: absDir }));
   if (!nonInteractive) {
     p.outro(t('common.done'));
   } else {
-    console.log(t('common.done'));
+    success(t('common.done'));
   }
   return 0;
 }
@@ -148,7 +174,7 @@ async function runTemplateInitFromProject(
   topic: string | undefined,
 ): Promise<number> {
   const projectDir = process.cwd();
-  console.log(t('template.fromProject.title'));
+  info(t('template.fromProject.title'));
 
   const result = await generateTemplateFromProject(projectDir, {
     dir: targetDir ? path.resolve(targetDir) : undefined,
@@ -157,19 +183,19 @@ async function runTemplateInitFromProject(
   });
 
   for (const abs of result.writtenPaths) {
-    console.log(t('skill.install.written', { path: path.relative(projectDir, abs) || abs }));
+    info(t('skill.install.written', { path: path.relative(projectDir, abs) || abs }));
   }
 
   if (result.excluded.length) {
-    console.log(t('template.fromProject.excluded', { count: result.excluded.length }));
+    info(t('template.fromProject.excluded', { count: result.excluded.length }));
     for (const item of result.excluded) {
-      console.log(`  - ${item.path} (${t(item.reasonKey as 'provenance.reason.user')})`);
+      info(`  - ${item.path} (${t(item.reasonKey as 'provenance.reason.user')})`);
     }
   }
 
   if (result.conflicts.length) {
     for (const conflict of result.conflicts) {
-      console.warn(
+      warn(
         t('template.fromProject.conflict', {
           slug: conflict.slug,
           tools: conflict.tools.join(', '),
@@ -179,18 +205,42 @@ async function runTemplateInitFromProject(
   }
 
   if (result.artifacts.length === 0 && result.excluded.length === 0) {
-    console.log(t('template.fromProject.empty'));
+    info(t('template.fromProject.empty'));
     return 0;
   }
 
-  console.log(
+  success(
     t('template.fromProject.success', {
       count: result.artifacts.length,
       path: path.relative(projectDir, result.genDir) || result.genDir,
     }),
   );
-  console.log(t('template.fromProject.nextSteps', {
+  info(t('template.fromProject.nextSteps', {
     path: path.relative(projectDir, result.genDir) || result.genDir,
   }));
+
+  if (isInteractiveStdin() && result.artifacts.length > 0) {
+    const lintAutomation = await p.confirm({
+      message: t('template.init.prompt.lintAutomation'),
+      initialValue: false,
+    });
+    if (!p.isCancel(lintAutomation) && lintAutomation) {
+      const hostCli = await detectHostCli();
+      const automation = await setupLintAutomation(result.genDir, {
+        hostCli,
+        activateLocally: false,
+      });
+      info(
+        automation.ciFile
+          ? t('template.fromProject.lintAutomation.done', {
+              path: path.relative(projectDir, result.genDir) || result.genDir,
+              ci: ` + CI at ${automation.ciFile}`,
+            })
+          : t('template.fromProject.lintAutomation.doneNoCi', {
+              path: path.relative(projectDir, result.genDir) || result.genDir,
+            }),
+      );
+    }
+  }
   return 0;
 }

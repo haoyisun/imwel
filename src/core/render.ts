@@ -50,7 +50,12 @@ export function renderArtifacts(
           : undefined;
       const rendered = adapter.render(artifact, renderOverrides);
       for (const file of rendered) {
-        rawFiles.push({ ...file, sourceAdapterId: tool, sourceProject: artifact.project });
+        rawFiles.push({
+          ...file,
+          sourceAdapterId: tool,
+          sourceProject: artifact.project,
+          sourceArtifactPath: artifact.sourcePath,
+        });
         installedPaths[tool] = [...(installedPaths[tool] ?? []), file.path];
       }
       if (consumerOverride) {

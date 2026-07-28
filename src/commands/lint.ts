@@ -1,4 +1,6 @@
 import { lintExitCode, lintTemplateRepo, type LintIssue } from '../core/lint-template.js';
+import { shouldHintLintHookActivation } from '../core/lint-automation.js';
+import { error, info, success, warn } from '../core/cli-output.js';
 import { t } from '../locales/index.js';
 
 export interface LintOptions {
@@ -10,22 +12,22 @@ export async function runLint(options: LintOptions = {}): Promise<number> {
   const cwd = options.cwd ?? process.cwd();
   const strict = Boolean(options.strict);
 
-  console.log(t('lint.title'));
-  console.log(t('lint.detecting'));
+  info(t('lint.title'));
+  info(t('lint.detecting'));
 
   const result = await lintTemplateRepo(cwd, { strict });
 
   if (result.wrongContext) {
     switch (result.contextKind) {
       case 'consumer':
-        console.error(
+        error(
           t('lint.wrongContext.consumer', {
             root: result.root ?? cwd,
           }),
         );
         break;
       case 'ambiguous':
-        console.error(
+        error(
           t('lint.wrongContext.ambiguous', {
             root: result.root ?? cwd,
           }),
@@ -33,13 +35,17 @@ export async function runLint(options: LintOptions = {}): Promise<number> {
         break;
       case 'neither':
       default:
-        console.error(t('lint.wrongContext.neither'));
+        error(t('lint.wrongContext.neither'));
         break;
     }
     return 1;
   }
 
-  console.log(t('lint.checking', { root: result.root ?? cwd }));
+  info(t('lint.checking', { root: result.root ?? cwd }));
+
+  if (result.root && (await shouldHintLintHookActivation(result.root))) {
+    warn(t('lint.hookActivation.hint'));
+  }
 
   const errors = result.issues.filter((i) => i.severity === 'error');
   const warnings = result.issues.filter((i) => i.severity === 'warning');
@@ -49,9 +55,9 @@ export async function runLint(options: LintOptions = {}): Promise<number> {
   }
 
   if (errors.length === 0 && warnings.length === 0) {
-    console.log(t('lint.clean'));
+    success(t('lint.clean'));
   } else {
-    console.log(
+    info(
       t('lint.summary', {
         errors: errors.length,
         warnings: warnings.length,
@@ -60,7 +66,7 @@ export async function runLint(options: LintOptions = {}): Promise<number> {
   }
 
   if (strict && warnings.length > 0 && errors.length === 0) {
-    console.error(t('lint.strictFailed'));
+    error(t('lint.strictFailed'));
   }
 
   return lintExitCode(result, strict);
@@ -69,8 +75,10 @@ export async function runLint(options: LintOptions = {}): Promise<number> {
 function printIssue(issue: LintIssue): void {
   const loc = issue.path ? ` (${issue.path})` : '';
   if (issue.severity === 'error') {
-    console.error(t('lint.issue.error', { code: issue.code, message: issue.message, loc }));
+    error(t('lint.issue.error', { code: issue.code, message: issue.message, loc }));
   } else {
-    console.log(t('lint.issue.warning', { code: issue.code, message: issue.message, loc }));
+    warn(t('lint.issue.warning', { code: issue.code, message: issue.message, loc }), {
+      target: 'stdout',
+    });
   }
 }

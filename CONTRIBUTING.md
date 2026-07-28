@@ -25,7 +25,7 @@ Useful scripts:
 | `npm run e2e` | End-to-end walkthrough |
 | `npm run dev -- <cmd>` | Run CLI via `tsx` (e.g. `npm run dev -- doctor`) |
 
-Requirements: Node.js `>=18.18`, system `git` on `PATH`.
+Requirements: Node.js `>=22.8` for development and tests (`npm test` uses `--experimental-test-isolation=none`, available since Node 22.8.0, to avoid a `node:test` subprocess IPC bug). The published CLI runtime target remains `>=18.18`. System `git` on `PATH`.
 
 ## Pull requests
 

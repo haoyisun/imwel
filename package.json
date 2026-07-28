@@ -10,7 +10,10 @@
   "files": [
     "dist",
     "templates",
-    "assets"
+    "assets",
+    "!dist/**/*.test.js",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.js.map"
   ],
   "engines": {
     "node": ">=18.18"
@@ -37,7 +40,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/cli.ts",
-    "test": "node --test --test-reporter spec dist/**/*.test.js",
+    "test": "node --test --experimental-test-isolation=none --test-reporter spec dist/**/*.test.js",
     "check:i18n": "node scripts/check-i18n.mjs",
     "ci": "npm run build && npm run check:i18n && npm test",
     "prepublishOnly": "npm run ci",
@@ -51,6 +54,7 @@
     "@clack/prompts": "^0.9.1",
     "commander": "^12.1.0",
     "execa": "^9.5.2",
+    "picocolors": "^1.1.1",
     "yaml": "^2.6.1"
   },
   "devDependencies": {

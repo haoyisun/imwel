@@ -1,5 +1,6 @@
 import * as p from '@clack/prompts';
 import { t } from '../locales/index.js';
+import { info } from './cli-output.js';
 
 export interface SelectableItem {
   value: string;
@@ -47,15 +48,15 @@ export async function selectWithDiffConfirm(opts: {
   const added = selected.filter((v) => !installedSet.has(v));
   const removed = opts.installed.filter((v) => !selectedSet.has(v));
 
-  console.log(t('select.diff.title'));
+  info(t('select.diff.title'));
   if (added.length === 0 && removed.length === 0) {
-    console.log(t('select.diff.none'));
+    info(t('select.diff.none'));
   } else {
     for (const name of added) {
-      console.log(t('select.diff.added', { name }));
+      info(t('select.diff.added', { name }));
     }
     for (const name of removed) {
-      console.log(t('select.diff.removed', { name }));
+      info(t('select.diff.removed', { name }));
     }
   }
 

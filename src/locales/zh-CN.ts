@@ -67,6 +67,15 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'template.init.prompt.locale': '脚手架内容语言',
   'template.init.prompt.git': '初始化 Git 仓库并创建首次提交？',
   'template.init.prompt.remote': '使用 {cli} 创建远程仓库？',
+  'template.init.prompt.lintAutomation':
+    '是否设置提交时自动 lint（提交进仓的 pre-commit hook + 运行 `imwel lint` 的 CI workflow）？',
+  'template.init.lintAutomation.done':
+    '已设置 lint 自动化：pre-commit hook 位于 .githooks/pre-commit{ci}，已本地激活 core.hooksPath。',
+  'template.init.lintAutomation.doneNoCi':
+    '已设置 lint 自动化：pre-commit hook 位于 .githooks/pre-commit（未检测到托管 CLI —— 跳过 CI workflow），已本地激活 core.hooksPath。',
+  'template.init.lintAutomation.hookSkipped':
+    '已存在 .githooks/pre-commit —— 未覆盖。',
+  'template.init.lintAutomation.contributing': '已在 CONTRIBUTING.md 追加激活说明。',
   'template.init.success': '模板仓库已生成于 {path}',
   'template.init.exists': '目录非空：{path}',
   'template.fromProject.title': '正在基于本项目已有的 AI 工具制品生成模板仓...',
@@ -77,7 +86,16 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'template.fromProject.success': '已生成含 {count} 个制品的模板骨架于 {path}。',
   'template.fromProject.nextSteps':
     '下一步：在 {path} 运行 `imwel lint` 校验，然后在 AI 工具中用 /imwel-create-template skill 拆分 project、指定 role、并生成 README/CONTRIBUTING。',
+  'template.fromProject.lintAutomation.done':
+    'lint 自动化文件已写入 {path}（pre-commit hook{ci}）。未本地激活 —— 在该目录运行 `git init` 后再运行 `git config core.hooksPath .githooks` 激活。',
+  'template.fromProject.lintAutomation.doneNoCi':
+    'lint 自动化文件已写入 {path}（pre-commit hook；未检测到托管 CLI —— 跳过 CI workflow）。在该目录运行 `git init` 后再运行 `git config core.hooksPath .githooks` 激活。',
   'template.init.skipExisting': '已跳过已存在文件（未覆盖）：{path}',
+
+  'lint.hookActivation.hint':
+    '本模板仓包含 .githooks/，但 core.hooksPath 未设置。运行 `git config core.hooksPath .githooks` 以激活提交时 lint。',
+  'lintAutomation.contributingNote':
+    '## 提交时 lint（可选）\n\n本仓包含一个运行 `imwel lint` 的 `.githooks/pre-commit` hook。克隆后请一次性激活：\n\n```bash\ngit config core.hooksPath .githooks\n```\n\nCI workflow 也会在 Pull Request 上运行 `imwel lint --strict`。',
 
   'init.title': '将当前目录绑定到模板项目',
   'init.alreadyBound': '此目录已绑定到远程 "{remote}" / 项目 "{project}"。',
@@ -89,6 +107,7 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'init.prompt.project.none': '（不绑定项目，仅安装模块）',
   'init.prompt.modules': '选择要安装的只读模块',
   'init.prompt.optional': '选择要安装的可选制品',
+  'init.confirm': '执行 {count} 项计划文件写入并更新绑定？',
   'init.prompt.syncNow': '重新绑定后立即同步？',
   'init.success': '已初始化项目 "{project}"（分支 "{branch}"）的绑定。',
   'init.successModulesOnly': '已初始化绑定，模块 "{modules}"（分支 "{branch}"）。',
@@ -120,6 +139,9 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'writeSafety.plan.unmanaged-identical': '  = {path}（非受管内容兼容；将接管）',
   'writeSafety.plan.unmanaged-different': '  ! {path}（非受管内容不同；将覆盖）',
   'writeSafety.confirm': '覆盖 {count} 个冲突文件：{paths}？',
+  'writeSafety.action.apply': '确认执行',
+  'writeSafety.action.back': '返回修改选择',
+  'writeSafety.action.cancel': '取消',
   'writeSafety.nonInteractive':
     '未提供 --yes，拒绝覆盖冲突文件：{paths}。请检查计划，并仅在确认这些具体覆盖后加 --yes 重试。',
 
@@ -200,7 +222,6 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'status.clean': '未检测到漂移。',
 
   'binding.description': '纯本地查看绑定与贡献追踪，不访问网络',
-  'binding.help.details': '显示受管制品和贡献追踪路径',
   'binding.help.json': '输出稳定、带版本号的 JSON 视图',
   'binding.section.binding': '绑定（Binding）',
   'binding.section.contribution': '贡献追踪（Contribution tracking）',
@@ -216,17 +237,38 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'binding.syncRemote': '  上次同步的远程提交：{sha}',
   'binding.syncHistory': '  上次同步的历史提交：{sha}',
   'binding.artifactCount': '  受管制品：{count}',
-  'binding.artifact': '  - {path} [{type}，{requirement}] — {role} 项目“{project}”',
-  'binding.installedPath': '      {tool}：{path} [{status}]',
-  'binding.syncHint': '  此处只报告缺失的受管路径。运行 `imwel sync` 恢复。',
+  'binding.projectGroup.linked': '{project}（关联）',
+  'binding.projectGroup.subscribed': '{project}（已订阅）',
+  'binding.projectGroup.subscribedFrozen': '{project}（已订阅，已冻结）',
+  'binding.enum.type.rule': '规则',
+  'binding.enum.type.skill': '技能',
+  'binding.enum.type.agents': 'Agents',
+  'binding.enum.requirement.required': '必选',
+  'binding.enum.requirement.optional': '可选',
+  'binding.enum.status.pending': '待推送',
+  'binding.enum.status.pushed': '已推送',
+  'binding.enum.role.project': '可写项目',
+  'binding.enum.role.shared': '共享模块',
+  'binding.enum.missing': '! 缺失',
+  'binding.tree.project': '  {label}',
+  'binding.tree.target': '  {target}',
+  'binding.tree.type': '  {branch} {type}',
+  'binding.tree.artifact':
+    '  {indent}{branch} {path}（{type} · {requirement}）→ {tools}',
   'binding.contribution.none': '  无。',
   'binding.contribution.explanation': '  这些记录授权贡献，不代表已安装的绑定状态。',
   'binding.contributionCount': '  已追踪贡献：{count}',
-  'binding.contribution': '  - {path} [{type}，{requirement}，{status}] → {remote}/{project}（{role}）',
-  'binding.contributionTool': '      来源工具：{tool}',
-  'binding.contributionSource': '      来源：{path} [{status}]',
-  'binding.contributionPush': '      最近推送：{branch} @ {commit}',
-  'binding.proposeHint': '  此处只报告缺失的贡献来源。请使用 `imwel propose` 管理其追踪。',
+  'binding.tree.contribution':
+    '  {indent}{branch} {path}（{type} · {requirement}）→ {tool} · {status} · {role}',
+  'binding.tree.contributionSource': '来源：{path}{missing}',
+  'binding.tree.contributionPush': '最近推送：{branch} @ {commit}',
+  'binding.tree.detail': '  {indent}{branch} {detail}',
+  'binding.missingArtifacts.one': '有 1 个安装路径缺失——运行 `imwel sync` 恢复。',
+  'binding.missingArtifacts.many': '有 {count} 个安装路径缺失——运行 `imwel sync` 恢复。',
+  'binding.missingContributions.one':
+    '有 1 个贡献来源缺失——请使用 `imwel propose` 管理其追踪。',
+  'binding.missingContributions.many':
+    '有 {count} 个贡献来源缺失——请使用 `imwel propose` 管理其追踪。',
 
   'health.title': '规则健康：',
   'health.clean': '  所有受管规则均健康。',
@@ -287,6 +329,8 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'propose.multiselect.needsInteractive':
     '交互式 `imwel propose`（不带文件）需要 TTY。请改为传文件路径并带选择类 flags。',
   'propose.multiselect.none': '你的工具里没有可提议的用户制品。',
+  'propose.multiselect.none.actionable':
+    '在工具的发现路径中未找到用户编写的制品（例如 Cursor 规则的 `.cursor/rules/*.mdc`）。请在受支持的发现路径下创建文件，或用 `imwel propose <path>` 直接提议指定文件。',
   'propose.multiselect.prompt': '选择要登记为 proposal 的制品（空格勾选/取消）',
   'propose.multiselect.excluded':
     '已排除：{provenance} 个非用户制品、{binding} 个可写项目受管制品、{target} 个已归属其它目标、{conflict} 个跨工具冲突。',
@@ -347,6 +391,9 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'skill.install.title': '安装 imwel 第一方 skill',
   'skill.install.none': '当前 imwel 安装未随包提供任何第一方 skill。',
   'skill.install.prompt.tools': '选择要安装 skill 的工具',
+  'skill.install.binding.reuse': '使用当前 binding 中的工具（{tools}）？',
+  'skill.install.binding.invalidTools':
+    '当前 binding 包含不受支持的工具 id：{tools}。请改从受支持的工具中选择。',
   'skill.install.plan': '将安装 {skills} 个 skill → {files} 个文件到：{tools}',
   'skill.install.confirm': '写入这些第一方 skill 文件（非受管，不被 sync 跟踪）？',
   'skill.install.written': '  + {path}',
@@ -371,7 +418,9 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'adapter.pathConflict.hint':
     '请为该共享文件选定一个主导目标（或对齐 targetOverrides）后重试。',
   'adapter.pathConflict.sources':
-    '路径 "{path}" 在以下 project 间渲染冲突：{sources}。内容不一致，该路径未写入。请检查这些 project 是否有意使用相同的制品名；如果不是，请重命名其中一个源文件后重试。',
+    '路径 "{path}" 在以下 project 间渲染冲突：{sources}。内容不一致，该路径未写入。请检查这些 project 是否有意使用相同的制品名；如果不是，请重命名其中一个源文件后重试。{renameHint}',
+  'adapter.pathConflict.renameHint':
+    '建议：在 project "{project}" 中，将 "{from}" 重命名为 "{to}"。',
   'adapter.skill.r4Warning':
     '警告：该工具没有按需 skills 通道 — 技能已并入常驻说明（always-on）。',
   'adapter.codex.skillsHint':

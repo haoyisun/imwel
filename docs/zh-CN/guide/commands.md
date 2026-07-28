@@ -74,6 +74,8 @@
 | `--topic <slug>` | 生成目录名的主题 slug（配合 `--from-project`） |
 | `-y` / `--yes` | 跳过确认（非交互默认） |
 
+交互式下（在可选的 git 初始化之后），`imwel template init` 会提供在新仓中脚手架**提交时 lint 自动化**：一个提交进仓、运行 `imwel lint` 的 `.githooks/pre-commit` hook、一个 CI workflow（检测到 `gh` 写 `.github/workflows/imwel-lint.yml`，检测到 `glab` 写 `.gitlab-ci.yml`）、本地 `core.hooksPath` 激活，以及 `CONTRIBUTING.md` 激活说明。选择启用即全部写入；选择不启用则脚手架保持原样。见 [Lint 与质量条 → 提交时 lint 自动化](../author/lint.md#提交时-lint-自动化可选)。
+
 ### `imwel template init --from-project`
 
 从一个**已经积累了 AI 编码规则**（散落在各工具目录，或刚 extract+adopt 完）的项目冷启动出模板仓。它跨所有适配器收割你**自己**的制品，生成一个结构合法的模板骨架到唯一目录（默认 `.imwel/generated-templates/<主题>-<时间戳>/`，或用 `--dir`），多次运行互不覆盖。
@@ -127,6 +129,11 @@
 | `--tools <csv>` | 目标工具 id（非交互模式必填） |
 | `-y` / `--yes` | 跳过写入确认 |
 
+在已有 binding 的目录中交互运行且 `binding.tools` 含有效工具时，命令会先询问是否复用（默认“是”）。
+选择“否”才进入原有工具多选，并预选 binding 中的工具；空工具列表会直接进入多选且不预选。
+如果 binding 包含已不受支持的工具 id，imwel 会指出失效 id，直接进入多选，并只预选剩余的有效工具。
+显式传入 `--tools` 以及非交互模式的行为均不改变。
+
 命令包文件是**非受管**的：带 `generatedBy: imwel` 标记、位于 `imwel-*` 命名空间，写入磁盘但不登记进 binding、不提交到 `.imwel/history/`，也不被 `status`/`sync`/`push` 跟踪。`imwel init` 也能安装命令包——通过提示 opt-in，或用 `--command-pack` / `--no-command-pack`。
 
 工作流：先 `imwel scan`，再 `imwel skill install`，然后在你的 AI 工具中调用 skill：
@@ -155,7 +162,7 @@
 
 绑定成功后，`imwel init` 会询问是否把第一方命令包安装进所选工具（交互提示，或用 `--command-pack` 强制 / `--no-command-pack` 跳过）。这一步绝不阻断绑定：跳过或失败时绑定仍有效，可稍后用 `imwel skill install` 安装。
 
-`--project` 与 `--module` 至少要选中其一。在已绑定目录上重跑 `imwel init` 即**换绑**：整套选择（工具、模块、可写项目）会被替换。init 或换绑写入前，imwel 会列出并分类每个渲染目标。不同内容的非受管文件（例如你自己的 `.cursor/rules/coding-style.mdc`）绝不会被静默替换：交互模式要求明确确认；非交互模式除非用 `--yes` 授权计划中列出的覆盖，否则以退出码 **1** 中止。拒绝后，渲染文件、history 与 binding 均不改变。`AGENTS.md` 中的受管块等共享文件写入会保留 imwel 块之外的内容。
+`--project` 与 `--module` 至少要选中其一。在已绑定目录上重跑 `imwel init` 即**换绑**：整套选择（工具、模块、可写项目）会被替换。init 或换绑写入前，imwel 会列出并分类每个渲染目标。最后一个交互提示始终提供**确认执行**、**返回修改选择**、**取消**三项；返回会从工具选择重新开始，并预选之前的全部选择，取消则保持渲染文件、history 与 binding 不变。不同内容的非受管文件（例如你自己的 `.cursor/rules/coding-style.mdc`）绝不会被静默替换：同一个最终提示会列出冲突路径；非交互模式除非用 `--yes` 授权计划中列出的覆盖，否则以退出码 **1** 中止。`AGENTS.md` 中的受管块等共享文件写入会保留 imwel 块之外的内容。
 
 ## `imwel tools`
 
@@ -213,6 +220,8 @@ imwel tools --remove cursor --delete-output -y  # 只删无引用的记录路径
 
 **缺失受管文件。** 删除 binding 与本地 history 已记录的路径不等于卸载。`imwel sync` 会先把该路径列为恢复项，确认后才从当前绑定的上游 Artifact 重新渲染。非交互模式需传 `--yes`；未确认时文件、history 与 binding 均不改变。
 
+交互式 sync 在写文件或改变模块状态前都会请求最终确认。本轮存在模块漂移选择时，提示提供**确认执行**、**返回修改选择**、**取消**三项；返回会从第一个模块漂移选择重新开始，并预选之前的选择。若本轮仅有远端更新或缺失文件恢复，没有更早的选择可修改，提示只提供**确认执行**与**取消**。取消不会改变本地文件、history 或已记录的同步 SHA。
+
 ## `imwel status`
 
 报告远程与本地漂移。始终强制刷新。漂移报告之后，会对受管的已渲染文件运行**规则健康**检查并列出问题（不改变退出码）：
@@ -223,21 +232,65 @@ imwel tools --remove cursor --delete-output -y  # 只删无引用的记录路径
 
 检查是确定性且保守的（无 LLM，忽略 glob/URL/命令），仅作提示，不阻断。
 
+### 如何阅读输出
+
+`imwel status` 按以下顺序输出信息：
+
+1. **Binding 摘要**
+   - `远程：<remote> / <branch>` 标明正在检查的远程别名和分支。
+   - Binding 包含关联的可写项目时，会显示 `可写项目：<project>`。
+   - Binding 包含已订阅模块时，会显示 `模块（只读）：<modules>`。已冻结模块带有 `（已冻结）` 标记，并会在同步时保持本地固定版本。
+   - `工具：<tools>` 列出接收渲染后 Artifact 的 AI 编程工具。
+   - `上次同步提交：<sha>` 是上次成功同步所记录远程提交的前八个字符。
+2. **漂移结果**
+   - `远程有可用更新。` 表示分支当前指向的提交不同于所记录的上次同步提交。运行 `imwel sync` 预览并应用上游变更。
+   - `检测到本地手工修改：<paths>` 表示列出的受管路径与本地 history 中记录的状态不同。先检查这些编辑，决定保留、贡献还是丢弃，再用 `imwel sync` 协调变更。
+   - `未检测到漂移。` 仅在远程提交未变且受管路径均无本地编辑时显示。此时无需操作。
+
+   远程更新与本地编辑相互独立，因此前两行可以同时出现。只有两种情况都不存在时，才会显示无漂移行。
+3. **规则健康**
+   - `[空壳]` 表示受管规则为空或只含占位文字。请补充实质性指导，或从模板中移除该规则。
+   - `[死链导入]` 表示某个 `@path` 导入无法解析。请修正导入，或恢复被引用文件。
+   - `[孤儿引用]` 表示反引号路径指向不存在的文件。请更新或移除引用；如果文件本应存在，则将其恢复。
+
+   这些发现仅作提示：不会阻断命令，也不会改变退出码。若未发现问题，status 会显示 `所有受管规则均健康。`
+
+需要快速离线查看本地记录的 binding 和贡献追踪状态时，使用 `imwel binding show`。它只读取本地元数据并检查路径是否存在，不 fetch，也不运行规则健康检查。需要判断是否应该同步时，使用 `imwel status`：它始终强制刷新远程，随后检查漂移和规则健康。
+
 ## `imwel binding show`
 
 只读取本地元数据并检查路径是否存在。它不会 fetch、联系 Git、初始化 history、修改追踪或写入文件。与 `imwel status` 不同，它不报告远程漂移或规则健康。
 
 输出严格分成 **Binding** 与 **Contribution tracking** 两部分：
 
-- Binding 表示已安装、受管的状态：远程别名/分支、关联项目、订阅/冻结模块、工具、同步引用和受管 Artifact 数量。
-- Contribution tracking 表示允许将本地来源贡献到上游，不代表这些来源已由 binding 安装或管理。同一 Artifact 同时出现在两部分是正确的。
+- Binding 表示已安装、受管的状态。摘要之后的默认树形清单先列关联项目，再按字母序列出订阅模块；Artifact 类型固定按 `rule` → `skill` → `agents` 排列。叶子显示 canonical path、本地化后的类型与必选/可选状态、安装工具，并在需要时标记 `! 缺失`。
+- Contribution tracking 表示允许将本地来源贡献到上游。其树按目标远程/project、再按类型分组；这不代表来源已由 binding 安装或管理。同一 Artifact 同时出现在两部分是正确的。
+
+```text
+绑定（Binding）
+  远程：team / main
+  关联项目：app
+  ...
+  app（关联）
+  └─ 规则
+     └─ rules/app.md（规则 · 必选）→ claude-code, cursor
+  shared（已订阅，已冻结）
+  └─ 规则
+     └─ rules/shared.md（规则 · 必选）→ cursor ! 缺失
+
+贡献追踪（Contribution tracking）
+  ...
+  team/shared
+  └─ 规则
+     └─ rules/shared.md（规则 · 必选）→ cursor · 已推送 · 共享模块
+        └─ 来源：.cursor/rules/shared.mdc ! 缺失
+```
 
 | 选项 | 说明 |
 |------|------|
-| `--details` | 显示受管 Artifact 归属、canonical/installed 路径、贡献目标/来源、`present`/`missing` 状态及最近推送的 Git 引用 |
-| `--json` | 仅输出稳定、带版本号的完整 JSON 视图；隐含 details |
+| `--json` | 仅输出字段不变的稳定 `schemaVersion: 1` JSON 视图 |
 
-命令只显示远程别名，绝不显示可能携带凭据的 URL；路径统一为项目相对 POSIX 格式，也不会读取文件正文用于输出。受管路径缺失时提示 `imwel sync`；贡献来源缺失时提示 `imwel propose`。只有 contribution tracking、没有 binding 时仍可查看；两者都没有时给出初始化提示，且不创建 `.imwel`。
+命令只显示远程别名，绝不显示可能携带凭据的 URL；路径统一为项目相对 POSIX 格式，也不会读取文件正文用于输出。缺失的安装路径会逐路径计数，并在 stdout 给出指向 `imwel sync` 的警告；贡献来源缺失时也在 stdout 给出带数量的 `imwel propose` 警告。工具 ID 与路径不翻译，`--json` 继续保留机器枚举值。只有 contribution tracking、没有 binding 时仍可查看；两者都没有时给出初始化提示，且不创建 `.imwel`。
 
 ## `imwel rollback`
 
@@ -277,7 +330,9 @@ imwel tools --remove cursor --delete-output -y  # 只删无引用的记录路径
 
 ### 交互多选（不带文件）
 
-不带文件运行 `imwel propose`：先选择 remote 和一个目标 project/module。随后列表把现有追踪放在最前并预勾选，再列出符合条件、未绑定的 `USER` Artifact。空格切换追踪，回车显示新增/移除 diff，二次确认后应用；整个过程不执行 Git，也不修改本地文件。可写项目受管 Artifact、`MINE`/`FOREIGN` 文件、已归属其它目标的项及跨工具冲突会被排除并汇总。
+不带文件运行 `imwel propose`：先选择 remote。获取其 manifest 后，imwel 会检查每个 project 的候选，并检查所选 remote 是否有目标 project 仍存在于该 manifest 的待处理贡献追踪。若两者都为空，命令会在 project 提示前退出，并说明工具原生文件通常位于哪些发现路径（例如 `.cursor/rules/*.mdc`），以及如何用 `imwel propose <path>` 直接提议指定文件。只要任一 project 有候选，或存在选择器可管理的待处理追踪，就会像以前一样继续选择目标 project/module；指向已删除或重命名 project 的 stale tracking 不会打开一个无法管理它的选择器。
+
+选择目标后，列表把现有追踪放在最前并预勾选，再列出符合条件、未绑定的 `USER` Artifact。空格切换追踪，回车显示新增/移除 diff，二次确认后应用；整个过程不执行 Git，也不修改本地文件。可写项目受管 Artifact、`MINE`/`FOREIGN` 文件、已归属其它目标的项及跨工具冲突会被排除并汇总。带文件流程与非交互流程保持不变。
 
 追踪前会反向解析工具原生路径。例如 `.cursor/rules/arkts-hooks.mdc` 保留为本地来源，同时按 manifest conventions 派生目标路径 `rules/arkts-hooks.md`。
 
@@ -304,6 +359,7 @@ imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
 | 变量 | 说明 |
 |------|------|
 | `IMWEL_FETCH_THROTTLE_MS` | 覆盖全局被动 fetch 节流（默认 4 小时）。非法值回退默认。尚不支持按远程独立节流。`sync` / `status` 始终强制刷新。 |
+| `NO_COLOR` | 只要该变量存在，无论取值为何（包括空值），都会禁用 ANSI 颜色；输出中的语义图标仍会保留。 |
 
 ## 下一步
 

@@ -11,6 +11,7 @@ import {
   restoreToCommit,
 } from '../core/history.js';
 import { exitIfMissingFlags, isInteractiveStdin } from '../core/cli-flags.js';
+import { error, info, success } from '../core/cli-output.js';
 import { t } from '../locales/index.js';
 
 export interface RollbackOptions {
@@ -36,13 +37,13 @@ export async function runRollback(opts: RollbackOptions = {}): Promise<number> {
 
   const binding = await readBinding(projectDir);
   if (!binding) {
-    console.error(t('sync.noBinding'));
+    error(t('sync.noBinding'));
     return 1;
   }
 
   const commits = await listHistoryCommits(projectDir);
   if (commits.length === 0) {
-    console.error(t('rollback.noHistory'));
+    error(t('rollback.noHistory'));
     return 1;
   }
 
@@ -58,7 +59,7 @@ export async function runRollback(opts: RollbackOptions = {}): Promise<number> {
       try {
         await listFilesAtCommit(projectDir, selected);
       } catch {
-        console.error(t('rollback.unknownCommit', { sha: selected }));
+        error(t('rollback.unknownCommit', { sha: selected }));
         return 1;
       }
     } else {
@@ -78,7 +79,7 @@ export async function runRollback(opts: RollbackOptions = {}): Promise<number> {
       })),
     })) as string;
     if (p.isCancel(picked)) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
     selected = picked;
@@ -89,19 +90,19 @@ export async function runRollback(opts: RollbackOptions = {}): Promise<number> {
   try {
     commitTreePaths = await listFilesAtCommit(projectDir, selected);
   } catch {
-    console.error(t('rollback.unknownCommit', { sha: selected }));
+    error(t('rollback.unknownCommit', { sha: selected }));
     return 1;
   }
 
   const toDelete = managedPathsMissingFromCommit(managedPaths, commitTreePaths);
   if (toDelete.length > 0) {
-    console.log(t('rollback.delete.title'));
+    info(t('rollback.delete.title'));
     for (const rel of toDelete) {
-      console.log(t('rollback.delete.entry', { path: rel }));
+      info(t('rollback.delete.entry', { path: rel }));
     }
     if (!opts.yes) {
       if (!isInteractiveStdin()) {
-        console.error(t('cli.nonInteractiveConfirmRequired'));
+        error(t('cli.nonInteractiveConfirmRequired'));
         return 1;
       }
       const confirm = await p.confirm({
@@ -109,7 +110,7 @@ export async function runRollback(opts: RollbackOptions = {}): Promise<number> {
         initialValue: false,
       });
       if (p.isCancel(confirm) || !confirm) {
-        console.log(t('common.cancelled'));
+        info(t('common.cancelled'));
         return 1;
       }
     }
@@ -132,7 +133,7 @@ export async function runRollback(opts: RollbackOptions = {}): Promise<number> {
     ...pruned,
     lastSyncedHistoryCommit: selected,
   });
-  console.log(t('rollback.success', { sha: selected.slice(0, 8) }));
+  success(t('rollback.success', { sha: selected.slice(0, 8) }));
   p.outro(t('common.done'));
   return 0;
 }

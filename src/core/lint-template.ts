@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { detectImwelContext, isDirectory } from './detect-context.js';
 import { parseFrontmatter } from './frontmatter.js';
-import { pathExists } from './fs-utils.js';
+import { pathExists, readIfExists } from './fs-utils.js';
 import { checkRuleHealth } from './rule-health.js';
 import {
   ManifestError,
@@ -401,14 +401,18 @@ async function lintOptionalPaths(
 }
 
 interface ProjectArtifactNames {
-  rules: Set<string>;
-  skills: Set<string>;
+  /** rule basename → file content (for content-aware collision check). */
+  rules: Map<string, string>;
+  /** skill dir name → SKILL.md content (canonical file; bundle files ignored). */
+  skills: Map<string, string>;
 }
 
 /**
- * Gather rule-file basenames and skill-directory names for one project, for the
- * cross-project collision check below. Best-effort: an unreadable/missing dir
- * just yields an empty set (already reported by lintRules/lintSkills above).
+ * Gather rule-file basenames (with content) and skill-directory names (with
+ * SKILL.md content) for one project, for the cross-project collision check
+ * below. Best-effort: an unreadable/missing dir or a skill dir without a
+ * readable SKILL.md just yields no entry (structural problems are already
+ * reported by lintRules/lintSkills above).
  */
 async function collectProjectArtifactNames(
   repoRoot: string,
@@ -417,15 +421,19 @@ async function collectProjectArtifactNames(
 ): Promise<ProjectArtifactNames> {
   const { conventions } = resolveConventions(manifest, project.name);
   const projectDir = path.join(repoRoot, project.path);
-  const rules = new Set<string>();
-  const skills = new Set<string>();
+  const rules = new Map<string, string>();
+  const skills = new Map<string, string>();
 
   const rulesDir = path.join(projectDir, conventions.rulesDir);
   if ((await pathExists(rulesDir)) && (await isDirectory(rulesDir))) {
     const entries = await fs.readdir(rulesDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isFile() && entry.name.endsWith('.md')) {
-        rules.add(entry.name.slice(0, -'.md'.length));
+        const basename = entry.name.slice(0, -'.md'.length);
+        const content = await readIfExists(path.join(rulesDir, entry.name));
+        if (content !== null) {
+          rules.set(basename, content);
+        }
       }
     }
   }
@@ -435,7 +443,10 @@ async function collectProjectArtifactNames(
     const entries = await fs.readdir(skillsDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        skills.add(entry.name);
+        const skillMd = await readIfExists(path.join(skillsDir, entry.name, 'SKILL.md'));
+        if (skillMd !== null) {
+          skills.set(entry.name, skillMd);
+        }
       }
     }
   }
@@ -444,10 +455,12 @@ async function collectProjectArtifactNames(
 }
 
 /**
- * A rule/skill basename shared by two projects only *might* collide, and only
- * for consumers who install both — lint cannot know that in advance, so this
- * stays a warning even under --strict-adjacent policy (still respects --strict
- * like any other warning). See design.md D3.
+ * Content-aware cross-project collision check. A shared basename is a real
+ * collision only when the contents differ — render dedupes same-content
+ * artifacts on the same path silently, so identical same-named artifacts are
+ * safe (e.g. a shared baseline). Differing content is a latent collision
+ * regardless of whether a consumer ever co-installs both projects, so it is
+ * reported as an error with a concrete rename suggestion. See design.md D1.
  */
 function lintCrossProjectArtifactNameCollisions(
   byProject: Map<string, ProjectArtifactNames>,
@@ -462,25 +475,31 @@ function lintCrossProjectArtifactNameCollisions(
       const b = byProject.get(nameB)!;
 
       for (const rule of intersect(a.rules, b.rules)) {
+        if (a.rules.get(rule) === b.rules.get(rule)) {
+          continue;
+        }
         issues.push({
-          severity: 'warning',
+          severity: 'error',
           code: 'project.artifactNameCollision',
-          message: `Projects "${nameA}" and "${nameB}" both declare a rule named "${rule}.md"; installing both would collide on the rendered path. Rename one of them if this is unintentional.`,
+          message: `Projects "${nameA}" and "${nameB}" both declare a rule named "${rule}.md" with differing content; installing both would collide on the rendered path. Rename one of them — e.g. to "${nameA}-${rule}.md".`,
         });
       }
       for (const skill of intersect(a.skills, b.skills)) {
+        if (a.skills.get(skill) === b.skills.get(skill)) {
+          continue;
+        }
         issues.push({
-          severity: 'warning',
+          severity: 'error',
           code: 'project.artifactNameCollision',
-          message: `Projects "${nameA}" and "${nameB}" both declare a skill named "${skill}"; installing both would collide on the rendered path. Rename one of them if this is unintentional.`,
+          message: `Projects "${nameA}" and "${nameB}" both declare a skill named "${skill}" with differing SKILL.md content; installing both would collide on the rendered path. Rename one of them — e.g. to "${nameA}-${skill}".`,
         });
       }
     }
   }
 }
 
-function intersect(a: Set<string>, b: Set<string>): string[] {
-  return [...a].filter((value) => b.has(value));
+function intersect(a: Map<string, string>, b: Map<string, string>): string[] {
+  return [...a.keys()].filter((value) => b.has(value));
 }
 
 function pathEscapes(root: string, relative: string): boolean {

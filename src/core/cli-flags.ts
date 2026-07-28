@@ -1,4 +1,5 @@
 import { t } from '../locales/index.js';
+import { error } from './cli-output.js';
 
 /** True when stdin is a TTY (interactive prompts are possible). */
 export function isInteractiveStdin(): boolean {
@@ -29,7 +30,7 @@ export function exitIfMissingFlags(required: Record<string, unknown>): number | 
   if (missing.length === 0) {
     return null;
   }
-  console.error(formatMissingFlagsError(missing));
+  error(formatMissingFlagsError(missing));
   return 1;
 }
 

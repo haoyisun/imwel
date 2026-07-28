@@ -25,7 +25,7 @@ npm run ci
 | `npm run e2e` | 端到端走查 |
 | `npm run dev -- <cmd>` | 用 `tsx` 运行 CLI（如 `npm run dev -- doctor`） |
 
-要求：Node.js `>=18.18`，系统 `PATH` 上有 `git`。
+要求：开发与测试需 Node.js `>=22.8`（`npm test` 使用 `--experimental-test-isolation=none`，自 Node 22.8.0 起可用，以规避 `node:test` 子进程 IPC 的 bug）；发布的 CLI 运行时目标仍为 `>=18.18`。系统 `PATH` 上有 `git`。
 
 ## Pull Request
 

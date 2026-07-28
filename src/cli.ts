@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { resolveLocale } from './core/locale.js';
+import { error as outputError } from './core/cli-output.js';
 import { setActiveLocale, t } from './locales/index.js';
 import { runPassiveCheckIfDue } from './core/passive-check.js';
 import { runDoctor } from './commands/doctor.js';
@@ -237,7 +238,6 @@ async function main(): Promise<void> {
   const binding = program.command('binding').description(t('binding.description'));
   binding
     .command('show')
-    .option('--details', t('binding.help.details'))
     .option('--json', t('binding.help.json'))
     .action(async (opts: BindingShowOptions) => {
       process.exit(await runBindingShow(opts));
@@ -279,6 +279,6 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(message);
+  outputError(message);
   process.exit(1);
 });

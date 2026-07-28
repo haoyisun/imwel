@@ -8,6 +8,7 @@ import { applyRenderedFiles } from '../core/apply-files.js';
 import type { Artifact } from '../core/artifact-types.js';
 import { readBinding } from '../core/binding.js';
 import { isInteractiveStdin, parseCsv } from '../core/cli-flags.js';
+import { error, info, success, warn } from '../core/cli-output.js';
 import { draftsDir } from '../core/paths.js';
 import { pathExists } from '../core/fs-utils.js';
 import { printPathConflicts } from '../core/print-conflicts.js';
@@ -33,12 +34,12 @@ export async function runAdopt(opts: AdoptOptions = {}): Promise<number> {
 
   const source = await resolveDraftBox(projectDir, opts.from);
   if (source.kind === 'none') {
-    console.log(t('adopt.drafts.none', { dir: source.dir }));
+    info(t('adopt.drafts.none', { dir: source.dir }));
     p.outro(t('common.done'));
     return 0;
   }
   if (source.kind === 'ambiguous') {
-    console.error(t('adopt.multipleBoxes', { boxes: source.boxes.join(', ') }));
+    error(t('adopt.multipleBoxes', { boxes: source.boxes.join(', ') }));
     return 1;
   }
 
@@ -48,7 +49,7 @@ export async function runAdopt(opts: AdoptOptions = {}): Promise<number> {
   spinner.stop(t('common.done'));
 
   if (drafts.length === 0) {
-    console.log(t('adopt.drafts.none', { dir: path.relative(projectDir, source.dir) || source.dir }));
+    info(t('adopt.drafts.none', { dir: path.relative(projectDir, source.dir) || source.dir }));
     p.outro(t('common.done'));
     return 0;
   }
@@ -59,14 +60,14 @@ export async function runAdopt(opts: AdoptOptions = {}): Promise<number> {
   }
 
   const issues = draftHealthIssues(drafts, source.dir, projectDir);
-  console.log(t('adopt.drafts.plan', { artifacts: drafts.length, issues: issues.length }));
+  info(t('adopt.drafts.plan', { artifacts: drafts.length, issues: issues.length }));
   for (const issue of issues) {
-    console.warn(formatHealthIssue(issue));
+    warn(formatHealthIssue(issue));
   }
 
   if (!opts.yes) {
     if (!isInteractiveStdin()) {
-      console.error(t('cli.nonInteractiveConfirmRequired'));
+      error(t('cli.nonInteractiveConfirmRequired'));
       return 1;
     }
     const message =
@@ -79,7 +80,7 @@ export async function runAdopt(opts: AdoptOptions = {}): Promise<number> {
         : t('adopt.drafts.confirmRender', { count: drafts.length, tools: tools.join(', ') });
     const confirm = await p.confirm({ message, initialValue: issues.length === 0 });
     if (p.isCancel(confirm) || !confirm) {
-      console.log(t('common.cancelled'));
+      info(t('common.cancelled'));
       return 1;
     }
   }
@@ -95,10 +96,10 @@ export async function runAdopt(opts: AdoptOptions = {}): Promise<number> {
   // pack): no binding entry, no history commit — so status/sync/push never track them.
   await applyRenderedFiles(projectDir, files);
   for (const file of files) {
-    console.log(t('adopt.written', { path: file.path }));
+    info(t('adopt.written', { path: file.path }));
   }
-  console.log(t('adopt.render.success', { count: drafts.length, tools: tools.join(', ') }));
-  console.log(t('adopt.render.nextSteps'));
+  success(t('adopt.render.success', { count: drafts.length, tools: tools.join(', ') }));
+  info(t('adopt.render.nextSteps'));
   p.outro(t('common.done'));
   return 0;
 }
@@ -168,7 +169,7 @@ async function resolveTools(projectDir: string, toolsFlag?: string): Promise<str
     const tools = parseCsv(toolsFlag);
     const unknown = tools.filter((id) => !supported.has(id));
     if (tools.length === 0 || unknown.length > 0) {
-      console.error(
+      error(
         t('init.unknownTools', {
           tools: unknown.join(', ') || '(empty)',
           supported: [...supported].join(', '),
@@ -186,7 +187,7 @@ async function resolveTools(projectDir: string, toolsFlag?: string): Promise<str
   if (detected.length) {
     return detected;
   }
-  console.error(t('adopt.needTools'));
+  error(t('adopt.needTools'));
   return null;
 }
 

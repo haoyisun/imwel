@@ -238,7 +238,7 @@ projects:
     assert.ok(!result.issues.some((i) => i.code === 'module.agentsIgnored'));
   });
 
-  it('warns when two shared modules declare a same-named rule file', async () => {
+  it('errors when two shared modules declare a same-named rule file with differing content', async () => {
     const dir = path.join(root, 'cross-module-rule-collision');
     await writeFile(
       path.join(dir, '.imwel', 'manifest.yaml'),
@@ -256,23 +256,90 @@ projects:
 `,
     );
     await writeFile(path.join(dir, 'README.md'), '# x\n');
-    const ruleContent =
-      '---\ndescription: Use when editing files to follow the security guide.\n---\n\n# Security\n\nBody.\n';
-    await writeFile(path.join(dir, 'modules', 'python', 'rules', 'security.md'), ruleContent);
-    await writeFile(path.join(dir, 'modules', 'code', 'rules', 'security.md'), ruleContent);
+    await writeFile(
+      path.join(dir, 'modules', 'python', 'rules', 'security.md'),
+      '---\ndescription: Use when editing files to follow the security guide.\n---\n\n# Security\n\nPython body.\n',
+    );
+    await writeFile(
+      path.join(dir, 'modules', 'code', 'rules', 'security.md'),
+      '---\ndescription: Use when editing files to follow the security guide.\n---\n\n# Security\n\nGo body.\n',
+    );
     const result = await lintTemplateRepo(dir);
     const collision = result.issues.find((i) => i.code === 'project.artifactNameCollision');
     assert.ok(collision);
+    assert.equal(collision!.severity, 'error');
     assert.match(collision!.message, /python-std/);
     assert.match(collision!.message, /code-std/);
     assert.match(collision!.message, /security/);
-    assert.equal(result.issues.filter((i) => i.severity === 'error').length, 0);
-    assert.equal(lintExitCode(result, false), 0);
+    assert.match(collision!.message, /python-std-security\.md/);
+    assert.equal(lintExitCode(result, false), 1);
     assert.equal(lintExitCode(result, true), 1);
   });
 
-  it('warns when a writable project and a module declare a same-named skill dir', async () => {
+  it('does not report when two projects declare a same-named rule file with identical content', async () => {
+    const dir = path.join(root, 'cross-module-rule-same-content');
+    await writeFile(
+      path.join(dir, '.imwel', 'manifest.yaml'),
+      `conventions:
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+projects:
+  - name: python-std
+    path: modules/python
+    role: shared
+  - name: code-std
+    path: modules/code
+    role: shared
+`,
+    );
+    await writeFile(path.join(dir, 'README.md'), '# x\n');
+    const ruleContent =
+      '---\ndescription: Use when editing files to follow the security guide.\n---\n\n# Security\n\nShared baseline.\n';
+    await writeFile(path.join(dir, 'modules', 'python', 'rules', 'security.md'), ruleContent);
+    await writeFile(path.join(dir, 'modules', 'code', 'rules', 'security.md'), ruleContent);
+    const result = await lintTemplateRepo(dir);
+    assert.ok(!result.issues.some((i) => i.code === 'project.artifactNameCollision'));
+    assert.equal(lintExitCode(result, false), 0);
+  });
+
+  it('errors when a writable project and a module declare a same-named skill dir with differing SKILL.md', async () => {
     const dir = path.join(root, 'cross-project-skill-collision');
+    await writeFile(
+      path.join(dir, '.imwel', 'manifest.yaml'),
+      `conventions:
+  rulesDir: rules
+  skillsDir: skills
+  agentsFile: agents.md
+projects:
+  - name: example-project
+    path: example-project
+    role: project
+  - name: python-std
+    path: modules/python
+    role: shared
+`,
+    );
+    await writeFile(path.join(dir, 'README.md'), '# x\n');
+    await writeFile(
+      path.join(dir, 'example-project', 'skills', 'shared-skill', 'SKILL.md'),
+      GOOD_SKILL,
+    );
+    await writeFile(
+      path.join(dir, 'modules', 'python', 'skills', 'shared-skill', 'SKILL.md'),
+      GOOD_SKILL.replace('Body.\n', 'Different body.\n'),
+    );
+    const result = await lintTemplateRepo(dir);
+    const collision = result.issues.find((i) => i.code === 'project.artifactNameCollision');
+    assert.ok(collision);
+    assert.equal(collision!.severity, 'error');
+    assert.match(collision!.message, /shared-skill/);
+    assert.match(collision!.message, /example-project-shared-skill|python-std-shared-skill/);
+    assert.equal(lintExitCode(result, false), 1);
+  });
+
+  it('does not report when a writable project and a module declare a same-named skill dir with identical SKILL.md', async () => {
+    const dir = path.join(root, 'cross-project-skill-same-content');
     await writeFile(
       path.join(dir, '.imwel', 'manifest.yaml'),
       `conventions:
@@ -298,11 +365,7 @@ projects:
       GOOD_SKILL,
     );
     const result = await lintTemplateRepo(dir);
-    const collision = result.issues.find((i) => i.code === 'project.artifactNameCollision');
-    assert.ok(collision);
-    assert.match(collision!.message, /shared-skill/);
-    assert.equal(lintExitCode(result, false), 0);
-    assert.equal(lintExitCode(result, true), 1);
+    assert.ok(!result.issues.some((i) => i.code === 'project.artifactNameCollision'));
   });
 
   it('does not warn artifactNameCollision when no names collide', async () => {

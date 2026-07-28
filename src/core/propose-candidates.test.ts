@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { adapters } from '../adapters/index.js';
+import type { Adapter, DiscoveredArtifact } from '../adapters/types.js';
 import { collectProposeCandidates } from './propose-candidates.js';
 
 async function writeRule(dir: string, slug: string): Promise<string> {
@@ -68,4 +69,49 @@ describe('collectProposeCandidates', () => {
       ),
     );
   });
+
+  it('reuses precomputed adapter discoveries without rescanning the adapter', async () => {
+    let discoverCalls = 0;
+    const adapter: Adapter = {
+      id: 'cached',
+      detect: async () => true,
+      render: () => [],
+      parseExisting: (files) => ({ canonicalContent: files[0]?.content ?? '' }),
+      discoverExisting: async () => {
+        discoverCalls += 1;
+        return [];
+      },
+    };
+    const discovered: DiscoveredArtifact[] = [
+      {
+        slug: 'cached-rule',
+        type: 'rule',
+        files: [
+          {
+            path: '.cached/rules/cached-rule.md',
+            content: '# Cached rule\n',
+          },
+        ],
+        sourceFiles: ['.cached/rules/cached-rule.md'],
+      },
+    ];
+
+    const result = await collectProposeCandidates(
+      projectDir,
+      [adapter],
+      null,
+      [],
+      {
+        remote: 'org',
+        project: { name: 'app', path: 'projects/app' },
+        conventions: { rulesDir: 'rules', skillsDir: 'skills', agentsFile: 'agents.md' },
+      },
+      projectDir,
+      new Map([['cached', discovered]]),
+    );
+
+    assert.equal(discoverCalls, 0);
+    assert.equal(result.candidates[0]?.canonicalPath, 'rules/cached-rule.md');
+  });
+
 });

@@ -4,6 +4,13 @@
 
 imwel has two distinct lifecycles. Pick the lane that matches your role.
 
+## Read command output
+
+imwel prefixes informational, successful, warning, and error messages with `→`, `✔`, `⚠`, and
+`✖`. Interactive terminals also use color. Set `NO_COLOR` (including to an empty value) to disable
+color; redirected or piped output disables ANSI color automatically. The symbols remain so the
+message meaning is still visible in CI logs.
+
 ## Author lane — you publish rules
 
 ```bash
@@ -37,18 +44,30 @@ imwel push                          # push project edits + explicitly tracked co
 > tracking. Existing tracking is preselected; the second confirmation applies only the shown
 > added/removed records and never touches local files. Project tracking graduates into binding
 > after a matching sync; module tracking persists until you cancel it. `imwel push` records Git
-> branch/commit state and skips unchanged contributions. Or pass a path:
+> branch/commit state and skips unchanged contributions. If the selected remote has neither
+> discoverable user-authored files nor pending tracking for a project still in its manifest, imwel
+> stops before project selection and points you to the expected discovery paths or
+> `imwel propose <path>`. Stale tracking for deleted or renamed projects does not block that early
+> exit. Or pass a path:
 > `imwel propose <file>`. Flag detail: [Commands — propose](./commands.md#imwel-propose-file).
+
+> **Before applying:** interactive `imwel init` always ends with **apply / go back / cancel**;
+> **go back** restarts at tool selection with every prior choice preselected. Interactive `imwel
+> sync` includes **go back** only when the run has module-drift choices to revisit; remote-only
+> updates and missing-file restorations use **apply / cancel**. In either command, **cancel** leaves
+> files and binding/sync state unchanged. See
+> [Commands — init](./commands.md#imwel-init) and [Commands — sync](./commands.md#imwel-sync).
 
 > **Changing tools:** use `imwel tools`, not a full `imwel init` rebind. Adding a tool renders the
 > complete current binding into that tool without rewriting existing-tool outputs. Removing a tool
 > keeps its files as unmanaged by default; deletion is a separate, explicit choice. Flag detail:
 > [Commands — tools](./commands.md#imwel-tools).
 
-> **Inspecting local state:** use `imwel binding show` for a fast, offline summary of what the
-> binding manages and what contribution tracking authorizes. Add `--details` for ownership and
-> `present`/`missing` paths, or `--json` for the stable versioned machine view. This never fetches
-> or writes; use `imwel status` separately when you need remote drift and rule health. Flag detail:
+> **Inspecting local state:** use `imwel binding show` for a fast, offline summary and complete
+> tree of what the binding manages and what contribution tracking authorizes. Missing installed
+> paths and contribution sources are visible by default with recovery hints. Use `--json` for the
+> unchanged stable versioned machine view. This never fetches or writes; use `imwel status`
+> separately when you need remote drift and rule health. Flag detail:
 > [Commands — binding show](./commands.md#imwel-binding-show).
 
 Step-by-step: [Install a template](../consume/quickstart.md) → [Sync, drift & rollback](../consume/sync-and-drift.md) → [Contribute changes back](../consume/contribute-back.md).
@@ -60,6 +79,13 @@ Step-by-step: [Install a template](../consume/quickstart.md) → [Sync, drift & 
 ## Bootstrapping rules from a codebase
 
 No template yet? imwel can consolidate scattered rules, fingerprint a project, and draft rules with its first-party skills — see [Draft rules from your codebase](../author/from-codebase.md).
+
+When you run `imwel skill install` interactively in an initialized project with valid tools in its
+binding, accept the default to reuse them, or decline to customize the selection with those tools
+preselected. An empty tool list opens the selector directly. Unsupported ids in an older binding are
+reported and omitted from the preselection. This one-time command-pack install remains unmanaged and
+never changes the binding. See
+[Commands — skill install](./commands.md#imwel-skill-install).
 
 Already have rules across your tools and want a shareable template repo out of them? Run `imwel template init --from-project` to harvest **your own** artifacts (imwel's and other tools' files are excluded) into a skeleton, then refine it with the `/imwel-create-template` skill — see [`imwel template init --from-project`](./commands.md#imwel-template-init-from-project).
 

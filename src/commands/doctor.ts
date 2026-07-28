@@ -1,27 +1,28 @@
 import process from 'node:process';
+import { error as outputError, info, success } from '../core/cli-output.js';
 import { assertGitVersion, MIN_GIT_VERSION } from '../core/git.js';
 import { imwelHome } from '../core/paths.js';
 import { t } from '../locales/index.js';
 
 export async function runDoctor(): Promise<number> {
-  console.log(t('doctor.title'));
+  info(t('doctor.title'));
   try {
     const version = await assertGitVersion(MIN_GIT_VERSION);
-    console.log(t('doctor.gitOk', { version }));
+    success(t('doctor.gitOk', { version }));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('ENOENT') || message.includes('not found')) {
-      console.error(t('doctor.gitMissing'));
+      outputError(t('doctor.gitMissing'));
     } else if (message.includes('older')) {
-      console.error(t('doctor.gitTooOld', { found: message, required: MIN_GIT_VERSION }));
+      outputError(t('doctor.gitTooOld', { found: message, required: MIN_GIT_VERSION }));
     } else {
-      console.error(t('common.error', { message }));
+      outputError(t('common.error', { message }));
     }
     return 1;
   }
-  console.log(t('doctor.nodeOk', { version: process.version }));
-  console.log(t('doctor.homeOk', { path: imwelHome() }));
-  console.log(t('doctor.authorHint'));
-  console.log(t('doctor.allOk'));
+  success(t('doctor.nodeOk', { version: process.version }));
+  success(t('doctor.homeOk', { path: imwelHome() }));
+  info(t('doctor.authorHint'));
+  success(t('doctor.allOk'));
   return 0;
 }

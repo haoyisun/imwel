@@ -1,11 +1,13 @@
 import { lintExitCode, lintTemplateRepo, type LintIssue } from '../core/lint-template.js';
-import { shouldHintLintHookActivation } from '../core/lint-automation.js';
+import { activateLintHook, shouldHintLintHookActivation } from '../core/lint-automation.js';
 import { error, info, success, warn } from '../core/cli-output.js';
 import { t } from '../locales/index.js';
 
 export interface LintOptions {
   strict?: boolean;
   cwd?: string;
+  /** Auto-activate `.githooks/` via `core.hooksPath` when detected and unset. Default true; `--no-auto-activate-hooks` opts out. */
+  autoActivateHooks?: boolean;
 }
 
 export async function runLint(options: LintOptions = {}): Promise<number> {
@@ -44,7 +46,11 @@ export async function runLint(options: LintOptions = {}): Promise<number> {
   info(t('lint.checking', { root: result.root ?? cwd }));
 
   if (result.root && (await shouldHintLintHookActivation(result.root))) {
-    warn(t('lint.hookActivation.hint'));
+    if (options.autoActivateHooks === false) {
+      warn(t('lint.hookActivation.hint'));
+    } else if (await activateLintHook(result.root)) {
+      success(t('lint.hookActivation.activated'));
+    }
   }
 
   const errors = result.issues.filter((i) => i.severity === 'error');

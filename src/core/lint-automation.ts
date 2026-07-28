@@ -156,3 +156,41 @@ async function readHooksPath(repoDir: string): Promise<string | null> {
   const value = result.stdout.trim();
   return value === '' ? null : value;
 }
+
+/**
+ * Activate the committed `.githooks/` locally by setting `core.hooksPath`.
+ * Returns false when there is no `.git` (e.g. a fresh `--from-project` output
+ * dir that has not been `git init`-ed yet). Idempotent: re-running on an
+ * already-activated repo just rewrites the same value.
+ */
+export async function activateLintHook(repoDir: string): Promise<boolean> {
+  if (!(await pathExists(path.join(repoDir, '.git')))) {
+    return false;
+  }
+  await runGit(['config', 'core.hooksPath', '.githooks'], { cwd: repoDir });
+  return true;
+}
+
+/**
+ * Write a minimal `package.json` whose `prepare` script auto-activates the
+ * committed `.githooks/` after a contributor runs `npm install` (npm runs
+ * `prepare` automatically after install). Zero dependencies — pure npm
+ * lifecycle. Skips when a `package.json` already exists so we never clobber a
+ * real one. `name` should be the repo name (used as the package name).
+ */
+export async function writePreparePackageJson(
+  repoDir: string,
+  name: string,
+): Promise<'written' | 'skippedExisting'> {
+  const pkgPath = path.join(repoDir, 'package.json');
+  if (await pathExists(pkgPath)) {
+    return 'skippedExisting';
+  }
+  const pkg = {
+    name,
+    private: true,
+    scripts: { prepare: 'git config core.hooksPath .githooks' },
+  };
+  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+  return 'written';
+}

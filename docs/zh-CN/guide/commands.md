@@ -31,6 +31,7 @@
 | 选项 | 说明 |
 |------|------|
 | `--strict` | warning 与 error 一并失败 |
+| `--no-auto-activate-hooks` | 检测到 `.githooks/` 且 `core.hooksPath` 未设时不自动激活（改为打印提示） |
 
 - **Errors** — 装坏类（无效 manifest、项目 path 缺失、skill 缺 `SKILL.md`、路径逃逸等）。
 - **Warnings** — 风格 / 最佳实践（skill `description` 质量、**空壳/占位规则**等）。
@@ -74,7 +75,7 @@
 | `--topic <slug>` | 生成目录名的主题 slug（配合 `--from-project`） |
 | `-y` / `--yes` | 跳过确认（非交互默认） |
 
-交互式下（在可选的 git 初始化之后），`imwel template init` 会提供在新仓中脚手架**提交时 lint 自动化**：一个提交进仓、运行 `imwel lint` 的 `.githooks/pre-commit` hook、一个 CI workflow（检测到 `gh` 写 `.github/workflows/imwel-lint.yml`，检测到 `glab` 写 `.gitlab-ci.yml`）、本地 `core.hooksPath` 激活，以及 `CONTRIBUTING.md` 激活说明。选择启用即全部写入；选择不启用则脚手架保持原样。见 [Lint 与质量条 → 提交时 lint 自动化](../author/lint.md#提交时-lint-自动化可选)。
+交互式下（在可选的 git 初始化之后），`imwel template init` 会提供在新仓中脚手架**提交时 lint 自动化** —— **默认开启**（选择不启用则跳过）：一个提交进仓、运行 `imwel lint` 的 `.githooks/pre-commit` hook、一个 CI workflow（检测到 `gh` 写 `.github/workflows/imwel-lint.yml`，检测到 `glab` 写 `.gitlab-ci.yml`）、本地 `core.hooksPath` 激活，以及 `CONTRIBUTING.md` 激活说明。随后还可选生成一个最小 `package.json`，其 `prepare` 脚本会在贡献者 `npm install` 后自动激活 hook（零依赖）。接受默认即全部写入；选择不启用则脚手架保持原样。见 [Lint 与质量条 → 提交时 lint 自动化](../author/lint.md#提交时-lint-自动化可选)。
 
 ### `imwel template init --from-project`
 

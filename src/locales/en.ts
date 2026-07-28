@@ -75,6 +75,12 @@ export const en = {
   'template.init.lintAutomation.hookSkipped':
     'Existing .githooks/pre-commit found — not overwritten.',
   'template.init.lintAutomation.contributing': 'Contributing activation note added to CONTRIBUTING.md.',
+  'template.init.prompt.preparePackageJson':
+    'Generate a minimal package.json with a `prepare` script so `npm install` auto-activates the hook after clone?',
+  'template.init.preparePackageJson.written':
+    'Wrote package.json with `prepare` script (auto-activates .githooks after `npm install`).',
+  'template.init.preparePackageJson.skipped':
+    'Existing package.json found — prepare script not added.',
   'template.init.success': 'Template repository scaffolded at {path}',
   'template.init.exists': 'Directory is not empty: {path}',
   'template.fromProject.title': 'Generating a template repository from this project\'s existing tool artifacts...',
@@ -95,6 +101,8 @@ export const en = {
 
   'lint.hookActivation.hint':
     'This template repo ships .githooks/ but core.hooksPath is not set. Run `git config core.hooksPath .githooks` to activate commit-time lint.',
+  'lint.hookActivation.activated':
+    'Activated .githooks/pre-commit locally (core.hooksPath → .githooks). Unset with: `git config --unset core.hooksPath`',
   'lintAutomation.contributingNote':
     '## Commit-time lint (optional)\n\nThis repo ships a `.githooks/pre-commit` hook that runs `imwel lint`. After cloning, activate it once:\n\n```bash\ngit config core.hooksPath .githooks\n```\n\nA CI workflow also runs `imwel lint --strict` on pull requests.',
 

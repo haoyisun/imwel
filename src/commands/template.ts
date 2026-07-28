@@ -9,7 +9,7 @@ import { pathExists } from '../core/fs-utils.js';
 import { isInteractiveStdin } from '../core/cli-flags.js';
 import { error, info, success, warn } from '../core/cli-output.js';
 import { generateTemplateFromProject } from '../core/template-from-project.js';
-import { setupLintAutomation } from '../core/lint-automation.js';
+import { setupLintAutomation, writePreparePackageJson } from '../core/lint-automation.js';
 import { t } from '../locales/index.js';
 
 export async function runTemplateInit(
@@ -110,7 +110,7 @@ export async function runTemplateInit(
     const hostCli = await detectHostCli();
     const lintAutomation = await p.confirm({
       message: t('template.init.prompt.lintAutomation'),
-      initialValue: false,
+      initialValue: true,
     });
     if (!p.isCancel(lintAutomation) && lintAutomation) {
       const automation = await setupLintAutomation(absDir, {
@@ -130,6 +130,20 @@ export async function runTemplateInit(
           ? t('template.init.lintAutomation.done', { ci: ` + CI at ${automation.ciFile}` })
           : t('template.init.lintAutomation.doneNoCi'),
       );
+      if (automation.hookWritten || automation.hookSkippedExisting) {
+        const preparePkg = await p.confirm({
+          message: t('template.init.prompt.preparePackageJson'),
+          initialValue: false,
+        });
+        if (!p.isCancel(preparePkg) && preparePkg) {
+          const r = await writePreparePackageJson(absDir, repoName);
+          info(
+            r === 'written'
+              ? t('template.init.preparePackageJson.written')
+              : t('template.init.preparePackageJson.skipped'),
+          );
+        }
+      }
     }
 
     if (hostCli) {
@@ -222,7 +236,7 @@ async function runTemplateInitFromProject(
   if (isInteractiveStdin() && result.artifacts.length > 0) {
     const lintAutomation = await p.confirm({
       message: t('template.init.prompt.lintAutomation'),
-      initialValue: false,
+      initialValue: true,
     });
     if (!p.isCancel(lintAutomation) && lintAutomation) {
       const hostCli = await detectHostCli();
@@ -240,6 +254,23 @@ async function runTemplateInitFromProject(
               path: path.relative(projectDir, result.genDir) || result.genDir,
             }),
       );
+      if (automation.hookWritten || automation.hookSkippedExisting) {
+        const preparePkg = await p.confirm({
+          message: t('template.init.prompt.preparePackageJson'),
+          initialValue: false,
+        });
+        if (!p.isCancel(preparePkg) && preparePkg) {
+          const r = await writePreparePackageJson(
+            result.genDir,
+            path.basename(result.genDir),
+          );
+          info(
+            r === 'written'
+              ? t('template.init.preparePackageJson.written')
+              : t('template.init.preparePackageJson.skipped'),
+          );
+        }
+      }
     }
   }
   return 0;

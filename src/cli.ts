@@ -53,8 +53,14 @@ async function main(): Promise<void> {
     .command('lint')
     .description('Lint a template repository for install-breaking and style issues')
     .option('--strict', 'Fail on warnings as well as errors')
-    .action(async (opts: { strict?: boolean }) => {
-      process.exit(await runLint({ strict: Boolean(opts.strict) }));
+    .option('--no-auto-activate-hooks', 'Do not auto-activate .githooks/ when detected unset')
+    .action(async (opts: { strict?: boolean; autoActivateHooks?: boolean }) => {
+      process.exit(
+        await runLint({
+          strict: Boolean(opts.strict),
+          autoActivateHooks: opts.autoActivateHooks !== false,
+        }),
+      );
     });
 
   const remote = program.command('remote').description('Manage template remotes');

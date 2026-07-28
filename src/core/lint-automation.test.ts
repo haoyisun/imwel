@@ -6,6 +6,8 @@ import path from 'node:path';
 import {
   setupLintAutomation,
   shouldHintLintHookActivation,
+  activateLintHook,
+  writePreparePackageJson,
   PRE_COMMIT_HOOK,
   GITHUB_LINT_WORKFLOW,
   GITLAB_LINT_CI,
@@ -154,6 +156,62 @@ describe('shouldHintLintHookActivation', () => {
       await fs.mkdir(path.join(d, '.githooks'), { recursive: true });
       await runGit(['config', 'core.hooksPath', '.githooks'], { cwd: d });
       assert.equal(await shouldHintLintHookActivation(d), false);
+    } finally {
+      await fs.rm(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('activateLintHook', () => {
+  it('sets core.hooksPath to .githooks when .git exists', async () => {
+    const d = await makeTempDir('imwel-activate-git-');
+    try {
+      await runGit(['init'], { cwd: d });
+      const ok = await activateLintHook(d);
+      assert.equal(ok, true);
+      const { stdout } = await runGit(['config', 'core.hooksPath'], { cwd: d });
+      assert.equal(stdout.trim(), '.githooks');
+    } finally {
+      await fs.rm(d, { recursive: true, force: true });
+    }
+  });
+
+  it('returns false and does not touch config when .git is absent', async () => {
+    const d = await makeTempDir('imwel-activate-nogit-');
+    try {
+      const ok = await activateLintHook(d);
+      assert.equal(ok, false);
+      // No .git → git config cannot have been written; verify by absence of .git/config.
+      assert.equal(await pathExists(path.join(d, '.git', 'config')), false);
+    } finally {
+      await fs.rm(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('writePreparePackageJson', () => {
+  it('writes a minimal package.json with a prepare script', async () => {
+    const d = await makeTempDir('imwel-pkg-write-');
+    try {
+      const r = await writePreparePackageJson(d, 'my-template');
+      assert.equal(r, 'written');
+      const pkg = JSON.parse(await fs.readFile(path.join(d, 'package.json'), 'utf8'));
+      assert.equal(pkg.name, 'my-template');
+      assert.equal(pkg.private, true);
+      assert.equal(pkg.scripts.prepare, 'git config core.hooksPath .githooks');
+    } finally {
+      await fs.rm(d, { recursive: true, force: true });
+    }
+  });
+
+  it('skips and returns skippedExisting when package.json already exists', async () => {
+    const d = await makeTempDir('imwel-pkg-skip-');
+    try {
+      await fs.writeFile(path.join(d, 'package.json'), '{"name":"existing"}\n', 'utf8');
+      const r = await writePreparePackageJson(d, 'my-template');
+      assert.equal(r, 'skippedExisting');
+      const pkg = JSON.parse(await fs.readFile(path.join(d, 'package.json'), 'utf8'));
+      assert.equal(pkg.name, 'existing');
     } finally {
       await fs.rm(d, { recursive: true, force: true });
     }

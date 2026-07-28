@@ -76,6 +76,12 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'template.init.lintAutomation.hookSkipped':
     '已存在 .githooks/pre-commit —— 未覆盖。',
   'template.init.lintAutomation.contributing': '已在 CONTRIBUTING.md 追加激活说明。',
+  'template.init.prompt.preparePackageJson':
+    '是否生成一个最小 package.json（含 `prepare` 脚本），让 `npm install` 在 clone 后自动激活 hook？',
+  'template.init.preparePackageJson.written':
+    '已写入 package.json（含 `prepare` 脚本，`npm install` 后自动激活 .githooks）。',
+  'template.init.preparePackageJson.skipped':
+    '已存在 package.json —— 未添加 prepare 脚本。',
   'template.init.success': '模板仓库已生成于 {path}',
   'template.init.exists': '目录非空：{path}',
   'template.fromProject.title': '正在基于本项目已有的 AI 工具制品生成模板仓...',
@@ -94,6 +100,8 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
 
   'lint.hookActivation.hint':
     '本模板仓包含 .githooks/，但 core.hooksPath 未设置。运行 `git config core.hooksPath .githooks` 以激活提交时 lint。',
+  'lint.hookActivation.activated':
+    '已本地激活 .githooks/pre-commit（core.hooksPath → .githooks）。取消请运行：`git config --unset core.hooksPath`',
   'lintAutomation.contributingNote':
     '## 提交时 lint（可选）\n\n本仓包含一个运行 `imwel lint` 的 `.githooks/pre-commit` hook。克隆后请一次性激活：\n\n```bash\ngit config core.hooksPath .githooks\n```\n\nCI workflow 也会在 Pull Request 上运行 `imwel lint --strict`。',
 

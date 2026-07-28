@@ -20,20 +20,25 @@ In a consumer binding, the CLI points you to the template repo instead of report
 
 ## Commit-time lint automation (optional)
 
-To catch issues before they land in a PR, `imwel template init` offers (opt-in) to scaffold lint automation into the new template repo:
+To catch issues before they land in a PR, `imwel template init` scaffolds lint automation into the new template repo **on by default** (decline to skip):
 
 - a committed `.githooks/pre-commit` hook that runs `imwel lint` on every commit, and
 - a CI workflow (`.github/workflows/imwel-lint.yml` when `gh` is detected, or `.gitlab-ci.yml` when `glab` is detected) that runs `imwel lint --strict` on pull requests / pushes to the default branch.
 
-When you opt in, imwel also activates the hook locally (`git config core.hooksPath .githooks`) and appends an activation note to `CONTRIBUTING.md`. `imwel template init --from-project` offers the same opt-in (files written, no local activation since the generated dir has no `.git` yet).
+When you accept the default, imwel also activates the hook locally (`git config core.hooksPath .githooks`) and appends an activation note to `CONTRIBUTING.md`. `imwel template init --from-project` offers the same default-on choice (files written, no local activation since the generated dir has no `.git` yet).
 
-The hook degrades gracefully — if `imwel` is not on PATH it prints a warning and exits `0`, so a missing imwel never blocks a commit on another machine or in CI. After a fresh clone, each contributor activates the hook once:
+The hook degrades gracefully — if `imwel` is not on PATH it prints a warning and exits `0`, so a missing imwel never blocks a commit on another machine or in CI. Git deliberately does not run hooks that come from a clone (a security measure), so each contributor activates the hook once after cloning. imwel makes this near-automatic via two paths:
+
+- **Auto-activation on `imwel lint`**: when `imwel lint` detects a template repo that ships `.githooks/` but has not set `core.hooksPath`, it activates it for you and prints the result. Pass `--no-auto-activate-hooks` to opt out (the old passive hint is printed instead).
+- **`prepare` script (optional, scaffold-time)**: `imwel template init` offers to write a minimal `package.json` whose `prepare` script runs `git config core.hooksPath .githooks`. Because npm runs `prepare` automatically after `npm install`, a contributor who clones and runs `npm install` gets the hook activated with no extra step and no dependency (no husky/lefthook).
+
+If neither path applies, the fallback is still the one-liner:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-`imwel lint` also prints a passive hint when it detects a template repo that ships `.githooks/` but has not activated `core.hooksPath`. imwel does not install husky/lefthook or auto-activate hooks on `clone` — activation is a one-line, opt-in action by each contributor.
+imwel does not install husky/lefthook and never auto-activates hooks on `git clone` itself — that is Git's behavior, not imwel's to override.
 
 ## Context detection
 

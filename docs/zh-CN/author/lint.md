@@ -20,20 +20,25 @@ imwel lint --strict   # CI：警告也失败
 
 ## 提交时 lint 自动化（可选）
 
-为在 PR 落地前拦截问题,`imwel template init` 提供（opt-in）在新模板仓中脚手架 lint 自动化:
+为在 PR 落地前拦截问题,`imwel template init` 会**默认开启**脚手架 lint 自动化（选择不启用则跳过）:
 
 - 一个提交进仓的 `.githooks/pre-commit` hook,每次提交运行 `imwel lint`,以及
 - 一个 CI workflow（检测到 `gh` 写 `.github/workflows/imwel-lint.yml`,检测到 `glab` 写 `.gitlab-ci.yml`）,在 PR / 推送到默认分支时运行 `imwel lint --strict`。
 
-选择启用时,imwel 还会本地激活 hook（`git config core.hooksPath .githooks`）并向 `CONTRIBUTING.md` 追加激活说明。`imwel template init --from-project` 提供相同 opt-in（仅写文件,不本地激活,因为生成目录尚无 `.git`）。
+接受默认时,imwel 还会本地激活 hook（`git config core.hooksPath .githooks`）并向 `CONTRIBUTING.md` 追加激活说明。`imwel template init --from-project` 提供相同的默认开启选项（仅写文件,不本地激活,因为生成目录尚无 `.git`）。
 
-hook 优雅降级 —— 若 `imwel` 不在 PATH,会打印警告并以 `0` 退出,缺失 imwel 绝不阻塞其它机器或 CI 的提交。全新克隆后,每位贡献者需一次性激活:
+hook 优雅降级 —— 若 `imwel` 不在 PATH,会打印警告并以 `0` 退出,缺失 imwel 绝不阻塞其它机器或 CI 的提交。Git 出于安全考虑不会自动执行 clone 带来的 hook,因此每位贡献者在克隆后仍需激活一次。imwel 通过两条路径让这一步近乎自动:
+
+- **`imwel lint` 自动激活**:当 `imwel lint` 检测到模板仓包含 `.githooks/` 但 `core.hooksPath` 未设时,会直接为你激活并打印结果。传 `--no-auto-activate-hooks` 可退出（改为打印旧的被动提示）。
+- **`prepare` 脚本（脚手架时可选）**:`imwel template init` 提供写入一个最小 `package.json` 的选项,其 `prepare` 脚本运行 `git config core.hooksPath .githooks`。由于 npm 在 `npm install` 后会自动执行 `prepare`,贡献者克隆并 `npm install` 即可激活 hook,无需额外步骤、无需依赖（不装 husky/lefthook）。
+
+若两条路径都不适用,回退仍是这一行:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-`imwel lint` 还会在检测到模板仓包含 `.githooks/` 但 `core.hooksPath` 未激活时打印被动提示。imwel 不安装 husky/lefthook,也不在 `clone` 时自动激活 hook —— 激活是每位贡献者一次性、opt-in 的动作。
+imwel 不安装 husky/lefthook,也不会在 `git clone` 本身自动激活 hook —— 那是 Git 的行为,imwel 无权覆盖。
 
 ## 上下文检测
 

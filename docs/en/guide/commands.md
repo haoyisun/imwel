@@ -31,6 +31,7 @@ Validates a **template** repository (expects `.imwel/manifest.yaml`, not a consu
 | Flag | Description |
 |------|-------------|
 | `--strict` | Fail on warnings as well as errors |
+| `--no-auto-activate-hooks` | Do not auto-activate `.githooks/` when detected and `core.hooksPath` is unset (prints a hint instead) |
 
 - **Errors** — install-breaking (invalid manifest, missing project path, skill without `SKILL.md`, path escape, …).
 - **Warnings** — style / best practice (skill `description` quality, **empty/placeholder rules**, …).
@@ -74,7 +75,7 @@ Scaffolds a new template repository (manifest, example project, author `AGENTS.m
 | `--topic <slug>` | Topic slug for the generated dir name (with `--from-project`) |
 | `-y` / `--yes` | Skip confirmation prompts (non-interactive defaults) |
 
-Interactively (after the optional git bootstrap), `imwel template init` offers to scaffold **commit-time lint automation** into the new repo: a committed `.githooks/pre-commit` hook running `imwel lint`, a CI workflow (`.github/workflows/imwel-lint.yml` when `gh` is detected, or `.gitlab-ci.yml` when `glab` is), local `core.hooksPath` activation, and a `CONTRIBUTING.md` activation note. Opt in to get all of them; decline to leave the scaffold unchanged. See [Lint & quality bar → Commit-time lint automation](../author/lint.md#commit-time-lint-automation-optional).
+Interactively (after the optional git bootstrap), `imwel template init` offers to scaffold **commit-time lint automation** into the new repo — **on by default** (decline to skip): a committed `.githooks/pre-commit` hook running `imwel lint`, a CI workflow (`.github/workflows/imwel-lint.yml` when `gh` is detected, or `.gitlab-ci.yml` when `glab` is), local `core.hooksPath` activation, and a `CONTRIBUTING.md` activation note. It then offers an optional minimal `package.json` whose `prepare` script auto-activates the hook after a contributor's `npm install` (zero dependency). Accept the default to get all of them; decline to leave the scaffold unchanged. See [Lint & quality bar → Commit-time lint automation](../author/lint.md#commit-time-lint-automation-optional).
 
 ### `imwel template init --from-project`
 

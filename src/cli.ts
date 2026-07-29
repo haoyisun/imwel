@@ -3,7 +3,10 @@ import { Command } from 'commander';
 import { resolveLocale } from './core/locale.js';
 import { error as outputError } from './core/cli-output.js';
 import { setActiveLocale, t } from './locales/index.js';
-import { runPassiveCheckIfDue } from './core/passive-check.js';
+import {
+  runPassiveCheckIfDue,
+  shouldRunPassiveCheck,
+} from './core/passive-check.js';
 import { runDoctor } from './commands/doctor.js';
 import {
   runRemoteAdd,
@@ -40,7 +43,7 @@ async function main(): Promise<void> {
       const locale = resolveLocale(lang);
       setActiveLocale(locale);
       const sub = thisCommand.args[0];
-      if (sub !== 'sync' && sub !== 'status' && sub !== 'binding') {
+      if (shouldRunPassiveCheck(sub)) {
         await runPassiveCheckIfDue();
       }
     });

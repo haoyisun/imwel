@@ -1,83 +1,120 @@
 # imwel
 
+[![npm version](https://img.shields.io/npm/v/@culock/imwel.svg)](https://www.npmjs.com/package/@culock/imwel)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![node](https://img.shields.io/node/v/@culock/imwel.svg)](https://www.npmjs.com/package/@culock/imwel)
+
 [简体中文](README.zh-CN.md)
 
-**imwel** is a Git-native CLI for distributing AI coding rules, skills, and agent instructions across teams and tools — with no backend, no database, and no hosted platform.
+One source of truth for your team's AI coding rules — distributed to every tool from a plain Git repo. No backend, no database, no platform.
 
-New here? Read the end-to-end [Usage guide](docs/en/guide/usage.md) (or the [command reference](docs/en/guide/commands.md)).
+Half your team is on Cursor, half on Claude Code, someone just switched to Codex. Each tool stores its rules in a different format and place, so your shared coding standard drifts the moment anyone edits a file.
+
+imwel fixes that. It keeps the standard in one Git repo, renders it into each tool's native format, and pushes edits back through normal PRs.
 
 ## Quickstart
 
+**Use your team's rules** (most common):
+
 ```bash
-npx @culock/imwel@latest template init
-imwel remote add git@github.com:example/imwel-templates.git   # alias derived from the URL
+npm install -g @culock/imwel
+imwel remote add git@github.com:your-org/rules.git
 cd your-project
-imwel init                                                    # single remote is auto-selected
-imwel sync
+imwel init && imwel sync
 ```
 
-## Commands
+Prefer no global install? Run every command as `npx @culock/imwel@latest <command>`.
 
-| Command | Description |
-|---------|-------------|
-| `imwel doctor` | Check Git and environment prerequisites |
-| `imwel lint` | Lint a template repository (errors = install-breaking; warnings = style; `--strict` fails on warnings) |
-| `imwel remote add/list/remove/set` | Manage template repository remotes |
-| `imwel template init` | Scaffold a new template repository (includes author `AGENTS.md` + Cursor slash commands) |
-| `imwel adopt` | Consolidate existing scattered tool rules into canonical artifacts under `.imwel/adopted/` (no binding/remote required); `--from` adopts reviewed AI drafts from `.imwel/drafts/` through a deterministic quality gate |
-| `imwel scan` | Deterministically fingerprint the project into `.imwel/fingerprint.yaml` (languages, tooling, existing rule locations, plus a Git-history overlay of change hotspots/co-changes when available) — no LLM |
-| `imwel skill install` | Install imwel's first-party skills (`imwel-extract`, `imwel-audit`) into selected tools (unmanaged; not tracked by sync) |
-| `imwel init` | Bind the current directory to a template repo — at most one writable project (`role: project`) plus any number of read-only modules (`role: shared`) |
-| `imwel modules` | Add, remove, or freeze read-only modules for the current binding |
-| `imwel tools` | Add or remove AI coding tools without changing the current remote/project/modules; removed outputs are kept by default |
-| `imwel sync` | Pull upstream artifact updates (skips frozen modules; never silently overwrites read-only module edits) |
-| `imwel status` | Report remote and local drift, plus deterministic rule-health checks (empty rules, dead imports, orphan path references) |
-| `imwel binding show` | Inspect the complete local binding/contribution tree offline (stable `--json` available) |
-| `imwel rollback` | Restore a prior installed state (deletes managed files added after that point) |
-| `imwel push` | Push project edits and explicitly tracked contributions (branch + PR by default) |
-| `imwel propose [file]` | Add/remove single-target contribution tracking; tool paths map to canonical paths |
+**Author rules for others** — scaffold a fresh template repo and start writing:
+
+```bash
+npx @culock/imwel@latest template init
+```
+
+Then follow [Create a template repo](docs/en/how-to/create-template-repo.md).
+
+No account, no signup, no platform to deploy. imwel removes cleanly — just delete the `.imwel/` directory. Your rules stay in your own Git repo.
+
+## Core commands
+
+| Command | What it does |
+|---------|--------------|
+| `imwel init` | Bind this directory to a template repo (one writable project + any number of read-only shared modules) |
+| `imwel sync` | Pull the latest rules from upstream — skips frozen modules, never silently overwrites your local edits |
+| `imwel status` | Show what's drifted between upstream, your last sync, and your local files |
+| `imwel push` | Send your local edits back upstream as a branch + PR |
+| `imwel remote add` | Register a template repository to pull from |
+| `imwel template init` | Scaffold a brand-new template repo (with author guide + Cursor slash commands) |
+| `imwel doctor` | Check that Git and your environment are ready |
+
+Full reference, including `adopt`, `scan`, `modules`, `tools`, `rollback`, `propose`, `lint` → see the [command reference](docs/en/reference/commands.md).
+
+## Why Git-native
+
+Your team already lives in Git — branches, reviews, SSH keys, branch protection. imwel reuses all of it instead of making you adopt a new platform.
+
+- **Git is the database.** Versioning and history come from Git itself; imwel adds no parallel content store.
+- **Your Git host is governance.** Who can edit rules is controlled by GitHub/GitLab/Gitea permissions and PRs — not by an access-control system inside imwel.
+- **Local edits are safe.** A hidden Git repo under `.imwel/history/` tracks every install. Drift shows up as a normal Git diff; conflicts surface as standard merge markers you resolve by hand. Nothing is ever silently overwritten.
+- **No background daemons.** Remote template checks run when you invoke imwel (throttled to once per 2h by default), never because of local edits or by hooking into your AI tool's session.
 
 ## Authoring templates
 
-The primary author path is **clone the template repository and develop in it** — not `propose`/`push` from a consumer project.
+The main author path is to **clone the template repo and edit there** — not to `propose`/`push` from a consumer project.
 
 1. `imwel template init` (or clone an existing template repo).
-2. Open the repo in Cursor and run `/imwel-author` (scaffolded under `.cursor/commands/`).
-3. Edit Artifacts per `.imwel/manifest.yaml`, then validate with `imwel lint`.
-4. Open a branch + PR/MR on the Git host.
+2. Open it in Cursor and run `/imwel-author`.
+3. Edit artifacts per `.imwel/manifest.yaml`, then validate with `imwel lint`.
+4. Open a branch + PR on your Git host.
 
-`imwel propose` / `imwel push` remain the **consumer** feedback path for feeding local edits upstream from a bound project.
+`imwel propose` / `imwel push` are the **consumer** path — feeding local edits back upstream from a bound project.
 
-## Non-interactive / CI usage
+## Non-interactive / CI
 
-`--yes` / `-y` skips confirmation prompts only — it does **not** invent selection answers. Selection inputs must be passed as flags. Missing required flags in non-interactive mode exits with code 1.
+`--yes` / `-y` only skips confirmation prompts. Selections must be passed as flags; missing required flags exit with code 1.
 
 ```bash
-# Init (full flags)
 imwel init -y --tools cursor,claude-code --remote org-standards --branch main \
   --project my-app --no-optional
-
-# Sync / push / rollback / propose
-imwel tools --add codex --remove cursor -y
 imwel sync --yes
 imwel push --yes --all --message "chore: update artifacts"
 imwel rollback --yes --to <history-sha>
-imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
-  --type rule --required --tool cursor
 ```
 
 ## Environment
 
 | Variable | Description |
 |----------|-------------|
-| `IMWEL_FETCH_THROTTLE_MS` | Override the global passive fetch throttle (default 4h). Invalid values fall back to the default. Per-remote throttle is not supported yet. `sync` / `status` always force-refresh. |
+| `IMWEL_FETCH_THROTTLE_MS` | Override the passive fetch throttle (default 2h). `sync` / `status` / `propose` always force-refresh. |
 
 ## Architecture
 
-- Template repositories are ordinary Git repos with `.imwel/manifest.yaml`
-- Local bindings live in `.imwel/binding.yaml` per directory
-- Install history is tracked in `.imwel/history/` as a separate Git repo
-- Render adapters: **Cursor**, **Claude Code**, plus `trae`, `qoder`, `codex`, `opencode`, `zcode`, `gemini-cli`, `windsurf`, `continue`, `cline`, `kiro`, `copilot`, `aider` (see [adapters docs](docs/en/contribute/adapters.md))
+- Template repos are ordinary Git repos carrying a `.imwel/manifest.yaml`.
+- Each consuming directory gets its own `.imwel/binding.yaml` — per-directory, not per-repo. Monorepos just run `imwel init` in each sub-project.
+- Install history lives in a separate hidden Git repo at `.imwel/history/`.
+- Render adapters (14): **Cursor**, **Claude Code**, plus `codex`, `windsurf`, `gemini-cli`, `copilot`, `cline`, `continue`, `aider`, `kiro`, `opencode`, `trae`, `qoder`, `zcode` — see [Add an adapter](docs/en/how-to/add-adapter.md) and [Supported tools](docs/en/reference/supported-tools.md).
+
+## Documentation
+
+```bash
+npm run docs:dev      # local preview
+npm run docs:build    # build the site
+```
+
+Docs follow [Diátaxis](https://diataxis.fr/) (Tutorials / How-to / Reference / Explanation):
+
+| Guide | Path |
+|-------|------|
+| Overview | [docs/en/index.md](docs/en/index.md) |
+| Quick Start (5 min) | [docs/en/tutorials/quick-start.md](docs/en/tutorials/quick-start.md) |
+| Create a template repo | [docs/en/how-to/create-template-repo.md](docs/en/how-to/create-template-repo.md) |
+| Consume for Cursor | [docs/en/how-to/consume-for-cursor.md](docs/en/how-to/consume-for-cursor.md) |
+| Consume for Claude Code | [docs/en/how-to/consume-for-claude-code.md](docs/en/how-to/consume-for-claude-code.md) |
+| Push via PR | [docs/en/how-to/push-via-pr.md](docs/en/how-to/push-via-pr.md) |
+| Commands | [docs/en/reference/commands.md](docs/en/reference/commands.md) |
+| Manifest | [docs/en/reference/manifest.md](docs/en/reference/manifest.md) |
+| Architecture | [docs/en/explanation/architecture.md](docs/en/explanation/architecture.md) |
+| Glossary | [docs/en/explanation/glossary.md](docs/en/explanation/glossary.md) |
 
 ## Development
 
@@ -88,28 +125,11 @@ npm test
 npm run dev -- doctor
 ```
 
-## Documentation
+## Get involved
 
-Docs site source: [docs/](docs/). Local preview / build:
-
-```bash
-npm run docs:dev
-npm run docs:build
-```
-
-| Guide | Path |
-|-------|------|
-| Overview & choose your path | [docs/en/index.md](docs/en/index.md) |
-| Quick walkthrough (both lanes) | [docs/en/guide/usage.md](docs/en/guide/usage.md) |
-| Consumer path (install a template) | [docs/en/consume/quickstart.md](docs/en/consume/quickstart.md) |
-| Author path (author a template) | [docs/en/author/quickstart.md](docs/en/author/quickstart.md) |
-| Commands | [docs/en/guide/commands.md](docs/en/guide/commands.md) |
-| Manifest | [docs/en/guide/manifest.md](docs/en/guide/manifest.md) |
-| Architecture | [docs/en/guide/architecture.md](docs/en/guide/architecture.md) |
-| Glossary | [docs/en/concepts/glossary.md](docs/en/concepts/glossary.md) |
-| Adapters (contribute) | [docs/en/contribute/adapters.md](docs/en/contribute/adapters.md) |
-
-简体中文：平行路径见 [`docs/zh-CN/`](docs/zh-CN/)。
+- Star [imwel on GitHub](https://github.com/haoyisun/imwel) — if it saves your team a copy-paste cycle, help others find it too.
+- Missing your AI tool? [Open an issue](https://github.com/haoyisun/imwel/issues) or [contribute an adapter](docs/en/how-to/add-adapter.md) via PR.
+- Hit a bug or have a question? [Open an issue](https://github.com/haoyisun/imwel/issues).
 
 ## Contributing
 

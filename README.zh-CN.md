@@ -1,83 +1,120 @@
 # imwel
 
+[![npm version](https://img.shields.io/npm/v/@culock/imwel.svg)](https://www.npmjs.com/package/@culock/imwel)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![node](https://img.shields.io/node/v/@culock/imwel.svg)](https://www.npmjs.com/package/@culock/imwel)
+
 [English](README.md)
 
-**imwel** 是一个 Git 原生的 CLI，用于在团队与多种 AI 编程工具之间分发规则、技能与 agent 说明 — 无需后端、数据库或托管平台。
+团队 AI 编码规则的唯一真相源 —— 从一个普通 Git 仓分发到每个工具。无后端、无数据库、无平台。
 
-初次使用？请阅读端到端[使用说明](docs/zh-CN/guide/usage.md)（或[命令参考](docs/zh-CN/guide/commands.md)）。
+团队里一半人用 Cursor、一半人用 Claude Code，还有人刚换了 Codex。每种工具的规则格式和存放位置都不一样，于是共享的编码规范只要有人改一个文件就开始漂移。
+
+imwel 解决这个问题。它把规范收在一个 Git 仓里，渲染成各工具的原生格式，并通过正常的 PR 把改动回推上游。
 
 ## 快速开始
 
+**使用团队规则**（最常见）：
+
 ```bash
-npx @culock/imwel@latest template init
-imwel remote add git@github.com:example/imwel-templates.git   # 别名由 URL 推导
+npm install -g @culock/imwel
+imwel remote add git@github.com:your-org/rules.git
 cd your-project
-imwel init                                                    # 单个远程会自动选用
-imwel sync
+imwel init && imwel sync
 ```
 
-## 命令
+不想全局安装？每条命令都用 `npx @culock/imwel@latest <command>` 即可。
 
-| 命令 | 说明 |
+**为他人编写规则** —— 脚手架生成全新模板仓，开始编写：
+
+```bash
+npx @culock/imwel@latest template init
+```
+
+然后看[建立模板仓库](docs/zh-CN/how-to/create-template-repo.md)。
+
+无需账号、无需注册、无需部署平台。imwel 卸载干净 —— 删掉 `.imwel/` 目录即可。规则始终留在你自己的 Git 仓里。
+
+## 核心命令
+
+| 命令 | 作用 |
 |------|------|
-| `imwel doctor` | 检查 Git 与运行环境 |
-| `imwel lint` | 检查模板仓库（error=装坏类；warning=风格；`--strict` 时 warning 也失败） |
-| `imwel remote add/list/remove/set` | 管理模板仓库远程源 |
-| `imwel template init` | 脚手架生成新模板仓库（含作者向 `AGENTS.md` 与 Cursor Slash Commands） |
-| `imwel adopt` | 将项目中散落的工具规则归并为 canonical Artifact 到 `.imwel/adopted/`（无需 binding/remote）；`--from` 经确定性质量闸采纳 `.imwel/drafts/` 中 review 过的 AI 草稿 |
-| `imwel scan` | 确定性地生成项目指纹到 `.imwel/fingerprint.yaml`（语言、工具链、现有规则位置，Git 仓库时附带变更热点/共变的历史信号）—— 无 LLM |
-| `imwel skill install` | 将 imwel 第一方 skill（`imwel-extract`、`imwel-audit`）安装进所选工具（非受管，不被 sync 跟踪） |
-| `imwel init` | 将当前目录绑定到模板仓 —— 至多一个可写项目（`role: project`）外加任意数量的只读模块（`role: shared`） |
-| `imwel modules` | 为当前绑定增删/冻结只读模块 |
-| `imwel tools` | 不改变当前 remote/project/modules 即可增删 AI 编程工具；移除时默认保留原输出 |
-| `imwel sync` | 拉取上游制品更新（跳过已冻结模块；绝不静默覆盖只读模块的本地修改） |
-| `imwel status` | 报告远程与本地漂移，并附确定性规则健康检查（空壳规则、死链导入、孤儿路径引用） |
-| `imwel binding show` | 离线查看完整的本地绑定/贡献树（可用稳定 `--json`） |
-| `imwel rollback` | 恢复到先前的安装状态（会删除该点之后新增的管理文件） |
-| `imwel push` | 推送项目编辑与显式追踪的贡献（默认分支 + PR） |
-| `imwel propose [file]` | 新增/取消单目标贡献追踪；工具路径映射为 canonical 路径 |
+| `imwel init` | 把当前目录绑定到模板仓（一个可写项目 + 任意数量只读共享模块） |
+| `imwel sync` | 拉取上游最新规则 —— 跳过已冻结模块，绝不静默覆盖本地手改 |
+| `imwel status` | 查看上游、上次同步与本地文件之间的漂移 |
+| `imwel push` | 把本地改动以分支 + PR 的形式回推上游 |
+| `imwel remote add` | 注册一个要拉取的模板仓库 |
+| `imwel template init` | 脚手架生成全新模板仓（含作者指南 + Cursor slash 命令） |
+| `imwel doctor` | 检查 Git 与运行环境是否就绪 |
+
+完整参考，含 `adopt`、`scan`、`modules`、`tools`、`rollback`、`propose`、`lint` → 见[命令参考](docs/zh-CN/reference/commands.md)。
+
+## 为什么是 Git 原生
+
+你的团队本来就在 Git 里 —— 分支、评审、SSH 密钥、分支保护。imwel 复用这一切，而不是让你再接入一个新平台。
+
+- **Git 即数据库。** 版本与历史来自 Git 本身，imwel 不另建并行的内容存储。
+- **Git 宿主即治理。** 谁能改规则由 GitHub/GitLab/Gitea 的权限与 PR 决定 —— 不是 imwel 里的权限系统。
+- **本地手改安全。** `.imwel/history/` 下的隐藏 Git 仓记录每次安装。漂移表现为普通 Git diff，冲突以标准合并标记呈现、由你手工解决。任何东西都不会被静默覆盖。
+- **无后台守护进程。** 远程模板检查在你调用 imwel 时运行（默认节流为每 2 小时一次），不会由本地编辑触发，也从不挂钩进 AI 工具自身的会话。
 
 ## 编写模板
 
-作者主路径是**克隆模板仓库并在其中开发** — 不是在消费项目里用 `propose`/`push`。
+作者主路径是**克隆模板仓并在其中编辑** —— 不是在消费项目里用 `propose`/`push`。
 
 1. `imwel template init`（或克隆已有模板仓）。
-2. 在 Cursor 中打开仓库并运行 `/imwel-author`（脚手架写入 `.cursor/commands/`）。
-3. 按 `.imwel/manifest.yaml` 编辑 Artifact，再用 `imwel lint` 验收。
-4. 在 Git 宿主上开分支 + PR/MR。
+2. 在 Cursor 中打开并运行 `/imwel-author`。
+3. 按 `.imwel/manifest.yaml` 编辑 artifact，再用 `imwel lint` 校验。
+4. 在 Git 宿主上开分支 + PR。
 
-`imwel propose` / `imwel push` 仍是**消费侧**从绑定项目回馈上游的路径。
+`imwel propose` / `imwel push` 是**消费侧**路径 —— 从已绑定项目把本地改动回馈上游。
 
-## 非交互 / CI 用法
+## 非交互 / CI
 
-`--yes` / `-y` **只**跳过确认提示，不会自动填入选择类答案。选择类输入必须通过 flags 提供。非交互模式下缺少必填参数时以退出码 1 失败。
+`--yes` / `-y` 只跳过确认提示。选择类输入必须以 flags 提供；非交互模式下缺少必填 flags 以退出码 1 失败。
 
 ```bash
-# Init（完整 flags）
 imwel init -y --tools cursor,claude-code --remote org-standards --branch main \
   --project my-app --no-optional
-
-# Sync / push / rollback / propose
-imwel tools --add codex --remove cursor -y
 imwel sync --yes
 imwel push --yes --all --message "chore: update artifacts"
 imwel rollback --yes --to <history-sha>
-imwel propose rules/new-rule.md -y --remote org-standards --project my-app \
-  --type rule --required --tool cursor
 ```
 
 ## 环境变量
 
 | 变量 | 说明 |
 |------|------|
-| `IMWEL_FETCH_THROTTLE_MS` | 覆盖全局被动 fetch 节流间隔（默认 4 小时）。非法值回退默认。每远程独立节流尚未支持。`sync` / `status` 始终强制刷新。 |
+| `IMWEL_FETCH_THROTTLE_MS` | 覆盖被动 fetch 节流间隔（默认 2 小时）。`sync` / `status` / `propose` 始终强制刷新。 |
 
 ## 架构
 
-- 模板仓库是带有 `.imwel/manifest.yaml` 的普通 Git 仓库
-- 本地绑定位于每个目录的 `.imwel/binding.yaml`
-- 安装历史记录在 `.imwel/history/` 独立 Git 仓库中
-- 渲染适配器：**Cursor**、**Claude Code**，以及 `trae`、`qoder`、`codex`、`opencode`、`zcode`、`gemini-cli`、`windsurf`、`continue`、`cline`、`kiro`、`copilot`、`aider`（详见 [适配器文档](docs/zh-CN/contribute/adapters.md)）
+- 模板仓就是带 `.imwel/manifest.yaml` 的普通 Git 仓。
+- 每个消费目录有自己的 `.imwel/binding.yaml` —— 按目录而非按仓库。monorepo 在每个子项目目录分别 `imwel init` 即可。
+- 安装历史记录在 `.imwel/history/` 下独立的隐藏 Git 仓中。
+- 渲染适配器（14 个）：**Cursor**、**Claude Code**，以及 `codex`、`windsurf`、`gemini-cli`、`copilot`、`cline`、`continue`、`aider`、`kiro`、`opencode`、`trae`、`qoder`、`zcode` —— 见[贡献适配器](docs/zh-CN/how-to/add-adapter.md)与[支持的工具](docs/zh-CN/reference/supported-tools.md)。
+
+## 文档
+
+```bash
+npm run docs:dev      # 本地预览
+npm run docs:build    # 构建站点
+```
+
+文档按 [Diátaxis](https://diataxis.fr/)（教程 / 操作指南 / 参考 / 解释）组织：
+
+| 指南 | 路径 |
+|------|------|
+| 概览 | [docs/zh-CN/index.md](docs/zh-CN/index.md) |
+| 5 分钟快速上手 | [docs/zh-CN/tutorials/quick-start.md](docs/zh-CN/tutorials/quick-start.md) |
+| 建立模板仓库 | [docs/zh-CN/how-to/create-template-repo.md](docs/zh-CN/how-to/create-template-repo.md) |
+| 为 Cursor 消费渲染 | [docs/zh-CN/how-to/consume-for-cursor.md](docs/zh-CN/how-to/consume-for-cursor.md) |
+| 为 Claude Code 消费渲染 | [docs/zh-CN/how-to/consume-for-claude-code.md](docs/zh-CN/how-to/consume-for-claude-code.md) |
+| 经 PR 回推上游 | [docs/zh-CN/how-to/push-via-pr.md](docs/zh-CN/how-to/push-via-pr.md) |
+| 命令 | [docs/zh-CN/reference/commands.md](docs/zh-CN/reference/commands.md) |
+| Manifest | [docs/zh-CN/reference/manifest.md](docs/zh-CN/reference/manifest.md) |
+| 架构 | [docs/zh-CN/explanation/architecture.md](docs/zh-CN/explanation/architecture.md) |
+| 术语词表 | [docs/zh-CN/explanation/glossary.md](docs/zh-CN/explanation/glossary.md) |
 
 ## 开发
 
@@ -88,28 +125,11 @@ npm test
 npm run dev -- doctor
 ```
 
-## 文档
+## 参与进来
 
-文档站点源码：[docs/](docs/)。本地预览 / 构建：
-
-```bash
-npm run docs:dev
-npm run docs:build
-```
-
-| 指南 | 路径 |
-|------|------|
-| 概览与选择路径 | [docs/zh-CN/index.md](docs/zh-CN/index.md) |
-| 快速走查（两条泳道） | [docs/zh-CN/guide/usage.md](docs/zh-CN/guide/usage.md) |
-| 消费者路径（安装模板） | [docs/zh-CN/consume/quickstart.md](docs/zh-CN/consume/quickstart.md) |
-| 作者路径（编写模板） | [docs/zh-CN/author/quickstart.md](docs/zh-CN/author/quickstart.md) |
-| 命令 | [docs/zh-CN/guide/commands.md](docs/zh-CN/guide/commands.md) |
-| Manifest | [docs/zh-CN/guide/manifest.md](docs/zh-CN/guide/manifest.md) |
-| 架构 | [docs/zh-CN/guide/architecture.md](docs/zh-CN/guide/architecture.md) |
-| 术语词表 | [docs/zh-CN/concepts/glossary.md](docs/zh-CN/concepts/glossary.md) |
-| 适配器（贡献） | [docs/zh-CN/contribute/adapters.md](docs/zh-CN/contribute/adapters.md) |
-
-English (canonical)：平行路径见 [`docs/en/`](docs/en/)。
+- 在 GitHub 上 Star [imwel](https://github.com/haoyisun/imwel) —— 如果它替你团队省了一次复制粘贴，也帮别人发现它。
+- 缺你用的 AI 工具？[提个 issue](https://github.com/haoyisun/imwel/issues) 或通过 PR [贡献适配器](docs/zh-CN/how-to/add-adapter.md)。
+- 遇到 bug 或有疑问？[提个 issue](https://github.com/haoyisun/imwel/issues)。
 
 ## 贡献
 

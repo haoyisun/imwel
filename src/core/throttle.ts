@@ -1,5 +1,5 @@
-/** Default passive/cache fetch interval: 4 hours. */
-export const DEFAULT_FETCH_THROTTLE_MS = 4 * 60 * 60 * 1000;
+/** Default passive/cache fetch interval: 2 hours. */
+export const DEFAULT_FETCH_THROTTLE_MS = 2 * 60 * 60 * 1000;
 
 /**
  * Resolve the global fetch throttle from `IMWEL_FETCH_THROTTLE_MS`.

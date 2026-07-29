@@ -1,100 +1,90 @@
 import { defineConfig } from 'vitepress';
 
-// English content lives under docs/en/ (VitePress locale key `en`).
-// Design calls this the canonical / "root" locale; zh-CN is parallel under docs/zh-CN/.
-// The sidebar is grouped by purpose + audience (Diátaxis-lite), not one flat list,
-// so prev/next follows a real learning path. en and zh-CN mirror each other.
+// English under docs/en/; zh-CN under docs/zh-CN/. Sidebar follows Diátaxis:
+// Tutorials → How-to → Reference → Explanation.
 const enSidebar = [
   {
-    text: 'Getting started',
-    items: [
-      { text: 'Overview', link: '/en/' },
-      { text: 'Install & prerequisites', link: '/en/getting-started/install' },
-      { text: 'Quick walkthrough', link: '/en/guide/usage' },
-    ],
+    text: 'Tutorials',
+    items: [{ text: 'Quick Start (5 min)', link: '/en/tutorials/quick-start' }],
   },
   {
-    text: 'Consumer path',
+    text: 'How-to',
     items: [
-      { text: '1. Install a template', link: '/en/consume/quickstart' },
-      { text: '2. Sync, drift & rollback', link: '/en/consume/sync-and-drift' },
-      { text: '3. Contribute changes back', link: '/en/consume/contribute-back' },
-    ],
-  },
-  {
-    text: 'Author path',
-    items: [
-      { text: '1. Author a template', link: '/en/author/quickstart' },
-      { text: '2. Lint & quality bar', link: '/en/author/lint' },
-      { text: '3. Publish & maintain', link: '/en/author/publish' },
-      { text: 'Draft rules from your codebase', link: '/en/author/from-codebase' },
+      { text: 'Install', link: '/en/how-to/install' },
+      { text: 'Create a template repo', link: '/en/how-to/create-template-repo' },
+      { text: 'Add a rule', link: '/en/how-to/add-rule' },
+      { text: 'Add a skill', link: '/en/how-to/add-skill' },
+      { text: 'Consume for Cursor', link: '/en/how-to/consume-for-cursor' },
+      { text: 'Consume for Claude Code', link: '/en/how-to/consume-for-claude-code' },
+      { text: 'Sync and handle drift', link: '/en/how-to/sync-and-drift' },
+      { text: 'Push via PR', link: '/en/how-to/push-via-pr' },
+      { text: 'Manage modules and tools', link: '/en/how-to/manage-modules-and-tools' },
+      { text: 'Adopt existing rules', link: '/en/how-to/adopt-existing-rules' },
+      { text: 'Draft rules from a codebase', link: '/en/how-to/draft-rules-from-codebase' },
+      { text: 'Lint and publish', link: '/en/how-to/lint-and-publish' },
+      { text: 'Add an adapter', link: '/en/how-to/add-adapter' },
     ],
   },
   {
     text: 'Reference',
     items: [
-      { text: 'Commands', link: '/en/guide/commands' },
-      { text: 'In-tool skills & commands', link: '/en/guide/in-tool-skills' },
-      { text: 'Manifest', link: '/en/guide/manifest' },
+      { text: 'Commands', link: '/en/reference/commands' },
+      { text: 'Manifest', link: '/en/reference/manifest' },
+      { text: 'In-tool skills', link: '/en/reference/in-tool-skills' },
+      { text: 'Supported tools', link: '/en/reference/supported-tools' },
     ],
   },
   {
-    text: 'Concepts',
+    text: 'Explanation',
     items: [
-      { text: 'Architecture', link: '/en/guide/architecture' },
-      { text: 'Glossary', link: '/en/concepts/glossary' },
+      { text: 'Author vs consumer', link: '/en/explanation/author-vs-consumer' },
+      { text: 'Architecture', link: '/en/explanation/architecture' },
+      { text: 'Drift and history', link: '/en/explanation/drift-and-history' },
+      { text: 'Glossary', link: '/en/explanation/glossary' },
     ],
-  },
-  {
-    text: 'Contribute',
-    items: [{ text: 'Adapters', link: '/en/contribute/adapters' }],
   },
 ];
 
 const zhSidebar = [
   {
-    text: '快速上手',
-    items: [
-      { text: '概览', link: '/zh-CN/' },
-      { text: '安装与前置', link: '/zh-CN/getting-started/install' },
-      { text: '快速走查', link: '/zh-CN/guide/usage' },
-    ],
+    text: '教程',
+    items: [{ text: '5 分钟快速上手', link: '/zh-CN/tutorials/quick-start' }],
   },
   {
-    text: '消费者路径',
+    text: '操作指南',
     items: [
-      { text: '1. 安装模板', link: '/zh-CN/consume/quickstart' },
-      { text: '2. 同步、漂移与回滚', link: '/zh-CN/consume/sync-and-drift' },
-      { text: '3. 回馈上游', link: '/zh-CN/consume/contribute-back' },
-    ],
-  },
-  {
-    text: '作者路径',
-    items: [
-      { text: '1. 编写模板', link: '/zh-CN/author/quickstart' },
-      { text: '2. Lint 与质量条', link: '/zh-CN/author/lint' },
-      { text: '3. 发布与维护', link: '/zh-CN/author/publish' },
-      { text: '从代码库起草规则', link: '/zh-CN/author/from-codebase' },
+      { text: '安装', link: '/zh-CN/how-to/install' },
+      { text: '建立模板仓库', link: '/zh-CN/how-to/create-template-repo' },
+      { text: '添加 rule', link: '/zh-CN/how-to/add-rule' },
+      { text: '添加 skill', link: '/zh-CN/how-to/add-skill' },
+      { text: '为 Cursor 消费渲染', link: '/zh-CN/how-to/consume-for-cursor' },
+      { text: '为 Claude Code 消费渲染', link: '/zh-CN/how-to/consume-for-claude-code' },
+      { text: '同步与处理漂移', link: '/zh-CN/how-to/sync-and-drift' },
+      { text: '经 PR 回推上游', link: '/zh-CN/how-to/push-via-pr' },
+      { text: '管理模块与工具', link: '/zh-CN/how-to/manage-modules-and-tools' },
+      { text: '归并已有规则', link: '/zh-CN/how-to/adopt-existing-rules' },
+      { text: '从代码库起草规则', link: '/zh-CN/how-to/draft-rules-from-codebase' },
+      { text: 'Lint 与发布', link: '/zh-CN/how-to/lint-and-publish' },
+      { text: '贡献适配器', link: '/zh-CN/how-to/add-adapter' },
     ],
   },
   {
     text: '参考',
     items: [
-      { text: '命令', link: '/zh-CN/guide/commands' },
-      { text: '工具内 skill 与命令', link: '/zh-CN/guide/in-tool-skills' },
-      { text: 'Manifest', link: '/zh-CN/guide/manifest' },
+      { text: '命令', link: '/zh-CN/reference/commands' },
+      { text: 'Manifest', link: '/zh-CN/reference/manifest' },
+      { text: '工具内 skill', link: '/zh-CN/reference/in-tool-skills' },
+      { text: '支持的工具', link: '/zh-CN/reference/supported-tools' },
     ],
   },
   {
-    text: '概念',
+    text: '解释',
     items: [
-      { text: '架构', link: '/zh-CN/guide/architecture' },
-      { text: '术语词表', link: '/zh-CN/concepts/glossary' },
+      { text: '作者与消费者', link: '/zh-CN/explanation/author-vs-consumer' },
+      { text: '架构', link: '/zh-CN/explanation/architecture' },
+      { text: '漂移与 history', link: '/zh-CN/explanation/drift-and-history' },
+      { text: '术语词表', link: '/zh-CN/explanation/glossary' },
     ],
-  },
-  {
-    text: '贡献',
-    items: [{ text: '适配器', link: '/zh-CN/contribute/adapters' }],
   },
 ];
 
@@ -111,16 +101,13 @@ export default defineConfig({
       description: 'Git-native CLI for distributing AI coding rules, skills, and agent instructions',
       themeConfig: {
         nav: [
-          { text: 'Guide', link: '/en/guide/usage' },
-          { text: 'Contribute', link: '/en/contribute/adapters' },
-          {
-            text: 'GitHub',
-            link: 'https://github.com/haoyisun/imwel',
-          },
+          { text: 'Quick Start', link: '/en/tutorials/quick-start' },
+          { text: 'How-to', link: '/en/how-to/create-template-repo' },
+          { text: 'Reference', link: '/en/reference/commands' },
+          { text: 'Concepts', link: '/en/explanation/architecture' },
+          { text: 'GitHub', link: 'https://github.com/haoyisun/imwel' },
         ],
-        sidebar: {
-          '/en/': enSidebar,
-        },
+        sidebar: { '/en/': enSidebar },
         socialLinks: [{ icon: 'github', link: 'https://github.com/haoyisun/imwel' }],
         editLink: {
           pattern: 'https://github.com/haoyisun/imwel/edit/main/docs/:path',
@@ -135,16 +122,13 @@ export default defineConfig({
       description: '用于分发 AI 编程规则、技能与 agent 说明的 Git 原生 CLI',
       themeConfig: {
         nav: [
-          { text: '指南', link: '/zh-CN/guide/usage' },
-          { text: '贡献', link: '/zh-CN/contribute/adapters' },
-          {
-            text: 'GitHub',
-            link: 'https://github.com/haoyisun/imwel',
-          },
+          { text: '快速上手', link: '/zh-CN/tutorials/quick-start' },
+          { text: '操作指南', link: '/zh-CN/how-to/create-template-repo' },
+          { text: '参考', link: '/zh-CN/reference/commands' },
+          { text: '概念', link: '/zh-CN/explanation/architecture' },
+          { text: 'GitHub', link: 'https://github.com/haoyisun/imwel' },
         ],
-        sidebar: {
-          '/zh-CN/': zhSidebar,
-        },
+        sidebar: { '/zh-CN/': zhSidebar },
         socialLinks: [{ icon: 'github', link: 'https://github.com/haoyisun/imwel' }],
         editLink: {
           pattern: 'https://github.com/haoyisun/imwel/edit/main/docs/:path',

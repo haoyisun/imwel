@@ -4,7 +4,7 @@ import { getAdapter } from '../adapters/index.js';
 import { getRemote } from './config.js';
 import type { Binding, ManagedArtifact } from './binding.js';
 import { listDirtyPaths } from './history.js';
-import { ensureRemoteCache } from './remote-cache.js';
+import { ensureRemoteCache, remoteBranchCommit } from './remote-cache.js';
 import { runGit } from './git.js';
 import {
   contributionSourceIdentity,
@@ -395,6 +395,8 @@ export function buildCompareUrl(remoteUrl: string, base: string, head: string): 
 export interface PushResult {
   branch: string;
   commit: string;
+  baseBranch: string;
+  baseCommit: string;
   compareUrl: string;
   directPush: boolean;
 }
@@ -411,6 +413,7 @@ export async function executePush(
   const cacheDir = await ensureRemoteCache(binding.remote, { force: true });
   await runGit(['checkout', binding.branch], { cwd: cacheDir });
   await runGit(['pull', '--ff-only', 'origin', binding.branch], { cwd: cacheDir }).catch(() => undefined);
+  const baseCommit = await remoteBranchCommit(cacheDir, binding.branch);
 
   const directPush = Boolean(remote.directPush);
   const branch = directPush
@@ -448,6 +451,8 @@ export async function executePush(
   return {
     branch,
     commit,
+    baseBranch: binding.branch,
+    baseCommit: directPush ? commit : baseCommit,
     compareUrl: buildCompareUrl(remote.url, binding.branch, branch),
     directPush,
   };

@@ -11,7 +11,7 @@ import {
   resolveConventions,
   type Manifest,
 } from '../core/manifest.js';
-import { ensureRemoteCache } from '../core/remote-cache.js';
+import { ensureRemoteCache, remoteBranchCommit } from '../core/remote-cache.js';
 import {
   addPendingProposal,
   buildProposal,
@@ -185,10 +185,39 @@ export async function prepareProposeProjectSelection(
 
 const ARTIFACT_TYPES: ArtifactType[] = ['rule', 'skill', 'agents'];
 
+export async function resolveProposalBaseline(
+  remote: string,
+  binding: Pick<Binding, 'remote' | 'branch'> | null,
+  defaultBranch: string | undefined,
+  cacheDir: string,
+  readRemoteCommit: (cacheDir: string, branch: string) => Promise<string> = remoteBranchCommit,
+): Promise<Pick<PendingProposal, 'baseBranch' | 'baseCommit'>> {
+  const baseBranch =
+    binding?.remote === remote ? binding.branch : (defaultBranch ?? 'main');
+  return {
+    baseBranch,
+    baseCommit: await readRemoteCommit(cacheDir, baseBranch),
+  };
+}
+
+export function applyProposalBaseline(
+  proposals: PendingProposal[],
+  remote: string,
+  project: string,
+  baseline: Pick<PendingProposal, 'baseBranch' | 'baseCommit'>,
+): PendingProposal[] {
+  return proposals.map((proposal) =>
+    proposal.remote === remote && proposal.project === project
+      ? { ...proposal, ...baseline }
+      : proposal,
+  );
+}
+
 export async function runPropose(filePath?: string, opts: ProposeOptions = {}): Promise<number> {
   p.intro(t('propose.title'));
   const projectDir = process.cwd();
-  const remotes = Object.keys(await listRemotes());
+  const remoteConfigs = await listRemotes();
+  const remotes = Object.keys(remoteConfigs);
   if (remotes.length === 0) {
     outputError(t('init.noRemotes'));
     return 1;
@@ -258,6 +287,12 @@ export async function runPropose(filePath?: string, opts: ProposeOptions = {}): 
     preflight.proposals === undefined
       ? await readPendingProposals(projectDir)
       : preflight.proposals;
+  const baseline = await resolveProposalBaseline(
+    remote,
+    binding,
+    remoteConfigs[remote]?.defaultBranch,
+    cacheDir,
+  );
 
   if (filePath) {
     const optionalFlag = opts.optional === true || opts.required === true ? 'set' : undefined;
@@ -354,17 +389,20 @@ export async function runPropose(filePath?: string, opts: ProposeOptions = {}): 
     try {
       await addPendingProposal(
         projectDir,
-        buildProposal(
-          sourceFiles,
-          remote,
-          project,
-          projectRole(resolved.project),
-          type!,
-          canonicalPath,
-          optional,
-          tool!,
-          slug,
-        ),
+        {
+          ...buildProposal(
+            sourceFiles,
+            remote,
+            project,
+            projectRole(resolved.project),
+            type!,
+            canonicalPath,
+            optional,
+            tool!,
+            slug,
+          ),
+          ...baseline,
+        },
       );
     } catch (error) {
       outputError(t('common.error', { message: (error as Error).message }));
@@ -445,7 +483,10 @@ export async function runPropose(filePath?: string, opts: ProposeOptions = {}): 
       ),
     );
   }
-  await writePendingProposals(projectDir, kept);
+  await writePendingProposals(
+    projectDir,
+    applyProposalBaseline(kept, remote, project, baseline),
+  );
   success(
     t('propose.multiselect.done', {
       added: result.added.length,

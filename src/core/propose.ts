@@ -18,6 +18,8 @@ export interface PendingProposal {
   canonicalPath: string;
   optional: boolean;
   tool: string;
+  baseBranch?: string;
+  baseCommit?: string;
   pushed?: {
     branch: string;
     commit: string;
@@ -40,6 +42,8 @@ interface LegacyPendingProposal {
   canonicalPath?: unknown;
   optional?: unknown;
   tool?: unknown;
+  baseBranch?: unknown;
+  baseCommit?: unknown;
   pushed?: unknown;
 }
 
@@ -103,6 +107,8 @@ function normalizeProposal(raw: LegacyPendingProposal, index: number): PendingPr
     canonicalPath,
     optional: raw.optional === true,
     tool: raw.tool,
+    ...(typeof raw.baseBranch === 'string' ? { baseBranch: raw.baseBranch } : {}),
+    ...(typeof raw.baseCommit === 'string' ? { baseCommit: raw.baseCommit } : {}),
     ...(pushed ? { pushed } : {}),
   };
 }
@@ -308,11 +314,21 @@ export function buildContributionOwnershipIndex(
 export function markSuccessfulPushes(
   proposals: PendingProposal[],
   sourceIdentities: ReadonlySet<string>,
-  pushed: { branch: string; commit: string },
+  pushed: {
+    branch: string;
+    commit: string;
+    baseBranch: string;
+    baseCommit: string;
+  },
 ): PendingProposal[] {
   return proposals.map((proposal) =>
     sourceIdentities.has(contributionSourceIdentity(proposal))
-      ? { ...proposal, pushed: { ...pushed } }
+      ? {
+          ...proposal,
+          baseBranch: pushed.baseBranch,
+          baseCommit: pushed.baseCommit,
+          pushed: { branch: pushed.branch, commit: pushed.commit },
+        }
       : proposal,
   );
 }

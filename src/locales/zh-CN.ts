@@ -231,6 +231,20 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'status.remoteUpdated': '远程有可用更新。',
   'status.localEdited': '检测到本地手工修改：{paths}',
   'status.clean': '未检测到漂移。',
+  'status.noTargets': '当前目录没有 binding 或带远程目标的 pending proposal。',
+  'status.binding.current': 'Binding {remote}/{branch}：已是最新（{current}）。',
+  'status.binding.updated':
+    'Binding {remote}/{branch}：已从 {base} 更新到 {current}；运行 `imwel sync`。',
+  'status.proposal.current':
+    'Proposal {project} → {remote}/{branch}：已是最新（{current}）。',
+  'status.proposal.updated':
+    'Proposal {project} → {remote}/{branch}：已从 {base} 更新到 {current}；运行 `imwel propose` 检查并刷新追踪。',
+  'status.proposal.unknown':
+    'Proposal {project} → {remote}：缺少基线，无法判断远程更新；运行 `imwel propose` 刷新追踪。',
+  'status.target.failed':
+    '无法检查 {source} 目标 {remote}/{branch}；请运行 `imwel status` 重试。',
+  'status.source.binding': 'binding',
+  'status.source.proposal': 'proposal',
 
   'binding.description': '纯本地查看绑定与贡献追踪，不访问网络',
   'binding.help.json': '输出稳定、带版本号的 JSON 视图',
@@ -353,7 +367,17 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'propose.multiselect.confirm': '确认登记为 pending proposal？（不执行任何 Git 操作）',
   'propose.multiselect.done': '贡献追踪已更新：+{added} / -{removed}。本地文件未改动。',
 
-  'passive.driftNotice': '检测到漂移 — 运行 `imwel status` 或 `imwel sync` 查看详情。',
+  'passive.checking': '正在检查远程模板“{alias}”是否有更新……',
+  'passive.updateTitle': '远程模板有更新：',
+  'passive.updateSummary': '  {remote}/{branch}：{base} → {current}（{sources}）',
+  'passive.source.binding': 'binding',
+  'passive.source.proposals': 'proposal：{count} 个',
+  'passive.source.separator': '、',
+  'passive.updateNext':
+    '运行 `imwel status` 查看详情；运行 `imwel sync` 应用 binding 更新。',
+  'passive.failure':
+    '无法检查远程模板（{targets}）；请运行 `imwel status` 重试。当前命令将继续。',
+  'passive.failure.unknown': '未知目标',
 
   'adopt.title': '将已 review 的草稿箱渲染进你的 AI 编码工具',
   'adopt.scanning': '正在扫描现有的工具原生规则与技能……',

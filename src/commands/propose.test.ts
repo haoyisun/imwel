@@ -6,7 +6,9 @@ import type { Manifest } from '../core/manifest.js';
 import type { PendingProposal } from '../core/propose.js';
 import type { ProposeCandidateSummary } from '../core/propose-candidates.js';
 import {
+  applyProposalBaseline,
   prepareProposeProjectSelection,
+  resolveProposalBaseline,
   shouldFastFailPropose,
   type ProposePreflightDependencies,
 } from './propose.js';
@@ -272,5 +274,50 @@ describe('propose interactive preflight', () => {
     assert.equal(fileResult.fastFailed, false);
     assert.equal(nonInteractiveResult.fastFailed, false);
     assert.equal(dependencyCalls, 0);
+  });
+});
+
+describe('proposal remote baselines', () => {
+  it('uses the matching binding branch and current remote commit', async () => {
+    const result = await resolveProposalBaseline(
+      'origin',
+      { remote: 'origin', branch: 'release' } as Binding,
+      'main',
+      '/cache',
+      async (_cacheDir, branch) => `commit-${branch}`,
+    );
+
+    assert.deepEqual(result, { baseBranch: 'release', baseCommit: 'commit-release' });
+  });
+
+  it('uses the remote default branch or main for another remote', async () => {
+    const bound = { remote: 'origin', branch: 'release' } as Binding;
+    const readCommit = async (_cacheDir: string, branch: string): Promise<string> =>
+      `commit-${branch}`;
+
+    assert.deepEqual(
+      await resolveProposalBaseline('other', bound, 'develop', '/cache', readCommit),
+      { baseBranch: 'develop', baseCommit: 'commit-develop' },
+    );
+    assert.deepEqual(
+      await resolveProposalBaseline('other', bound, undefined, '/cache', readCommit),
+      { baseBranch: 'main', baseCommit: 'commit-main' },
+    );
+  });
+
+  it('refreshes retained and added proposals for the confirmed target only', () => {
+    const current = pending('app');
+    const other = pending('other');
+
+    const refreshed = applyProposalBaseline(
+      [current, other],
+      'origin',
+      'app',
+      { baseBranch: 'main', baseCommit: 'fresh' },
+    );
+
+    assert.equal(refreshed[0]?.baseBranch, 'main');
+    assert.equal(refreshed[0]?.baseCommit, 'fresh');
+    assert.equal(refreshed[1]?.baseCommit, undefined);
   });
 });

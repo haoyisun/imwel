@@ -9,6 +9,7 @@ import { resolveFetchThrottleMs } from './throttle.js';
 export interface EnsureCacheOptions {
   force?: boolean;
   throttleMs?: number;
+  onFetch?: (alias: string) => void;
 }
 
 export async function ensureRemoteCache(
@@ -31,6 +32,7 @@ export async function ensureRemoteCache(
   const lastCheck = remote.lastPassiveCheck ? Date.parse(remote.lastPassiveCheck) : 0;
   const shouldFetch = options.force || Date.now() - lastCheck >= throttleMs;
   if (shouldFetch) {
+    options.onFetch?.(alias);
     await runGit(['fetch', '--prune', 'origin'], { cwd: cacheDir });
     if (!options.force) {
       await updateRemotePassiveCheck(alias, new Date().toISOString());
@@ -66,5 +68,10 @@ export async function checkoutBranch(cacheDir: string, branch: string): Promise<
 export async function branchCommit(cacheDir: string, branch: string): Promise<string> {
   await checkoutBranch(cacheDir, branch);
   const { stdout } = await runGit(['rev-parse', 'HEAD'], { cwd: cacheDir });
+  return stdout.trim();
+}
+
+export async function remoteBranchCommit(cacheDir: string, branch: string): Promise<string> {
+  const { stdout } = await runGit(['rev-parse', `origin/${branch}`], { cwd: cacheDir });
   return stdout.trim();
 }

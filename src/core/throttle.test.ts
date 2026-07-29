@@ -6,6 +6,10 @@ import {
 } from './throttle.js';
 
 describe('resolveFetchThrottleMs', () => {
+  it('uses a two-hour default interval', () => {
+    assert.equal(DEFAULT_FETCH_THROTTLE_MS, 2 * 60 * 60 * 1000);
+  });
+
   it('returns default when unset', () => {
     assert.equal(resolveFetchThrottleMs({}), DEFAULT_FETCH_THROTTLE_MS);
   });

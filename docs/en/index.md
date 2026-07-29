@@ -2,42 +2,33 @@
 
 Git-native CLI for distributing AI coding rules, skills, and agent instructions — **no backend, no database, no hosted platform**.
 
-Template repositories are ordinary Git repos. imwel binds a local project directory to one project inside a remote template repo, renders Artifacts into tool-native formats (Cursor, Claude Code, …), detects drift with Git, and proposes upstream changes via branch + PR/MR. New to the terms? See the [Glossary](./concepts/glossary.md).
+One template repo. Many AI tools. Sync like code; push back through a normal PR.
 
-## 30-second quickstart
+## Start here
 
-```bash
-# Consume a team's rules:
-imwel remote add git@github.com:example/imwel-templates.git   # alias derived from the URL
-cd your-project
-imwel init && imwel sync
-```
+In about five minutes you can scaffold a local template and see rules land in Cursor or Claude Code’s native paths.
 
-Install globally when you want a persistent binary: `npm install -g @culock/imwel` (the command stays `imwel`). Or run once with `npx @culock/imwel@latest <command>`.
+**[Quick Start (5 min) →](./tutorials/quick-start.md)**
 
-## Choose your path
+## What do you want to do?
 
-imwel has two distinct lifecycles. Pick the one that matches your role — each is an ordered, step-by-step track:
+| I want to… | Go to |
+|------------|--------|
+| Install Node / Git / the CLI | [Install](./how-to/install.md) |
+| Publish rules for the team | [Create a template repo](./how-to/create-template-repo.md) |
+| Use a team template in Cursor | [Consume for Cursor](./how-to/consume-for-cursor.md) |
+| Use a team template in Claude Code | [Consume for Claude Code](./how-to/consume-for-claude-code.md) |
+| Send local edits upstream via PR | [Push via PR](./how-to/push-via-pr.md) |
+| Understand author vs consumer | [Author vs consumer](./explanation/author-vs-consumer.md) |
 
-| I want to… | Start here |
-|------------|-----------|
-| **Use** a team's rules in my AI tools | [Consumer path → Install a template](./consume/quickstart.md) |
-| **Publish** rules for others to consume | [Author path → Author a template](./author/quickstart.md) |
+## Reference
 
-Prefer a single-screen overview first? See the [Quick walkthrough](./guide/usage.md) (both lanes, minimal commands).
+| Page | Contents |
+|------|----------|
+| [Commands](./reference/commands.md) | Full CLI flags |
+| [Manifest](./reference/manifest.md) | `.imwel/manifest.yaml` |
+| [Supported tools](./reference/supported-tools.md) | Adapter list and typical paths |
+| [Architecture](./explanation/architecture.md) | Git-as-database, safety defaults |
+| [Glossary](./explanation/glossary.md) | Template repo, Artifact, Binding, Drift, … |
 
-## Reference & concepts
-
-| Page | What you will find |
-|------|--------------------|
-| [Commands](./guide/commands.md) | Full CLI reference (`doctor`, `lint`, `init`, `sync`, `push`, …) |
-| [Manifest](./guide/manifest.md) | `.imwel/manifest.yaml` fields, conventions, rule metadata overlay |
-| [Architecture](./guide/architecture.md) | Git as the database, per-directory bindings, history repo, safety defaults |
-| [Glossary](./concepts/glossary.md) | Core terms: Template repo, Artifact, Binding, Adapter, Drift, … |
-| [Adapters](./contribute/adapters.md) | How to add a render target via upstream PR (not a plugin system) |
-
-## Next
-
-- New consumer? → [Install a template](./consume/quickstart.md)
-- New author? → [Author a template](./author/quickstart.md)
-- Repository [README](https://github.com/haoyisun/imwel) · [Contributing](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md) · [Security](https://github.com/haoyisun/imwel/blob/main/SECURITY.md)
+Repository [README](https://github.com/haoyisun/imwel) · [Contributing](https://github.com/haoyisun/imwel/blob/main/CONTRIBUTING.md)

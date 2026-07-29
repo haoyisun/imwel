@@ -11,6 +11,8 @@ import {
   graduateProjectContributions,
   markSuccessfulPushes,
   readPendingProposals,
+  readPendingProposalsReadonly,
+  writePendingProposals,
 } from './propose.js';
 
 describe('contribution tracking persistence', () => {
@@ -54,6 +56,66 @@ describe('contribution tracking persistence', () => {
       await fs.mkdir(path.dirname(filePath), { recursive: true });
       await fs.writeFile(filePath, 'proposals:\n  - remote: org\n', 'utf8');
       await assert.rejects(readPendingProposals(projectDir), /Invalid contribution tracking record/);
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('round-trips optional remote baseline fields', async () => {
+    const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'imwel-proposal-baseline-'));
+    try {
+      const proposal = {
+        ...buildProposal(
+          '.cursor/rules/new.mdc',
+          'org',
+          'app',
+          'project',
+          'rule',
+          'rules/new.md',
+          false,
+          'cursor',
+        ),
+        baseBranch: 'develop',
+        baseCommit: '1234567890abcdef',
+      };
+
+      await writePendingProposals(projectDir, [proposal]);
+
+      assert.deepEqual(await readPendingProposals(projectDir), [proposal]);
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a version 2 proposal without a baseline without rewriting it', async () => {
+    const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'imwel-proposal-legacy-v2-'));
+    try {
+      const filePath = path.join(projectDir, '.imwel', 'pending-proposals.yaml');
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      const original = YAML.stringify({
+        version: 2,
+        proposals: [
+          {
+            localPath: '.cursor/rules/new.mdc',
+            sourceFiles: ['.cursor/rules/new.mdc'],
+            sourceId: 'new',
+            remote: 'org',
+            project: 'app',
+            targetRole: 'project',
+            type: 'rule',
+            canonicalPath: 'rules/new.md',
+            optional: false,
+            tool: 'cursor',
+          },
+        ],
+      });
+      await fs.writeFile(filePath, original, 'utf8');
+
+      const [proposal] = await readPendingProposalsReadonly(projectDir);
+
+      assert.equal(proposal?.baseBranch, undefined);
+      assert.equal(proposal?.baseCommit, undefined);
+      assert.equal(await fs.readFile(filePath, 'utf8'), original);
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true });
     }
@@ -122,10 +184,18 @@ describe('contribution tracking persistence', () => {
     const updated = markSuccessfulPushes(
       [first, second],
       new Set([contributionSourceIdentity(first)]),
-      { branch: 'imwel-push-1', commit: 'abc123' },
+      {
+        branch: 'imwel-push-1',
+        commit: 'abc123',
+        baseBranch: 'main',
+        baseCommit: 'base123',
+      },
     );
     assert.deepEqual(updated[0]?.pushed, { branch: 'imwel-push-1', commit: 'abc123' });
+    assert.equal(updated[0]?.baseBranch, 'main');
+    assert.equal(updated[0]?.baseCommit, 'base123');
     assert.equal(updated[1]?.pushed, undefined);
+    assert.equal(updated[1]?.baseBranch, undefined);
   });
 });
 

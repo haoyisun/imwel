@@ -235,6 +235,22 @@ export const en = {
   'status.remoteUpdated': 'Remote has updates available.',
   'status.localEdited': 'Local hand-edits detected: {paths}',
   'status.clean': 'No drift detected.',
+  'status.noTargets':
+    'No binding or pending proposal with a remote target exists in this directory.',
+  'status.binding.current':
+    'Binding {remote}/{branch}: up to date at {current}.',
+  'status.binding.updated':
+    'Binding {remote}/{branch}: updated from {base} to {current}; run `imwel sync`.',
+  'status.proposal.current':
+    'Proposal {project} → {remote}/{branch}: up to date at {current}.',
+  'status.proposal.updated':
+    'Proposal {project} → {remote}/{branch}: updated from {base} to {current}; run `imwel propose` to review and refresh tracking.',
+  'status.proposal.unknown':
+    'Proposal {project} → {remote}: cannot determine remote updates because its baseline is missing; run `imwel propose` to refresh tracking.',
+  'status.target.failed':
+    'Could not check {source} target {remote}/{branch}; retry with `imwel status`.',
+  'status.source.binding': 'binding',
+  'status.source.proposal': 'proposal',
 
   'binding.description': 'Inspect local binding and contribution tracking without network access',
   'binding.help.json': 'Output the stable versioned JSON view',
@@ -362,7 +378,18 @@ export const en = {
   'propose.multiselect.done':
     'Contribution tracking updated: +{added} / -{removed}. Local files were not changed.',
 
-  'passive.driftNotice': 'Drift detected — run `imwel status` or `imwel sync` for details.',
+  'passive.checking': 'Checking remote template "{alias}" for updates...',
+  'passive.updateTitle': 'Remote template updates available:',
+  'passive.updateSummary':
+    '  {remote}/{branch}: {base} → {current} ({sources})',
+  'passive.source.binding': 'binding',
+  'passive.source.proposals': 'proposals: {count}',
+  'passive.source.separator': ', ',
+  'passive.updateNext':
+    'Run `imwel status` for details; run `imwel sync` to apply binding updates.',
+  'passive.failure':
+    'Could not check remote templates ({targets}); run `imwel status` to retry. The command will continue.',
+  'passive.failure.unknown': 'unknown target',
 
   'adopt.title': 'Render a reviewed draft box into your AI coding tools',
   'adopt.scanning': 'Scanning for existing tool-native rules and skills...',

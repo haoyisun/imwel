@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Docs site restructured around [Diátaxis](https://diataxis.fr/): `tutorials/` (5-minute Quick Start), `how-to/` (task recipes including Cursor/Claude Code consume, add rule/skill, push via PR), `reference/`, and `explanation/`. Removed the overlapping `guide/usage` + consumer/author path trio. READMEs, `usage-doc-sync` rule, and the docs checklist now point at the new paths.
+
 ### Added
 
+- Passive remote-template checks now run at most every **2 hours** by default and inspect only remotes referenced by the current directory's binding or pending proposals. Notices are prominent, appear before the requested command, and trigger only when a tracked remote branch commit changes — local edits no longer produce a misleading remote-update notice. Proposal tracking records a Git branch/commit baseline, and `imwel status` now force-checks both binding and proposal targets, including proposal-only directories.
 - Cross-project same-name artifact collisions are now **content-aware** and an **error**: `imwel lint` reads and compares the contents of same-named rules (full file) and skills (`SKILL.md`) across projects — differing content is flagged as `project.artifactNameCollision` **error** with a concrete rename suggestion (`<project>-<basename>`), while identical same-named artifacts are no longer reported (render dedupes them silently). Install-time cross-project render conflicts now also print a directly-actionable rename path naming the source project and file. **BREAKING**: collision check is no longer a warning; existing template repos with same-named artifacts of differing content will now fail `imwel lint` (and `--strict` CI). Fix by renaming one source file (e.g. to `<project>-<basename>.md`) or by making the contents identical (a shared baseline).
 - Commit-time lint automation scaffolding: `imwel template init` (and `--from-project`) now offer (opt-in) to scaffold a committed `.githooks/pre-commit` hook that runs `imwel lint`, plus a CI workflow (`.github/workflows/imwel-lint.yml` for `gh`, or `.gitlab-ci.yml` for `glab`) running `imwel lint --strict` on PRs/pushes. The hook degrades gracefully when `imwel` is not on PATH (warn + exit 0), is activated locally via `git config core.hooksPath .githooks`, and a `CONTRIBUTING.md` activation note is appended. `imwel lint` prints a passive activation hint when a template repo ships `.githooks/` but `core.hooksPath` is unset. No husky/lefthook dependency; activation stays a one-line, per-contributor opt-in.
 

@@ -227,6 +227,8 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
     nextProposals = markSuccessfulPushes(nextProposals, successfulTracking, {
       branch: result.branch,
       commit: result.commit,
+      baseBranch: result.baseBranch,
+      baseCommit: result.baseCommit,
     });
     await writePendingProposals(projectDir, nextProposals);
     if (result.directPush) {

@@ -2,7 +2,10 @@
 
 想要一个团队当作 AI 规则/技能唯一真相源的普通 Git 仓——又不想自建平台？
 
-**你将得到：** 含 `.imwel/manifest.yaml` 与示例项目的模板仓；可选 lint 钩子，让每次 clone 仍能守住质量条。
+**你将得到：** 含 `.imwel/manifest.yaml` 与示例项目的模板仓。
+
+[!IMPORTANT] 
+推荐选择 lint 钩子，让每次 clone 仍能守住质量条。
 
 ## 前置
 
@@ -66,7 +69,7 @@ git push -u origin main
 
 ## 推荐：clone 后激活 hooks
 
-若 `template init` 生成了 `.githooks/`（或带 `prepare` 的 `package.json`），每台新机器仍需激活一次：
+若 `template init` 生成了 `.githooks/`（或带 `prepare` 的 `package.json`），每台新机器仍需执行命令激活一次：
 
 ```bash
 git config core.hooksPath .githooks

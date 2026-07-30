@@ -15,6 +15,7 @@ import {
   runRemoteSet,
 } from './commands/remote.js';
 import { runTemplateInit } from './commands/template.js';
+import { runTemplateSetupHooks } from './commands/template-setup-hooks.js';
 import { runInit, type InitOptions } from './commands/init.js';
 import { runModules, type ModulesOptions } from './commands/modules.js';
 import { runTools, type ToolsOptions } from './commands/tools.js';
@@ -139,6 +140,33 @@ async function main(): Promise<void> {
               topic: opts.topic,
             },
           ),
+        );
+      },
+    );
+  template
+    .command('setup-hooks')
+    .description('Add commit-time lint automation (.githooks + optional CI) to an existing template repo')
+    .option('--dir <path>', 'Template repository directory (default: cwd)')
+    .option('-y, --yes', 'Non-interactive: write files and activate hooks when .git exists')
+    .option('--prepare', 'Also write a minimal package.json with a prepare script (non-interactive)')
+    .option('--no-ci', 'Do not write a CI workflow file')
+    .option('--no-activate', 'Do not run git config core.hooksPath')
+    .action(
+      async (opts: {
+        dir?: string;
+        yes?: boolean;
+        prepare?: boolean;
+        ci?: boolean;
+        activate?: boolean;
+      }) => {
+        process.exit(
+          await runTemplateSetupHooks({
+            dir: opts.dir,
+            yes: Boolean(opts.yes),
+            prepare: Boolean(opts.prepare),
+            noCi: opts.ci === false,
+            noActivate: opts.activate === false,
+          }),
         );
       },
     );

@@ -31,6 +31,14 @@ imwel lint --strict
 - `.githooks/pre-commit` 跑 `imwel lint`
 - CI 工作流（`.github/workflows/imwel-lint.yml` 或 `.gitlab-ci.yml`）跑 `imwel lint --strict`
 
+若脚手架时跳过了该提示，可在模板仓根事后补装：
+
+```bash
+imwel template setup-hooks
+```
+
+会写入相同文件，再**单独**询问是否本地激活（`git config core.hooksPath .githooks`，默认 yes）。非交互：`imwel template setup-hooks -y` 在有 `.git` 时自动激活；`--no-activate` 跳过本机配置，`--no-ci` 跳过 CI，`--prepare` 额外写最小 `package.json`。详见 [命令 — template setup-hooks](../reference/commands.md#imwel-template-setup-hooks)。
+
 Git 默认不会启用 clone 来的 hooks。每台机器 clone 之后：
 
 ```bash
@@ -70,4 +78,4 @@ git push -u origin HEAD
 
 - [添加 rule](./add-rule.md)
 - [建立模板仓库](./create-template-repo.md)
-- [命令 — lint](../reference/commands.md)
+- [命令 — lint / template setup-hooks](../reference/commands.md)

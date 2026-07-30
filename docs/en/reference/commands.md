@@ -10,6 +10,7 @@ All commands below are implemented in the current CLI. Global option: `--lang <l
 | `imwel lint` | Lint a **template** repository |
 | `imwel remote add/list/remove/set` | Manage template remotes |
 | `imwel template init` | Scaffold a new template repository |
+| `imwel template setup-hooks` | Add commit-time lint automation to an existing template repo |
 | `imwel adopt` | Consolidate existing scattered tool rules into canonical artifacts |
 | `imwel init` | Bind the current directory to a template project |
 | `imwel tools` | Add or remove AI coding tools without rebinding |
@@ -77,7 +78,7 @@ Scaffolds a new template repository (manifest, example project, author `AGENTS.m
 
 Interactively (after the optional git bootstrap), `imwel template init` offers to scaffold **commit-time lint automation** into the new repo — **on by default** (decline to skip): a committed `.githooks/pre-commit` hook running `imwel lint`, a CI workflow (`.github/workflows/imwel-lint.yml` when `gh` is detected, or `.gitlab-ci.yml` when `glab` is), local `core.hooksPath` activation, and a `CONTRIBUTING.md` activation note. It then offers an optional minimal `package.json` whose `prepare` script auto-activates the hook after a contributor's `npm install` (zero dependency). Accept the default to get all of them; decline to leave the scaffold unchanged. See [Lint and publish](../how-to/lint-and-publish.md).
 
-### `imwel template init --from-project`
+### `imwel template init --from-project` {#imwel-template-init-from-project}
 
 Cold-start a template repository **from a project that already has AI coding rules** scattered across its tool directories (or freshly drafted+adopted). It harvests your **own** artifacts across all adapters, then generates a structurally valid template skeleton into a unique dir (default `.imwel/generated-templates/<topic>-<timestamp>/`, or `--dir`), so repeated runs never overwrite each other.
 
@@ -85,6 +86,20 @@ Cold-start a template repository **from a project that already has AI coding rul
 - Cross-tool content conflicts are reported and skipped (resolve by hand before publishing).
 - The skeleton contains `.imwel/manifest.yaml` (one `project`), the harvested `rules/`/`skills/`/`agents.md`, and scaffolded author commands (`/imwel-author`, `/imwel-lint`).
 - The deterministic CLI stops at the skeleton; the **semantic** organization (splitting projects, assigning roles, writing README/CONTRIBUTING) is done by the `/imwel-create-template` skill in your AI tool. Validate with `imwel lint` in the generated dir; publishing stays plain `git`.
+
+## `imwel template setup-hooks`
+
+Retrofit **commit-time lint automation** into an existing template repository (same products as the opt-in step in `template init`). Must run in a template root (`.imwel/manifest.yaml`, not a consumer binding).
+
+| Flag | Description |
+|------|-------------|
+| `--dir <path>` | Template repository directory (default: cwd) |
+| `-y` / `--yes` | Non-interactive: write files; activate `core.hooksPath` when `.git` exists |
+| `--prepare` | Also write a minimal `package.json` with a `prepare` script (non-interactive only; interactive still prompts) |
+| `--no-ci` | Do not write a CI workflow file |
+| `--no-activate` | Do not run `git config core.hooksPath` |
+
+Flow: write `.githooks/pre-commit` (never overwrites an existing one), optional CI, and README/CONTRIBUTING notes → **then** local activation as a separate step (interactive confirm default yes; `-y` auto-activates; `--no-activate` skips). See [Lint and publish](../how-to/lint-and-publish.md).
 
 ## `imwel adopt`
 

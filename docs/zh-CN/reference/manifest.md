@@ -45,7 +45,7 @@
 
 某 project 的解析结果 = 根级 `conventions` 与该 project 的 `conventions` 合并（同名键以 project 为准）。
 
-### 项目角色：模块 vs 项目
+### 项目角色：模块 vs 项目 {#项目角色-模块-vs-项目}
 
 `role` 让作者声明**该 project 期望如何被消费**：
 

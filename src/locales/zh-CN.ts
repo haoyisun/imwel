@@ -99,6 +99,26 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
     'lint 自动化文件已写入 {path}（pre-commit hook；未检测到托管 CLI —— 跳过 CI workflow）。在该目录运行 `git init` 后再运行 `git config core.hooksPath .githooks` 激活。',
   'template.init.skipExisting': '已跳过已存在文件（未覆盖）：{path}',
 
+  'template.setupHooks.title': '在此模板仓设置提交时 lint 自动化',
+  'template.setupHooks.prompt.write':
+    '是否将 lint 自动化写入本模板仓（.githooks/pre-commit、可选 CI，以及若存在则追加 README/CONTRIBUTING 说明）？',
+  'template.setupHooks.prompt.activate':
+    '现在本地激活提交时 lint？（将运行 `git config core.hooksPath .githooks`）',
+  'template.setupHooks.writing': '正在向 {path} 写入 lint 自动化...',
+  'template.setupHooks.filesDone':
+    'lint 自动化文件已就绪：pre-commit hook 位于 .githooks/pre-commit{ci}。',
+  'template.setupHooks.filesDoneNoCi':
+    'lint 自动化文件已就绪：pre-commit hook 位于 .githooks/pre-commit（未检测到托管 CLI 或已传 --no-ci —— 跳过 CI workflow）。',
+  'template.setupHooks.activate.noGit':
+    '无 .git 目录 —— 已跳过本地激活。完成 `git init`（或在 clone 中）后运行：`git config core.hooksPath .githooks`',
+  'template.setupHooks.activate.declined':
+    '已跳过本地激活。稍后可运行：`git config core.hooksPath .githooks`（或重新运行本命令 / `imwel lint`）。',
+  'template.setupHooks.activate.skippedByFlag':
+    '已跳过本地激活（--no-activate）。协作者可运行：`git config core.hooksPath .githooks`',
+  'template.setupHooks.activate.already':
+    '本地 core.hooksPath 已指向 .githooks —— 无需更改。',
+  'template.setupHooks.success': '已为 {path} 设置提交时 lint 自动化',
+
   'lint.hookActivation.hint':
     '本模板仓包含 .githooks/，但 core.hooksPath 未设置。运行 `git config core.hooksPath .githooks` 以激活提交时 lint。',
   'lint.hookActivation.activated':

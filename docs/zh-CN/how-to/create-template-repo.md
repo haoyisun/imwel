@@ -20,7 +20,7 @@
 npx @culock/imwel@latest template init --dir ./my-templates --name my-templates --locale zh-CN
 ```
 
-按提示操作即可。若问到 lint 自动化，建议接受：会写入 `.githooks/pre-commit` 跑 `imwel lint`。
+按提示操作即可。若问到 lint 自动化，建议接受：会写入 `.githooks/pre-commit` 跑 `imwel lint`。若当时跳过，可在模板仓根事后运行 `imwel template setup-hooks` 补装。
 
 非交互：
 
@@ -67,15 +67,17 @@ git push -u origin main
 | 脚手架语言不对 | 用 `--locale en` 或 `zh-CN` 重跑。 |
 | clone 后钩子不跑 | 见下方推荐操作。 |
 
-## 推荐：clone 后激活 hooks
 
-若 `template init` 生成了 `.githooks/`（或带 `prepare` 的 `package.json`），每台新机器仍需执行命令激活一次：
-
-```bash
-git config core.hooksPath .githooks
-```
-
-若脚手架写了 `"prepare": "git config core.hooksPath .githooks"`，在模板仓里执行 `npm install` 即可自动完成。
+> [!IMPORTANT]
+> ## 推荐：clone 后激活 hooks
+>
+> 若 `template init` 或 `template setup-hooks` 生成了 `.githooks/`（或带 `prepare` 的 `package.json`），每台新机器仍需执行命令激活一次：
+>
+> ```bash
+> git config core.hooksPath .githooks
+> ```
+>
+> 若脚手架写了 `"prepare": "git config core.hooksPath .githooks"`，在模板仓里执行 `npm install` 即可自动完成。`setup-hooks` 也可在你运行它的机器上激活（交互确认，或 `-y`）。
 
 ## 关联
 

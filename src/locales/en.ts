@@ -100,6 +100,26 @@ export const en = {
     'Lint automation files written to {path} (pre-commit hook; no hosting CLI detected — CI workflow skipped). Run `git init` then `git config core.hooksPath .githooks` there to activate.',
   'template.init.skipExisting': 'Skipped existing file (not overwritten): {path}',
 
+  'template.setupHooks.title': 'Set up commit-time lint automation in this template repository',
+  'template.setupHooks.prompt.write':
+    'Write lint automation into this repo (.githooks/pre-commit, optional CI, and activation notes in README/CONTRIBUTING when present)?',
+  'template.setupHooks.prompt.activate':
+    'Activate commit-time lint locally now? (runs `git config core.hooksPath .githooks`)',
+  'template.setupHooks.writing': 'Writing lint automation files in {path}...',
+  'template.setupHooks.filesDone':
+    'Lint automation files ready: pre-commit hook at .githooks/pre-commit{ci}.',
+  'template.setupHooks.filesDoneNoCi':
+    'Lint automation files ready: pre-commit hook at .githooks/pre-commit (no hosting CLI detected or --no-ci — CI workflow skipped).',
+  'template.setupHooks.activate.noGit':
+    'No .git directory here — skipped local activation. After `git init` (or in a clone), run `git config core.hooksPath .githooks`.',
+  'template.setupHooks.activate.declined':
+    'Skipped local activation. Run `git config core.hooksPath .githooks` when you want commit-time lint, or re-run `imwel template setup-hooks` / `imwel lint`.',
+  'template.setupHooks.activate.skippedByFlag':
+    'Skipped local activation (--no-activate). Contributors can run `git config core.hooksPath .githooks` after clone.',
+  'template.setupHooks.activate.already':
+    'Local core.hooksPath already points at .githooks — nothing to activate.',
+  'template.setupHooks.success': 'Commit-time lint automation is set up for {path}',
+
   'lint.hookActivation.hint':
     'This template repo ships .githooks/ but core.hooksPath is not set. Run `git config core.hooksPath .githooks` to activate commit-time lint.',
   'lint.hookActivation.activated':

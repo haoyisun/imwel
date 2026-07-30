@@ -45,6 +45,7 @@ No account, no signup, no platform to deploy. imwel removes cleanly — just del
 | `imwel push` | Send your local edits back upstream as a branch + PR |
 | `imwel remote add` | Register a template repository to pull from |
 | `imwel template init` | Scaffold a brand-new template repo (with author guide + Cursor slash commands) |
+| `imwel template setup-hooks` | Add commit-time lint hooks (+ optional CI) to an existing template repo |
 | `imwel doctor` | Check that Git and your environment are ready |
 
 Full reference, including `adopt`, `scan`, `modules`, `tools`, `rollback`, `propose`, `lint` → see the [command reference](docs/en/reference/commands.md).

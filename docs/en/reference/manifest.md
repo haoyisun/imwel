@@ -45,7 +45,7 @@ If `conventions` is omitted or partial, missing keys use the defaults above.
 
 Resolved conventions for a project = root `conventions` merged with that project’s `conventions` override (project wins per key).
 
-### Project roles: modules vs projects
+### Project roles: modules vs projects {#project-roles-modules-vs-projects}
 
 `role` lets an author declare **how a project is meant to be consumed**:
 

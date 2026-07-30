@@ -10,6 +10,7 @@
 | `imwel lint` | 检查**模板**仓库 |
 | `imwel remote add/list/remove/set` | 管理模板远程源 |
 | `imwel template init` | 脚手架生成新模板仓库 |
+| `imwel template setup-hooks` | 为已有模板仓补装提交时 lint 自动化 |
 | `imwel adopt` | 将项目中散落的工具规则归并为 canonical Artifact |
 | `imwel init` | 将当前目录绑定到模板 project |
 | `imwel tools` | 无需换绑即可增加或移除 AI 编程工具 |
@@ -77,7 +78,7 @@
 
 交互式下（在可选的 git 初始化之后），`imwel template init` 会提供在新仓中脚手架**提交时 lint 自动化** —— **默认开启**（选择不启用则跳过）：一个提交进仓、运行 `imwel lint` 的 `.githooks/pre-commit` hook、一个 CI workflow（检测到 `gh` 写 `.github/workflows/imwel-lint.yml`，检测到 `glab` 写 `.gitlab-ci.yml`）、本地 `core.hooksPath` 激活，以及 `CONTRIBUTING.md` 激活说明。随后还可选生成一个最小 `package.json`，其 `prepare` 脚本会在贡献者 `npm install` 后自动激活 hook（零依赖）。接受默认即全部写入；选择不启用则脚手架保持原样。见 [Lint 与发布](../how-to/lint-and-publish.md)。
 
-### `imwel template init --from-project`
+### `imwel template init --from-project` {#imwel-template-init-from-project}
 
 从一个**已经积累了 AI 编码规则**（散落在各工具目录，或刚 extract+adopt 完）的项目冷启动出模板仓。它跨所有适配器收割你**自己**的制品，生成一个结构合法的模板骨架到唯一目录（默认 `.imwel/generated-templates/<主题>-<时间戳>/`，或用 `--dir`），多次运行互不覆盖。
 
@@ -85,6 +86,20 @@
 - 跨工具内容冲突会被报告并跳过（发布前请手动解决）。
 - 骨架含 `.imwel/manifest.yaml`（一个 `project`）、收割到的 `rules/`/`skills/`/`agents.md`，以及脚手架作者命令（`/imwel-author`、`/imwel-lint`）。
 - 确定性 CLI 只做到骨架；**语义**组织（拆 project、指定 role、写 README/CONTRIBUTING）由 AI 工具里的 `/imwel-create-template` skill 完成。在生成目录运行 `imwel lint` 校验；发布仍走普通 `git`。
+
+## `imwel template setup-hooks`
+
+向**已有**模板仓补装**提交时 lint 自动化**（与 `template init` 中的 opt-in 步骤产物相同）。须在模板仓根运行（有 `.imwel/manifest.yaml`，非消费者 binding）。
+
+| 选项 | 说明 |
+|------|------|
+| `--dir <path>` | 模板仓目录（默认：当前目录） |
+| `-y` / `--yes` | 非交互：写文件；有 `.git` 时激活 `core.hooksPath` |
+| `--prepare` | 额外写入含 `prepare` 脚本的最小 `package.json`（非交互；交互模式仍会提问） |
+| `--no-ci` | 不写 CI workflow 文件 |
+| `--no-activate` | 不执行 `git config core.hooksPath` |
+
+流程：写入 `.githooks/pre-commit`（不覆盖已有）、可选 CI、以及 README/CONTRIBUTING 说明 → **再**单独处理本机激活（交互确认默认 yes；`-y` 自动激活；`--no-activate` 跳过）。见 [Lint 与发布](../how-to/lint-and-publish.md)。
 
 ## `imwel adopt`
 

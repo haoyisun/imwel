@@ -31,6 +31,14 @@ imwel lint --strict
 - `.githooks/pre-commit` running `imwel lint`
 - CI workflow (`.github/workflows/imwel-lint.yml` or `.gitlab-ci.yml`) with `imwel lint --strict`
 
+If you skipped that prompt when scaffolding, retrofit later from the template root:
+
+```bash
+imwel template setup-hooks
+```
+
+That writes the same files, then **separately** asks whether to activate locally (`git config core.hooksPath .githooks`, default yes). Non-interactive: `imwel template setup-hooks -y` auto-activates when `.git` exists; use `--no-activate` to skip, `--no-ci` to skip CI, `--prepare` to also write a minimal `package.json`. See [Commands — template setup-hooks](../reference/commands.md#imwel-template-setup-hooks).
+
 Git does not enable cloned hooks by default. After clone on each machine:
 
 ```bash
@@ -70,4 +78,4 @@ Open a PR/MR. After merge, consumers run `imwel sync`.
 
 - [Add a rule](./add-rule.md)
 - [Create a template repo](./create-template-repo.md)
-- [Commands — lint](../reference/commands.md)
+- [Commands — lint / template setup-hooks](../reference/commands.md)

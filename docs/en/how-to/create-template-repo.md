@@ -20,7 +20,7 @@ Want one Git repo your team treats as the source of truth for AI rules and skill
 npx @culock/imwel@latest template init --dir ./my-templates --name my-templates --locale en
 ```
 
-Follow prompts. Defaults are fine for a first repo. When asked about lint automation, accept if you want a `.githooks/pre-commit` that runs `imwel lint` (recommended for teams).
+Follow prompts. Defaults are fine for a first repo. When asked about lint automation, accept if you want a `.githooks/pre-commit` that runs `imwel lint` (recommended for teams). If you skip it now, you can add the same automation later with `imwel template setup-hooks` in the template root.
 
 Non-interactive:
 
@@ -67,15 +67,16 @@ Publishing is **not** an imwel command — it is normal `git push`.
 | Scaffold locale wrong | Re-run with `--locale zh-CN` or `en`. |
 | Hooks do not run after clone | See recommended follow-up below. |
 
-## Recommended after clone (hooks)
-
-If `template init` created `.githooks/` (or `package.json` with a `prepare` script), each new machine still needs hooks activated once:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-If the scaffold added `"prepare": "git config core.hooksPath .githooks"`, `npm install` in the template repo does this for you.
+> [!IMPORTANT]
+> ## Recommended after clone (hooks)
+> 
+> If `template init` or `template setup-hooks` created `.githooks/` (or `package.json` with a `prepare` script), each new machine still needs hooks activated once:
+> 
+> ```bash
+> git config core.hooksPath .githooks
+> ```
+>
+> If the scaffold added `"prepare": "git config core.hooksPath .githooks"`, `npm install` in the template repo does this for you. `setup-hooks` can also activate on the machine where you run it (interactive confirm, or `-y`).
 
 ## Related
 

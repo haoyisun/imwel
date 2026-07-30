@@ -45,6 +45,7 @@ npx @culock/imwel@latest template init
 | `imwel push` | 把本地改动以分支 + PR 的形式回推上游 |
 | `imwel remote add` | 注册一个要拉取的模板仓库 |
 | `imwel template init` | 脚手架生成全新模板仓（含作者指南 + Cursor slash 命令） |
+| `imwel template setup-hooks` | 为已有模板仓补装提交时 lint hooks（及可选 CI） |
 | `imwel doctor` | 检查 Git 与运行环境是否就绪 |
 
 完整参考，含 `adopt`、`scan`、`modules`、`tools`、`rollback`、`propose`、`lint` → 见[命令参考](docs/zh-CN/reference/commands.md)。

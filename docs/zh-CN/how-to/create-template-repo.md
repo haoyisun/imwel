@@ -4,8 +4,8 @@
 
 **你将得到：** 含 `.imwel/manifest.yaml` 与示例项目的模板仓。
 
-[!IMPORTANT] 
-推荐选择 lint 钩子，让每次 clone 仍能守住质量条。
+> [!IMPORTANT]
+> 推荐选择 lint 钩子，让每次 clone 仍能守住质量条。
 
 ## 前置
 

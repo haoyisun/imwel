@@ -4,9 +4,8 @@ Want one Git repo your team treats as the source of truth for AI rules and skill
 
 **What you get:** an ordinary Git repo with `.imwel/manifest.yaml`, an example project.
 
-[!IMPORTANT] 
-Recommend choice lint hooks so every clone keeps the quality bar.
-
+> [!IMPORTANT]
+> Recommend choice lint hooks so every clone keeps the quality bar.
 
 ## Prerequisites
 

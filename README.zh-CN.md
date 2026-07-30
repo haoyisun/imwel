@@ -33,6 +33,16 @@ npx @culock/imwel@latest template init
 
 然后看[建立模板仓库](docs/zh-CN/how-to/create-template-repo.md)。
 
+**从已有项目起草规则**（规则很少或还没有）：
+
+```bash
+cd your-app
+imwel scan && imwel skill install
+# 然后在 Cursor（或其他支持的工具）里运行 /imwel-extract
+```
+
+然后看[从代码库起草规则](docs/zh-CN/how-to/draft-rules-from-codebase.md) → [归并已有规则](docs/zh-CN/how-to/adopt-existing-rules.md)。要收割成可分享模板：`imwel template init --from-project`。
+
 无需账号、无需注册、无需部署平台。imwel 卸载干净 —— 删掉 `.imwel/` 目录即可。规则始终留在你自己的 Git 仓里。
 
 ## 核心命令
@@ -108,6 +118,8 @@ npm run docs:build    # 构建站点
 |------|------|
 | 概览 | [docs/zh-CN/index.md](docs/zh-CN/index.md) |
 | 5 分钟快速上手 | [docs/zh-CN/tutorials/quick-start.md](docs/zh-CN/tutorials/quick-start.md) |
+| 从代码库起草规则 | [docs/zh-CN/how-to/draft-rules-from-codebase.md](docs/zh-CN/how-to/draft-rules-from-codebase.md) |
+| 归并已有规则 | [docs/zh-CN/how-to/adopt-existing-rules.md](docs/zh-CN/how-to/adopt-existing-rules.md) |
 | 建立模板仓库 | [docs/zh-CN/how-to/create-template-repo.md](docs/zh-CN/how-to/create-template-repo.md) |
 | 为 Cursor 消费渲染 | [docs/zh-CN/how-to/consume-for-cursor.md](docs/zh-CN/how-to/consume-for-cursor.md) |
 | 为 Claude Code 消费渲染 | [docs/zh-CN/how-to/consume-for-claude-code.md](docs/zh-CN/how-to/consume-for-claude-code.md) |

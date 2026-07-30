@@ -33,6 +33,16 @@ npx @culock/imwel@latest template init
 
 Then follow [Create a template repo](docs/en/how-to/create-template-repo.md).
 
+**Draft rules from an existing project** (few or no rules yet):
+
+```bash
+cd your-app
+imwel scan && imwel skill install
+# then run /imwel-extract in Cursor (or another supported tool)
+```
+
+Then follow [Draft rules from a codebase](docs/en/how-to/draft-rules-from-codebase.md) → [Adopt existing rules](docs/en/how-to/adopt-existing-rules.md). To harvest into a shareable template: `imwel template init --from-project`.
+
 No account, no signup, no platform to deploy. imwel removes cleanly — just delete the `.imwel/` directory. Your rules stay in your own Git repo.
 
 ## Core commands
@@ -108,6 +118,8 @@ Docs follow [Diátaxis](https://diataxis.fr/) (Tutorials / How-to / Reference / 
 |-------|------|
 | Overview | [docs/en/index.md](docs/en/index.md) |
 | Quick Start (5 min) | [docs/en/tutorials/quick-start.md](docs/en/tutorials/quick-start.md) |
+| Draft rules from a codebase | [docs/en/how-to/draft-rules-from-codebase.md](docs/en/how-to/draft-rules-from-codebase.md) |
+| Adopt existing rules | [docs/en/how-to/adopt-existing-rules.md](docs/en/how-to/adopt-existing-rules.md) |
 | Create a template repo | [docs/en/how-to/create-template-repo.md](docs/en/how-to/create-template-repo.md) |
 | Consume for Cursor | [docs/en/how-to/consume-for-cursor.md](docs/en/how-to/consume-for-cursor.md) |
 | Consume for Claude Code | [docs/en/how-to/consume-for-claude-code.md](docs/en/how-to/consume-for-claude-code.md) |

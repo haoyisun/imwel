@@ -92,10 +92,11 @@ npx @culock/imwel@latest init -y --remote my-templates --branch main --project e
 
 - 之后本地手改不会被静默覆盖；会先检测漂移。见[同步与处理漂移](../how-to/sync-and-drift.md)。
 - 本流程用**本地路径**远程，首胜不依赖 GitHub。团队远程见[为 Cursor 消费渲染](../how-to/consume-for-cursor.md)。
-## 下一步（三选一）
+## 下一步（选一条）
 
 | 目标 | 指南 |
 |------|------|
 | 在模板里加自己的 rule | [添加 rule](../how-to/add-rule.md) |
+| 从已有代码库起草规则 | [从代码库起草规则](../how-to/draft-rules-from-codebase.md) |
 | 把真实项目绑到团队模板 | [为 Cursor 消费渲染](../how-to/consume-for-cursor.md) 或 [Claude Code](../how-to/consume-for-claude-code.md) |
 | 经 PR 回推上游 | [经 PR 回推上游](../how-to/push-via-pr.md) |

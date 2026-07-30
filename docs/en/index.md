@@ -15,6 +15,8 @@ In about five minutes you can scaffold a local template and see rules land in Cu
 | I want to… | Go to |
 |------------|--------|
 | Install Node / Git / the CLI | [Install](./how-to/install.md) |
+| Draft rules/skills from an existing codebase | [Draft rules from a codebase](./how-to/draft-rules-from-codebase.md) |
+| Try reviewed drafts in my AI tools | [Adopt existing rules](./how-to/adopt-existing-rules.md) |
 | Publish rules for the team | [Create a template repo](./how-to/create-template-repo.md) |
 | Use a team template in Cursor | [Consume for Cursor](./how-to/consume-for-cursor.md) |
 | Use a team template in Claude Code | [Consume for Claude Code](./how-to/consume-for-claude-code.md) |

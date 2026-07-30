@@ -15,6 +15,8 @@ Git 原生 CLI，用于分发 AI 编程规则、技能与 agent 说明——**�
 | 我想… | 去这里 |
 |-------|--------|
 | 安装 Node / Git / CLI | [安装](./how-to/install.md) |
+| 从已有代码库起草 rule / skill | [从代码库起草规则](./how-to/draft-rules-from-codebase.md) |
+| 把已审阅草稿写进 AI 工具试用 | [归并已有规则](./how-to/adopt-existing-rules.md) |
 | 为团队发布规则 | [建立模板仓库](./how-to/create-template-repo.md) |
 | 在 Cursor 里用团队模板 | [为 Cursor 消费渲染](./how-to/consume-for-cursor.md) |
 | 在 Claude Code 里用团队模板 | [为 Claude Code 消费渲染](./how-to/consume-for-claude-code.md) |

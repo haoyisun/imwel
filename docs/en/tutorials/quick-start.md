@@ -98,5 +98,6 @@ You just distributed a Git-native Artifact into a real AI tool path — that is 
 | Goal | Guide |
 |------|--------|
 | Add your own rule to the template | [Add a rule](../how-to/add-rule.md) |
+| Draft rules from an existing codebase | [Draft rules from a codebase](../how-to/draft-rules-from-codebase.md) |
 | Point a real project at a team template | [Consume for Cursor](../how-to/consume-for-cursor.md) or [Claude Code](../how-to/consume-for-claude-code.md) |
 | Send edits upstream via PR | [Push via PR](../how-to/push-via-pr.md) |

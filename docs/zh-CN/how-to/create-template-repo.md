@@ -83,6 +83,7 @@ git push -u origin main
 
 ## 关联
 
+- 项目里已有规则（或草稿）？见[从代码库起草规则](./draft-rules-from-codebase.md)，再用 `imwel template init --from-project` 收割
 - [添加 rule](./add-rule.md) · [添加 skill](./add-skill.md)
 - [Lint 与发布](./lint-and-publish.md)
 - [Manifest 参考](../reference/manifest.md)

@@ -81,6 +81,7 @@ Publishing is **not** an imwel command — it is normal `git push`.
 
 ## Related
 
+- Already have rules (or drafts) in a project? [Draft rules from a codebase](./draft-rules-from-codebase.md), then harvest with `imwel template init --from-project`
 - [Add a rule](./add-rule.md) · [Add a skill](./add-skill.md)
 - [Lint and publish](./lint-and-publish.md)
 - [Manifest reference](../reference/manifest.md)

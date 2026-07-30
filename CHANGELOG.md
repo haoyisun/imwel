@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Docs discoverability: the existing-project draft loop (`scan` → `/imwel-extract` → `adopt` → optional `template init --from-project`) is now linked from the docs home “What do you want to do?” tables, README Quickstart + Documentation tables, Quick Start “Next” steps, and Create-template-repo related links (en + zh-CN).
 - Docs site restructured around [Diátaxis](https://diataxis.fr/): `tutorials/` (5-minute Quick Start), `how-to/` (task recipes including Cursor/Claude Code consume, add rule/skill, push via PR), `reference/`, and `explanation/`. Removed the overlapping `guide/usage` + consumer/author path trio. READMEs, `usage-doc-sync` rule, and the docs checklist now point at the new paths.
 
 ### Added

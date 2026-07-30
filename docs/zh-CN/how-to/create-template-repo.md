@@ -69,15 +69,17 @@ git push -u origin main
 
 
 > [!IMPORTANT]
-> ## 推荐：clone 后激活 hooks
+> **🔧 推荐：Clone 后必须激活 Git Hooks**
 >
-> 若 `template init` 或 `template setup-hooks` 生成了 `.githooks/`（或带 `prepare` 的 `package.json`），每台新机器仍需执行命令激活一次：
+> 若 `template init` 或 `template setup-hooks` 生成了 `.githubs/` 目录（或包含 `prepare` 的 `package.json`），**每台新机器**仍需手动执行一次激活命令：
 >
 > ```bash
-> git config core.hooksPath .githooks
+> git config core.hooksPath .githubs
 > ```
 >
-> 若脚手架写了 `"prepare": "git config core.hooksPath .githooks"`，在模板仓里执行 `npm install` 即可自动完成。`setup-hooks` 也可在你运行它的机器上激活（交互确认，或 `-y`）。
+> **💡 自动化方案（推荐）：**
+> - 若脚手架在 `package.json` 中配置了 `"prepare": "git config core.hooksPath .githubs"`，在模板仓根目录执行 `npm install` 即可自动完成激活。
+> - 运行 `setup-hooks`（添加 `-y` 参数可跳过交互确认）也能在当前机器上完成激活。
 
 ## 关联
 

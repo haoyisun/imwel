@@ -68,15 +68,16 @@ Publishing is **not** an imwel command — it is normal `git push`.
 | Hooks do not run after clone | See recommended follow-up below. |
 
 > [!IMPORTANT]
-> ## Recommended after clone (hooks)
+> **🔧 Recommended after clone (hooks)**
 > 
-> If `template init` or `template setup-hooks` created `.githooks/` (or `package.json` with a `prepare` script), each new machine still needs hooks activated once:
+> If `template init` or `template setup-hooks` created `.githooks/` (or `package.json` with a `prepare` script), **each new machine** still needs hooks activated once:
 > 
 > ```bash
 > git config core.hooksPath .githooks
 > ```
->
-> If the scaffold added `"prepare": "git config core.hooksPath .githooks"`, `npm install` in the template repo does this for you. `setup-hooks` can also activate on the machine where you run it (interactive confirm, or `-y`).
+> **💡 自动化方案（推荐）：**
+> - If the scaffold added `"prepare": "git config core.hooksPath .githooks"`, `npm install` in the template repo does this for you. 
+> - `setup-hooks` can also activate on the machine where you run it (interactive confirm, or `-y`).
 
 ## Related
 

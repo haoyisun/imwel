@@ -1,4 +1,5 @@
 import * as p from '@clack/prompts';
+import { getAdapter } from '../adapters/index.js';
 import { readBinding } from '../core/binding.js';
 import { error as outputError, info, success, warn } from '../core/cli-output.js';
 import {
@@ -6,6 +7,8 @@ import {
   collectEditCandidatesWithSkipped,
   collectProposalCandidatesWithSkipped,
   executePush,
+  FromToolUnavailableError,
+  type CollectedPushCandidates,
   type SkippedPushInput,
 } from '../core/push.js';
 import { exitIfMissingFlags, isInteractiveStdin } from '../core/cli-flags.js';
@@ -23,6 +26,7 @@ export interface PushOptions {
   yes?: boolean;
   all?: boolean;
   message?: string;
+  from?: string;
 }
 
 function useNonInteractive(opts: PushOptions): boolean {
@@ -54,6 +58,61 @@ function candidateId(candidate: {
   return `${candidate.remote}\u0000${candidate.project}\u0000${candidate.canonicalPath}`;
 }
 
+async function collectEditsResolvingConflicts(
+  projectDir: string,
+  binding: NonNullable<Awaited<ReturnType<typeof readBinding>>>,
+  proposals: Awaited<ReturnType<typeof readPendingProposals>>,
+  opts: PushOptions,
+  nonInteractive: boolean,
+): Promise<CollectedPushCandidates | null> {
+  let fromTool = opts.from;
+  if (fromTool) {
+    if (!binding.tools.includes(fromTool) || !getAdapter(fromTool)) {
+      outputError(t('push.from.unknown', { tool: fromTool }));
+      return null;
+    }
+  }
+
+  for (;;) {
+    try {
+      return await collectEditCandidatesWithSkipped(projectDir, binding, proposals, {
+        fromTool,
+      });
+    } catch (error) {
+      if (error instanceof FromToolUnavailableError) {
+        outputError(
+          t('push.from.unavailable', {
+            tool: error.tool,
+            path: error.sourcePath,
+          }),
+        );
+        return null;
+      }
+      if (!(error instanceof CanonicalConflictError)) {
+        throw error;
+      }
+      if (nonInteractive) {
+        outputError(
+          t('push.canonicalConflict', {
+            path: error.sourcePath,
+            tools: error.tools.join(', '),
+          }),
+        );
+        return null;
+      }
+      const selected = await p.select({
+        message: t('push.canonicalConflict.pick', { path: error.sourcePath }),
+        options: error.tools.map((tool) => ({ value: tool, label: tool })),
+      });
+      if (p.isCancel(selected)) {
+        info(t('common.cancelled'));
+        return null;
+      }
+      fromTool = String(selected);
+    }
+  }
+}
+
 export async function runPush(opts: PushOptions = {}): Promise<number> {
   p.intro(t('push.title'));
   const projectDir = process.cwd();
@@ -66,20 +125,17 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
   const spinner = p.spinner();
   spinner.start(t('push.fetching'));
   const proposals = await readPendingProposals(projectDir);
-  let editResult;
-  try {
-    editResult = await collectEditCandidatesWithSkipped(projectDir, binding, proposals);
-  } catch (error) {
-    if (error instanceof CanonicalConflictError) {
-      outputError(
-        t('push.canonicalConflict', {
-          path: error.sourcePath,
-          tools: error.tools.join(', '),
-        }),
-      );
-      return 1;
-    }
-    throw error;
+  const nonInteractive = useNonInteractive(opts);
+  const editResult = await collectEditsResolvingConflicts(
+    projectDir,
+    binding,
+    proposals,
+    opts,
+    nonInteractive,
+  );
+  if (!editResult) {
+    spinner.stop(t('common.done'));
+    return 1;
   }
   const proposalResult = await collectProposalCandidatesWithSkipped(projectDir, proposals);
   spinner.stop(t('common.done'));
@@ -90,7 +146,6 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
     (item): item is SkippedPushInput & { trackingIdentity: string } =>
       item.kind === 'proposal' && Boolean(item.trackingIdentity),
   );
-  const nonInteractive = useNonInteractive(opts);
   const missingFailure = nonInteractive && missingTracking.length > 0;
   let nextProposals = proposals;
   if (missingTracking.length > 0) {
@@ -136,6 +191,14 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
     } else {
       info(t('push.valid.entry', { path: candidate.sourcePath }));
     }
+    if (candidate.authoringTools && candidate.authoringTools.length > 0) {
+      info(
+        t('push.authoring', {
+          path: candidate.sourcePath,
+          tools: candidate.authoringTools.join(', '),
+        }),
+      );
+    }
   }
 
   let selected: string[];
@@ -165,6 +228,37 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
         return 1;
       }
     }
+  } else if (all.length === 1) {
+    const only = all[0]!;
+    selected = [candidateId(only)];
+    const accompanying =
+      only.bundleFiles?.filter((f) => f.relativePath !== 'SKILL.md').length ?? 0;
+    const confirmMessage =
+      only.type === 'skill' && accompanying > 0
+        ? t('push.confirm.singleSkillBundle', {
+            path: only.canonicalPath,
+            count: accompanying,
+          })
+        : t('push.confirm.single', { path: only.canonicalPath });
+    if (!opts.yes) {
+      const confirm = await p.confirm({
+        message: confirmMessage,
+        initialValue: true,
+      });
+      if (p.isCancel(confirm) || !confirm) {
+        info(t('common.cancelled'));
+        return 1;
+      }
+    }
+    const msg = await p.text({
+      message: t('push.prompt.message'),
+      defaultValue: 'chore: update imwel artifacts',
+    });
+    if (p.isCancel(msg)) {
+      info(t('common.cancelled'));
+      return 1;
+    }
+    message = String(msg);
   } else {
     const picked = (await p.multiselect({
       message: t('push.prompt.select'),

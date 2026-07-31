@@ -333,15 +333,27 @@ export function markSuccessfulPushes(
   );
 }
 
+/** Normalize artifact identity for graduation (skills are directory paths). */
+export function contributionGraduationKey(
+  project: string,
+  type: ArtifactType,
+  sourcePath: string,
+): string {
+  let normalized = normalizePath(sourcePath).replace(/\/$/, '');
+  if (type === 'skill' && normalized.endsWith('/SKILL.md')) {
+    normalized = normalized.slice(0, -'/SKILL.md'.length);
+  }
+  return `${project}\u0000${type}\u0000${normalized}`;
+}
+
 export function graduateProjectContributions(
   proposals: PendingProposal[],
   remote: string,
   managed: ReadonlyArray<{ project: string; type: ArtifactType; sourcePath: string }>,
 ): PendingProposal[] {
   const installed = new Set(
-    managed.map(
-      (artifact) =>
-        `${artifact.project}\u0000${artifact.type}\u0000${normalizePath(artifact.sourcePath)}`,
+    managed.map((artifact) =>
+      contributionGraduationKey(artifact.project, artifact.type, artifact.sourcePath),
     ),
   );
   return proposals.filter(
@@ -349,7 +361,24 @@ export function graduateProjectContributions(
       proposal.targetRole === 'shared' ||
       proposal.remote !== remote ||
       !installed.has(
-        `${proposal.project}\u0000${proposal.type}\u0000${normalizePath(proposal.canonicalPath)}`,
+        contributionGraduationKey(proposal.project, proposal.type, proposal.canonicalPath),
       ),
+  );
+}
+
+/** After a successful sync, advance retained proposal baselines to the synced tip. */
+export function refreshProposalBaselinesAfterSync(
+  proposals: PendingProposal[],
+  remote: string,
+  baseline: { baseBranch: string; baseCommit: string },
+): PendingProposal[] {
+  return proposals.map((proposal) =>
+    proposal.remote === remote
+      ? {
+          ...proposal,
+          baseBranch: baseline.baseBranch,
+          baseCommit: baseline.baseCommit,
+        }
+      : proposal,
   );
 }

@@ -11,7 +11,18 @@ import {
   contributionTargetIdentity,
   type PendingProposal,
 } from './propose.js';
-import { showFileAtCommit, normalizeLineEndings } from './git.js';
+import { normalizeLineEndings } from './git.js';
+import {
+  artifactMatchesAtCommit,
+  matchesRemoteHead,
+} from './push.js';
+
+export type ContributionLifecycleStatus =
+  | 'pending'
+  | 'pushed'
+  | 'clean'
+  | 'modified'
+  | 'missing';
 
 export interface ProposeCandidate {
   path: string;
@@ -24,7 +35,7 @@ export interface ProposeCandidate {
   canonicalContent: string;
   targetOverrides?: Record<string, unknown>;
   optional: boolean;
-  status: 'clean' | 'modified' | 'pushed' | 'missing';
+  status: ContributionLifecycleStatus;
   conflictTools?: string[];
 }
 
@@ -102,7 +113,7 @@ async function proposalStatus(
     }
   }
   if (!proposal.pushed) {
-    return 'clean';
+    return 'pending';
   }
   let parseFiles = files;
   if (discovered) {
@@ -117,16 +128,35 @@ async function proposalStatus(
       parseFiles = matchingArtifact.files;
     }
   }
-  const current = adapter.parseExisting(parseFiles).canonicalContent;
-  const pushed = await showFileAtCommit(
-    proposal.pushed.commit,
-    path.posix.join(normalized(projectPath), proposal.canonicalPath),
-    { cwd: cacheDir },
+  const parsed = adapter.parseExisting(parseFiles);
+  const bundleFiles =
+    proposal.type === 'skill'
+      ? parsed.bundleFiles ?? [
+          { relativePath: 'SKILL.md', content: parsed.canonicalContent },
+        ]
+      : parsed.bundleFiles;
+  const onRemote = await matchesRemoteHead(
+    cacheDir,
+    proposal.baseBranch ?? 'main',
+    projectPath,
+    proposal.canonicalPath,
+    proposal.type,
+    parsed.canonicalContent,
+    bundleFiles,
   );
-  if (
-    pushed !== null &&
-    normalizeLineEndings(pushed).trimEnd() === normalizeLineEndings(current).trimEnd()
-  ) {
+  if (onRemote) {
+    return 'clean';
+  }
+  const matchesPush = await artifactMatchesAtCommit(
+    cacheDir,
+    proposal.pushed.commit,
+    projectPath,
+    proposal.canonicalPath,
+    proposal.type,
+    parsed.canonicalContent,
+    bundleFiles,
+  );
+  if (matchesPush) {
     return 'pushed';
   }
   return 'modified';

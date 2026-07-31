@@ -293,6 +293,7 @@ async function main(): Promise<void> {
     .option('-y, --yes', 'Skip confirmation prompts')
     .option('--all', 'Select all push candidates')
     .option('--message <msg>', 'Commit message')
+    .option('--from <tool>', 'Author reverse-render from this tool only (dirty-wins override)')
     .action(async (opts: PushOptions) => {
       process.exit(await runPush(opts));
     });

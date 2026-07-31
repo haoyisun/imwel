@@ -26,12 +26,34 @@ export interface PushCandidate {
   targetOverrides?: Record<string, Record<string, unknown>>;
   /** For `type=skill`: full bundle (SKILL.md + accompanying files) to write upstream. */
   bundleFiles?: BundleFile[];
+  /** Tools whose dirty (or `--from`) paths authored this edit candidate. */
+  authoringTools?: string[];
   projectPath: string;
   remote: string;
   project: string;
   kind: 'binding' | 'proposal' | 'module-contribution';
   trackingIdentity?: string;
 }
+
+export interface CollectEditOptions {
+  /** Force a single authoring tool for all edit candidates (`imwel push --from`). */
+  fromTool?: string;
+}
+
+export interface CollectEditDependencies {
+  listDirtyPaths(projectDir: string, paths: string[]): Promise<string[]>;
+  ensureRemoteCache(
+    remote: string,
+    options: { force?: boolean },
+  ): Promise<string>;
+  readManifest(cacheDir: string): Promise<Awaited<ReturnType<typeof readManifest>>>;
+}
+
+const defaultCollectEditDependencies: CollectEditDependencies = {
+  listDirtyPaths,
+  ensureRemoteCache,
+  readManifest,
+};
 
 export interface SkippedPushInput {
   sourcePath: string;
@@ -68,27 +90,180 @@ export class CanonicalConflictError extends Error {
   }
 }
 
+export class FromToolUnavailableError extends Error {
+  readonly sourcePath: string;
+  readonly tool: string;
+
+  constructor(sourcePath: string, tool: string) {
+    super(
+      `Tool "${tool}" has no installed paths for "${sourcePath}"; cannot use --from ${tool}`,
+    );
+    this.name = 'FromToolUnavailableError';
+    this.sourcePath = sourcePath;
+    this.tool = tool;
+  }
+}
+
+/** Normalize content before cross-tool equality checks (line endings + trailing whitespace). */
+export function normalizeComparableContent(content: string): string {
+  return content.replace(/\r\n/g, '\n').trimEnd();
+}
+
+/**
+ * Resolve which bound tools may author reverse-render for an edited artifact.
+ * Default: tools with at least one dirty installed path. `--from` overrides to a single tool.
+ */
+export function resolveAuthoringTools(
+  toolsWithPaths: string[],
+  installedPaths: Record<string, string[]>,
+  dirty: ReadonlySet<string>,
+  fromTool?: string,
+): string[] {
+  if (fromTool) {
+    if (!toolsWithPaths.includes(fromTool)) {
+      return [];
+    }
+    return [fromTool];
+  }
+  return toolsWithPaths.filter((tool) =>
+    (installedPaths[tool] ?? []).some((installedPath) => dirty.has(installedPath)),
+  );
+}
+
+function posixJoin(...parts: string[]): string {
+  return path.posix.join(
+    ...parts.map((part) => part.replace(/\\/g, '/').replace(/^\.\//, '')),
+  );
+}
+
+/** Repo-relative path for a skill bundle file under a project directory. */
+export function skillBundleRepoPath(
+  projectPath: string,
+  canonicalPath: string,
+  relativePath = 'SKILL.md',
+): string {
+  return posixJoin(
+    projectPath,
+    canonicalPath.replace(/\/$/, ''),
+    relativePath,
+  );
+}
+
+function skillBundleFilesForCompare(
+  canonicalContent: string,
+  bundleFiles?: BundleFile[],
+): BundleFile[] {
+  if (bundleFiles && bundleFiles.length > 0) {
+    return bundleFiles;
+  }
+  return [{ relativePath: 'SKILL.md', content: canonicalContent }];
+}
+
+/**
+ * Compare reverse-rendered artifact content to a Git tree at `commit`.
+ * Skills are compared as directory bundles (`…/SKILL.md` + optional companions),
+ * never as a file at the skill directory path itself.
+ */
+export async function artifactMatchesAtCommit(
+  cacheDir: string,
+  commit: string,
+  projectPath: string,
+  canonicalPath: string,
+  type: ManagedArtifact['type'],
+  canonicalContent: string,
+  bundleFiles?: BundleFile[],
+): Promise<boolean> {
+  const { showFileAtCommit } = await import('./git.js');
+  if (type === 'skill') {
+    for (const file of skillBundleFilesForCompare(canonicalContent, bundleFiles)) {
+      const atCommit = await showFileAtCommit(
+        commit,
+        skillBundleRepoPath(projectPath, canonicalPath, file.relativePath),
+        { cwd: cacheDir },
+      );
+      if (
+        atCommit === null ||
+        normalizeComparableContent(atCommit) !== normalizeComparableContent(file.content)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+  const atCommit = await showFileAtCommit(
+    commit,
+    posixJoin(projectPath, canonicalPath),
+    { cwd: cacheDir },
+  );
+  return (
+    atCommit !== null &&
+    normalizeComparableContent(atCommit) === normalizeComparableContent(canonicalContent)
+  );
+}
+
 export async function matchesPushedCommit(
   cacheDir: string,
   projectPath: string,
-  proposal: Pick<PendingProposal, 'canonicalPath' | 'pushed'>,
+  proposal: Pick<PendingProposal, 'canonicalPath' | 'pushed' | 'type'>,
   canonicalContent: string,
+  bundleFiles?: BundleFile[],
 ): Promise<boolean> {
   if (!proposal.pushed) {
     return false;
   }
-  const previouslyPushed = await import('./git.js').then((git) =>
-    git.showFileAtCommit(
-      proposal.pushed!.commit,
-      path.posix.join(projectPath.replace(/\\/g, '/'), proposal.canonicalPath),
-      { cwd: cacheDir },
-    ),
+  return artifactMatchesAtCommit(
+    cacheDir,
+    proposal.pushed.commit,
+    projectPath,
+    proposal.canonicalPath,
+    proposal.type,
+    canonicalContent,
+    bundleFiles,
   );
-  return (
-    previouslyPushed !== null &&
-    previouslyPushed.replace(/\r\n/g, '\n').trimEnd() ===
-      canonicalContent.replace(/\r\n/g, '\n').trimEnd()
+}
+
+/** True when local reverse-render already matches the remote branch tip (no push needed). */
+export async function matchesRemoteHead(
+  cacheDir: string,
+  branch: string,
+  projectPath: string,
+  canonicalPath: string,
+  type: ManagedArtifact['type'],
+  canonicalContent: string,
+  bundleFiles?: BundleFile[],
+): Promise<boolean> {
+  let head: string;
+  try {
+    head = await remoteBranchCommit(cacheDir, branch);
+  } catch {
+    return false;
+  }
+  return artifactMatchesAtCommit(
+    cacheDir,
+    head,
+    projectPath,
+    canonicalPath,
+    type,
+    canonicalContent,
+    bundleFiles,
   );
+}
+
+/** Ensure a skill root path is a directory (replace a mistaken file at that path). */
+export async function prepareSkillCacheRoot(skillRootAbs: string): Promise<void> {
+  try {
+    const stat = await fs.lstat(skillRootAbs);
+    if (stat.isFile()) {
+      await fs.unlink(skillRootAbs);
+    } else if (stat.isDirectory()) {
+      return;
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+  await fs.mkdir(skillRootAbs, { recursive: true });
 }
 
 export interface ToolParseResult {
@@ -118,8 +293,9 @@ export function mergeMultiToolParseResults(
     return { ok: false, tools: [] };
   }
   const canonicalContent = results[0]!.canonicalContent;
+  const canonicalKey = normalizeComparableContent(canonicalContent);
   const conflicting = results
-    .filter((r) => r.canonicalContent !== canonicalContent)
+    .filter((r) => normalizeComparableContent(r.canonicalContent) !== canonicalKey)
     .map((r) => r.tool);
   if (conflicting.length > 0) {
     const tools = [results[0]!.tool, ...conflicting];
@@ -142,10 +318,15 @@ function mergeBundleFiles(results: ToolParseResult[]): BundleFile[] | undefined 
   for (const result of withBundles) {
     for (const file of result.bundleFiles!) {
       const existing = byPath.get(file.relativePath);
-      if (existing !== undefined && existing !== file.content) {
+      if (
+        existing !== undefined &&
+        normalizeComparableContent(existing) !== normalizeComparableContent(file.content)
+      ) {
         throw new CanonicalConflictError(file.relativePath, withBundles.map((r) => r.tool));
       }
-      byPath.set(file.relativePath, file.content);
+      if (existing === undefined) {
+        byPath.set(file.relativePath, file.content);
+      }
     }
   }
   return [...byPath.entries()].map(([relativePath, content]) => ({ relativePath, content }));
@@ -154,14 +335,19 @@ function mergeBundleFiles(results: ToolParseResult[]): BundleFile[] | undefined 
 export async function collectEditCandidates(
   projectDir: string,
   binding: Binding,
+  proposals: PendingProposal[] = [],
+  options: CollectEditOptions = {},
 ): Promise<PushCandidate[]> {
-  return (await collectEditCandidatesWithSkipped(projectDir, binding)).candidates;
+  return (await collectEditCandidatesWithSkipped(projectDir, binding, proposals, options))
+    .candidates;
 }
 
 export async function collectEditCandidatesWithSkipped(
   projectDir: string,
   binding: Binding,
   proposals: PendingProposal[] = [],
+  options: CollectEditOptions = {},
+  dependencies: CollectEditDependencies = defaultCollectEditDependencies,
 ): Promise<CollectedPushCandidates> {
   const candidates: PushCandidate[] = [];
   const skipped: SkippedPushInput[] = [];
@@ -212,7 +398,7 @@ export async function collectEditCandidatesWithSkipped(
   const eligiblePaths = eligible.flatMap((artifact) =>
     binding.tools.flatMap((tool) => artifact.installedPaths[tool] ?? []),
   );
-  const dirty = new Set(await listDirtyPaths(projectDir, eligiblePaths));
+  const dirty = new Set(await dependencies.listDirtyPaths(projectDir, eligiblePaths));
   const dirtyArtifacts = eligible.filter((artifact) =>
     binding.tools
       .flatMap((tool) => artifact.installedPaths[tool] ?? [])
@@ -222,8 +408,8 @@ export async function collectEditCandidatesWithSkipped(
     return { candidates, skipped };
   }
 
-  const cacheDir = await ensureRemoteCache(binding.remote, { force: true });
-  const manifest = await readManifest(cacheDir);
+  const cacheDir = await dependencies.ensureRemoteCache(binding.remote, { force: true });
+  const manifest = await dependencies.readManifest(cacheDir);
   for (const artifact of dirtyArtifacts) {
     const { project } = resolveConventions(manifest, artifact.project);
     const toolsWithPaths = binding.tools.filter(
@@ -235,9 +421,22 @@ export async function collectEditCandidatesWithSkipped(
       continue;
     }
 
+    const authoringTools = resolveAuthoringTools(
+      toolsWithPaths,
+      artifact.installedPaths,
+      dirty,
+      options.fromTool,
+    );
+    if (options.fromTool && authoringTools.length === 0) {
+      throw new FromToolUnavailableError(artifact.sourcePath, options.fromTool);
+    }
+    if (authoringTools.length === 0) {
+      continue;
+    }
+
     const parseResults: ToolParseResult[] = [];
     let missingDuringRead: string[] = [];
-    for (const tool of toolsWithPaths) {
+    for (const tool of authoringTools) {
       const adapter = getAdapter(tool);
       if (!adapter) {
         continue;
@@ -301,9 +500,33 @@ export async function collectEditCandidatesWithSkipped(
         proposal.type === artifact.type &&
         proposal.canonicalPath === artifact.sourcePath,
     );
+    const editBundleFiles =
+      artifact.type === 'skill'
+        ? merged.bundleFiles ??
+          ([{ relativePath: 'SKILL.md', content: merged.canonicalContent }] as BundleFile[])
+        : merged.bundleFiles;
     if (
       moduleTracking &&
-      (await matchesPushedCommit(cacheDir, project.path, moduleTracking, merged.canonicalContent))
+      (await matchesPushedCommit(
+        cacheDir,
+        project.path,
+        moduleTracking,
+        merged.canonicalContent,
+        editBundleFiles,
+      ))
+    ) {
+      continue;
+    }
+    if (
+      await matchesRemoteHead(
+        cacheDir,
+        binding.branch,
+        project.path,
+        artifact.sourcePath,
+        artifact.type,
+        merged.canonicalContent,
+        editBundleFiles,
+      )
     ) {
       continue;
     }
@@ -316,7 +539,8 @@ export async function collectEditCandidatesWithSkipped(
       optional: artifact.optional,
       canonicalContent: merged.canonicalContent,
       targetOverrides: merged.targetOverrides,
-      ...(merged.bundleFiles ? { bundleFiles: merged.bundleFiles } : {}),
+      ...(editBundleFiles ? { bundleFiles: editBundleFiles } : {}),
+      authoringTools,
       projectPath: project.path,
       remote: binding.remote,
       project: artifact.project,
@@ -387,13 +611,37 @@ export async function collectProposalCandidatesWithSkipped(
     const cacheDir = await ensureRemoteCache(proposal.remote, { force: true });
     const manifest = await readManifest(cacheDir);
     const { project } = resolveConventions(manifest, proposal.project);
-    if (await matchesPushedCommit(cacheDir, project.path, proposal, parsed.canonicalContent)) {
-      continue;
-    }
     const bundleFiles =
       proposal.type === 'skill'
-        ? parsed.bundleFiles ?? [{ relativePath: 'SKILL.md', content: parsed.canonicalContent } as BundleFile]
+        ? parsed.bundleFiles ??
+          ([{ relativePath: 'SKILL.md', content: parsed.canonicalContent }] as BundleFile[])
         : undefined;
+    if (
+      await matchesPushedCommit(
+        cacheDir,
+        project.path,
+        proposal,
+        parsed.canonicalContent,
+        bundleFiles,
+      )
+    ) {
+      continue;
+    }
+    const remote = await getRemote(proposal.remote);
+    const targetBranch = remote?.defaultBranch ?? proposal.baseBranch ?? 'main';
+    if (
+      await matchesRemoteHead(
+        cacheDir,
+        proposal.baseBranch ?? targetBranch,
+        project.path,
+        proposal.canonicalPath,
+        proposal.type,
+        parsed.canonicalContent,
+        bundleFiles,
+      )
+    ) {
+      continue;
+    }
     candidates.push({
       sourcePath: proposal.canonicalPath,
       sourceFiles: proposal.sourceFiles,
@@ -463,10 +711,20 @@ export async function executePush(
   }
 
   for (const candidate of candidates) {
-    if (candidate.type === 'skill' && candidate.bundleFiles && candidate.bundleFiles.length > 0) {
-      assertBundlePathsSafe(candidate.bundleFiles);
+    if (candidate.type === 'skill') {
+      const bundleFiles = skillBundleFilesForCompare(
+        candidate.canonicalContent,
+        candidate.bundleFiles,
+      );
+      assertBundlePathsSafe(bundleFiles);
       const skillDir = candidate.canonicalPath.replace(/\\/g, '/').replace(/\/$/, '');
-      for (const bundleFile of candidate.bundleFiles) {
+      const skillRootAbs = path.join(
+        cacheDir,
+        ...candidate.projectPath.replace(/\\/g, '/').split('/').filter(Boolean),
+        ...skillDir.split('/').filter(Boolean),
+      );
+      await prepareSkillCacheRoot(skillRootAbs);
+      for (const bundleFile of bundleFiles) {
         const dest = path.posix.join(
           candidate.projectPath.replace(/\\/g, '/'),
           skillDir,

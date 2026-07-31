@@ -26,6 +26,9 @@ const REQUIREMENT_LOCALE_KEYS = {
 const CONTRIBUTION_STATUS_LOCALE_KEYS = {
   pending: 'binding.enum.status.pending',
   pushed: 'binding.enum.status.pushed',
+  clean: 'binding.enum.status.clean',
+  modified: 'binding.enum.status.modified',
+  missing: 'binding.enum.status.missing',
 } as const;
 const CONTRIBUTION_ROLE_LOCALE_KEYS = {
   project: 'binding.enum.role.project',

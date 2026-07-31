@@ -229,6 +229,7 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'sync.conflicts':
     '以下文件存在冲突：{paths}。请解决冲突标记后运行 `imwel sync --continue`。',
   'sync.success': '同步完成，提交 {sha}。',
+  'sync.graduated': '已将 {count} 条项目贡献追踪毕业为 binding 托管。',
   'sync.continue': '正在完成冲突解决后的同步...',
   'sync.pendingNone': '没有待继续的同步。',
   'sync.moduleDrift.prompt':
@@ -291,7 +292,10 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'binding.enum.requirement.required': '必选',
   'binding.enum.requirement.optional': '可选',
   'binding.enum.status.pending': '待推送',
-  'binding.enum.status.pushed': '已推送',
+  'binding.enum.status.pushed': '已推送（待合入）',
+  'binding.enum.status.clean': '已与上游一致',
+  'binding.enum.status.modified': '有本地修改',
+  'binding.enum.status.missing': '源文件缺失',
   'binding.enum.role.project': '可写项目',
   'binding.enum.role.shared': '共享模块',
   'binding.enum.missing': '! 缺失',
@@ -342,7 +346,12 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'push.prCreated': 'Pull Request：{url}',
   'push.directPush': '已直接提交到 {branch}（已启用 directPush）。',
   'push.canonicalConflict':
-    '制品 "{path}" 在多个工具间的规范正文不一致（{tools}）。请先对齐渲染文件后再重试。',
+    '制品 "{path}" 的作者工具对规范正文不一致（{tools}）。请用 `imwel push --from <tool>` 指定一侧，或对齐这些工具上的编辑后重试。其它工具的干净旧副本会被忽略，可在日后 `imwel sync` 时更新。',
+  'push.canonicalConflict.pick': '制品 "{path}" 的作者工具不一致。以哪个工具为准？',
+  'push.from.unknown': '未知的 --from 工具 "{tool}"。请使用已绑定的工具 id（如 cursor、claude-code）。',
+  'push.from.unavailable':
+    '无法对 "{path}" 使用 --from {tool}：该工具没有此制品的安装路径。',
+  'push.authoring': '  · {path}：以 {tools} 为作者来源',
   'push.skipped.title': '在创建 Git 分支、提交或推送前已跳过以下输入：',
   'push.skipped.bindingMissing':
     '  - {source}：受管本地文件缺失（{paths}），本次不会推送。请运行 `imwel sync` 恢复。',
@@ -352,6 +361,9 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'push.valid.entry': '  + {path}',
   'push.valid.entrySkillBundle': '  + {path} (SKILL.md + {count} 个附属文件)',
   'push.confirm': '推送 {count} 个有效制品，并跳过 {skipped} 个缺失项？',
+  'push.confirm.single': '确认推送这一条：{path}？',
+  'push.confirm.singleSkillBundle':
+    '确认推送这一条 skill：{path}（SKILL.md + {count} 个附属文件）？',
   'push.missing.prompt': '贡献追踪来源缺失。要移除这些追踪，还是取消 push 并补回文件？',
   'push.missing.remove': '移除缺失来源的追踪并继续',
   'push.missing.cancel': '取消 push，先补回文件',

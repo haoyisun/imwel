@@ -233,6 +233,7 @@ export const en = {
   'sync.confirm': 'Apply {count} change(s) to local files?',
   'sync.conflicts': 'Conflicts detected in: {paths}. Resolve markers and run `imwel sync --continue`.',
   'sync.success': 'Sync complete at commit {sha}.',
+  'sync.graduated': 'Graduated {count} project contribution(s) into binding tracking.',
   'sync.continue': 'Finalizing sync after conflict resolution...',
   'sync.pendingNone': 'No pending sync to continue.',
   'sync.moduleDrift.prompt':
@@ -297,8 +298,11 @@ export const en = {
   'binding.enum.type.agents': 'agents',
   'binding.enum.requirement.required': 'required',
   'binding.enum.requirement.optional': 'optional',
-  'binding.enum.status.pending': 'pending',
-  'binding.enum.status.pushed': 'pushed',
+  'binding.enum.status.pending': 'pending push',
+  'binding.enum.status.pushed': 'pushed (awaiting merge)',
+  'binding.enum.status.clean': 'in sync with upstream',
+  'binding.enum.status.modified': 'local changes',
+  'binding.enum.status.missing': 'source missing',
   'binding.enum.role.project': 'project',
   'binding.enum.role.shared': 'shared',
   'binding.enum.missing': '! missing',
@@ -351,7 +355,14 @@ export const en = {
   'push.prCreated': 'Pull request: {url}',
   'push.directPush': 'Committed directly to {branch} (directPush enabled).',
   'push.canonicalConflict':
-    'Canonical content differs across tools for "{path}" ({tools}). Align the rendered files, then retry.',
+    'Authoring tools disagree on canonical content for "{path}" ({tools}). Pick one with `imwel push --from <tool>`, or align those tools\' edits and retry. Clean copies of other tools are ignored and will refresh on a later `imwel sync`.',
+  'push.canonicalConflict.pick':
+    'Authoring tools disagree on "{path}". Which tool should win?',
+  'push.from.unknown':
+    'Unknown tool "{tool}" for --from. Use a bound tool id (e.g. cursor, claude-code).',
+  'push.from.unavailable':
+    'Cannot use --from {tool} for "{path}": that tool has no installed paths for this artifact.',
+  'push.authoring': '  · {path}: authoring from {tools}',
   'push.skipped.title': 'Inputs skipped before any Git branch, commit, or push:',
   'push.skipped.bindingMissing':
     '  - {source}: managed local file missing ({paths}); it will not be pushed. Run `imwel sync` to restore it.',
@@ -361,6 +372,9 @@ export const en = {
   'push.valid.entry': '  + {path}',
   'push.valid.entrySkillBundle': '  + {path} (SKILL.md + {count} accompanying file(s))',
   'push.confirm': 'Push {count} valid artifact(s) upstream and skip {skipped} missing item(s)?',
+  'push.confirm.single': 'Push this artifact upstream: {path}?',
+  'push.confirm.singleSkillBundle':
+    'Push this skill upstream: {path} (SKILL.md + {count} accompanying file(s))?',
   'push.missing.prompt':
     'Tracked contribution sources are missing. Remove their tracking, or cancel push and restore the files?',
   'push.missing.remove': 'Remove tracking for the missing sources and continue',

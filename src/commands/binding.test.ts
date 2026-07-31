@@ -132,7 +132,7 @@ describe('binding inspection formatting', () => {
         '  Tracked contributions: 1',
         '  team/shared',
         '  └─ rule',
-        '     └─ rules/shared.md (rule · required) → cursor · pushed · shared',
+        '     └─ rules/shared.md (rule · required) → cursor · pushed (awaiting merge) · shared',
         '        ├─ Source: .cursor/rules/shared.mdc ! missing',
         '        └─ Latest push: imwel-push-1 @ 1234567',
       ].join('\n'),
@@ -171,7 +171,7 @@ describe('binding inspection formatting', () => {
     assert.match(output, /├─ 规则/);
     assert.match(output, /rules\/app\.md（规则 · 必选）→ claude-code, cursor/);
     assert.match(output, /skills\/release\/SKILL\.md（技能 · 可选）→ cursor/);
-    assert.match(output, /cursor · 已推送 · 共享模块/);
+    assert.match(output, /cursor · 已推送（待合入） · 共享模块/);
     assert.match(output, /\.cursor\/rules\/shared\.mdc ! 缺失/);
     assert.doesNotMatch(output, /（(?:rule|skill|agents) · (?:required|optional)）/);
     assert.doesNotMatch(output, / · (?:pending|pushed) · (?:project|shared)$/m);

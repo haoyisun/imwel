@@ -7,6 +7,10 @@ import {
 } from './propose.js';
 import type { ArtifactType } from './artifact-types.js';
 import type { ProjectRole } from './manifest.js';
+import {
+  resolveContributionLifecycleStatus,
+  type ContributionLifecycleStatus,
+} from './contribution-status.js';
 
 export type PathStatus = 'present' | 'missing';
 
@@ -44,7 +48,7 @@ export interface ContributionInspection {
     project: string;
   };
   role: ProjectRole;
-  status: 'pending' | 'pushed';
+  status: ContributionLifecycleStatus;
   type: ArtifactType;
   requirement: 'required' | 'optional';
   canonicalPath: string;
@@ -146,13 +150,14 @@ async function inspectContribution(
     proposal.sourceFiles.map((sourceFile) => inspectLocalPath(projectDir, sourceFile)),
   );
   sourceFiles.sort((a, b) => a.path.localeCompare(b.path));
+  const status = await resolveContributionLifecycleStatus(projectDir, proposal);
   return {
     target: {
       remoteAlias: proposal.remote,
       project: proposal.project,
     },
     role: proposal.targetRole,
-    status: proposal.pushed ? 'pushed' : 'pending',
+    status,
     type: proposal.type,
     requirement: proposal.optional ? 'optional' : 'required',
     canonicalPath: canonicalPath(proposal.canonicalPath),

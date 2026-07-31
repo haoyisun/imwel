@@ -305,15 +305,17 @@ Contribution tracking
   ...
   team/shared
   └─ rule
-     └─ rules/shared.md (rule · required) → cursor · pushed · shared
+     └─ rules/shared.md (rule · required) → cursor · pushed (awaiting merge) · shared
         └─ Source: .cursor/rules/shared.mdc ! missing
 ```
+
+Human-readable contribution statuses (locale labels; JSON keeps machine enums): `pending` (pending push), `pushed` (pushed, awaiting merge), `clean` (in sync with upstream), `modified` (local changes), `missing` (source missing).
 
 | Flag | Description |
 |------|-------------|
 | `--json` | Output only the unchanged stable `schemaVersion: 1` JSON view |
 
-Only remote aliases are displayed, never credential-bearing URLs. Paths are project-relative POSIX paths, and file contents are never read for output. Missing installed paths are counted individually in a stdout warning pointing to `imwel sync`; missing contribution sources produce a stdout warning pointing to `imwel propose`. Tool ids and paths are never translated, and `--json` retains its machine enum values. The command still works when only contribution tracking exists. If neither local state exists, it prints the appropriate setup hint without creating `.imwel`.
+Only remote aliases are displayed, never credential-bearing URLs. Paths are project-relative POSIX paths, and file contents are never read for output. Missing installed paths are counted individually in a stdout warning pointing to `imwel sync`; missing contribution sources produce a stdout warning pointing to `imwel propose`. Tool ids and paths are never translated, and `--json` retains its machine enum values (`pending` / `pushed` / `clean` / `modified` / `missing`). The command still works when only contribution tracking exists. If neither local state exists, it prints the appropriate setup hint without creating `.imwel`.
 
 ## `imwel rollback`
 
@@ -330,15 +332,20 @@ After restore, imwel **deletes managed files that were added after that history 
 
 Reverse-renders local tool files back to canonical Artifacts and opens an upstream proposal (branch + PR/MR by default). Writable-project edits are included normally. A subscribed-module edit is eligible only when persistent contribution tracking for that module Artifact exists, and it appears as a separate candidate that must be selected explicitly.
 
-Before creating a branch or commit, push checks every local input. A missing binding-owned file is skipped (never treated as an upstream deletion) with an `imwel sync` recovery hint. For a missing contribution source, interactive push offers to remove tracking or cancel so you can restore it; non-interactive push skips it, retains tracking, and exits non-zero. Successful items record the pushed Git branch and commit SHA. Unselected or failed records are unchanged, and content already represented by that Git commit is not pushed again.
+Before creating a branch or commit, push checks every local input. A missing binding-owned file is skipped (never treated as an upstream deletion) with an `imwel sync` recovery hint. For a missing contribution source, interactive push offers to remove tracking or cancel so you can restore it; non-interactive push skips it, retains tracking, and exits non-zero. Successful items record the pushed Git branch and commit SHA. Unselected or failed records are unchanged. Content already represented by that Git commit **or** already equivalent on the current remote target-branch tip is not offered as a candidate and is not pushed again.
 
-For `skill` Artifacts, push writes the full bundle (`SKILL.md` plus accompanying files) back to the template repo under `skills/<slug>/<relativePath>`, preserving subdirectories. The candidate summary lists each skill as `SKILL.md + N accompanying file(s)`. When two bound tools disagree on an accompanying file's content, push reports a conflict and fails rather than silently picking one.
+For `skill` Artifacts, push always writes a directory bundle (`SKILL.md` plus accompanying files) under `skills/<slug>/…` — never a plain file at the skill directory path. The candidate summary lists each skill as `SKILL.md + N accompanying file(s)`.
+
+Interactive push: when exactly one candidate remains after filtering, multi-select is skipped and a single confirm asks whether to push that path. Two or more candidates still use multi-select.
+
+For edited managed Artifacts, reverse-render **authoring tools** are those with at least one installed path dirty relative to `.imwel/history` (or the single tool given by `--from`). Clean tools do not veto push and are not rewritten locally — they catch up on a later `imwel sync`. When two or more authoring tools disagree on canonical content or a skill accompanying file, push reports a conflict: interactive mode can pick a winning tool; non-interactive mode requires `--from <tool>`.
 
 | Flag | Description |
 |------|-------------|
 | `-y` / `--yes` | Skip confirmation |
 | `--all` | Select all push candidates |
 | `--message <msg>` | Commit message |
+| `--from <tool>` | Author reverse-render from this tool only (overrides dirty-wins) |
 
 ## `imwel propose [file]`
 

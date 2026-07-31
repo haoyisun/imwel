@@ -303,15 +303,17 @@ imwel tools --remove cursor --delete-output -y  # 只删无引用的记录路径
   ...
   team/shared
   └─ 规则
-     └─ rules/shared.md（规则 · 必选）→ cursor · 已推送 · 共享模块
+     └─ rules/shared.md（规则 · 必选）→ cursor · 已推送（待合入） · 共享模块
         └─ 来源：.cursor/rules/shared.mdc ! 缺失
 ```
+
+人类可读的贡献状态（locale 文案；JSON 使用机器枚举）：`pending`（待推送）、`pushed`（已推送待合入）、`clean`（已与上游一致）、`modified`（有本地修改）、`missing`（源文件缺失）。
 
 | 选项 | 说明 |
 |------|------|
 | `--json` | 仅输出字段不变的稳定 `schemaVersion: 1` JSON 视图 |
 
-命令只显示远程别名，绝不显示可能携带凭据的 URL；路径统一为项目相对 POSIX 格式，也不会读取文件正文用于输出。缺失的安装路径会逐路径计数，并在 stdout 给出指向 `imwel sync` 的警告；贡献来源缺失时也在 stdout 给出带数量的 `imwel propose` 警告。工具 ID 与路径不翻译，`--json` 继续保留机器枚举值。只有 contribution tracking、没有 binding 时仍可查看；两者都没有时给出初始化提示，且不创建 `.imwel`。
+命令只显示远程别名，绝不显示可能携带凭据的 URL；路径统一为项目相对 POSIX 格式，也不会读取文件正文用于输出。缺失的安装路径会逐路径计数，并在 stdout 给出指向 `imwel sync` 的警告；贡献来源缺失时也在 stdout 给出带数量的 `imwel propose` 警告。工具 ID 与路径不翻译，`--json` 继续保留机器枚举值（`pending` / `pushed` / `clean` / `modified` / `missing`）。只有 contribution tracking、没有 binding 时仍可查看；两者都没有时给出初始化提示，且不创建 `.imwel`。
 
 ## `imwel rollback`
 
@@ -328,15 +330,20 @@ imwel tools --remove cursor --delete-output -y  # 只删无引用的记录路径
 
 将本地工具文件反向渲染为 canonical Artifact，并向上游提案（默认分支 + PR/MR）。可写项目编辑按常规进入候选。只有存在该模块 Artifact 的长期贡献追踪时，订阅模块编辑才有资格贡献，并会作为单独候选要求显式选择。
 
-创建分支或提交前，push 会检查所有本地输入。缺失的 binding 受管文件会被跳过（绝不推断为删除上游），并提示用 `imwel sync` 恢复。贡献来源缺失时，交互 push 可移除追踪或取消以便补回；非交互 push 会跳过、保留追踪并返回非零。成功项会记录 Git 分支与 commit SHA；未选择或失败记录保持不变，已由该 Git commit 表示的未变内容不会重复推送。
+创建分支或提交前，push 会检查所有本地输入。缺失的 binding 受管文件会被跳过（绝不推断为删除上游），并提示用 `imwel sync` 恢复。贡献来源缺失时，交互 push 可移除追踪或取消以便补回；非交互 push 会跳过、保留追踪并返回非零。成功项会记录 Git 分支与 commit SHA；未选择或失败记录保持不变。已由该 Git commit 表示、或已与当前远程目标分支 tip 规范化等价的内容不会进入候选，也不会重复推送。
 
-对 `skill` 制品，push 会把整个 bundle（`SKILL.md` 加附属文件）回写到模板仓 `skills/<slug>/<relativePath>` 下，保留子目录。候选摘要会把每个 skill 列为 `SKILL.md + N 个附属文件`。当两个绑定工具在某个附属文件内容上不一致时，push 报冲突并失败，而非静默选一份。
+对 `skill` 制品，push 始终按目录 bundle 写入（`SKILL.md` 加附属文件）到 `skills/<slug>/…`——绝不会在 skill 目录路径上落成普通文件。候选摘要会把每个 skill 列为 `SKILL.md + N 个附属文件`。
+
+交互式 push：过滤后恰好 1 条候选时跳过多选，改为一次确认是否推送该路径；≥2 条仍走多选。
+
+对已编辑的托管制品，反解的**作者工具**是相对 `.imwel/history` 至少有一条安装路径为 dirty 的绑定工具（或 `--from` 指定的单一工具）。干净工具不会否决 push，也不会被本地改写——它们在日后的 `imwel sync` 中更新。当两个及以上作者工具对 canonical 正文或 skill 附属文件不一致时，push 报告冲突：交互模式可选主导工具；非交互模式须使用 `--from <tool>`。
 
 | 选项 | 说明 |
 |------|------|
 | `-y` / `--yes` | 跳过确认 |
 | `--all` | 选择全部 push 候选 |
 | `--message <msg>` | 提交说明 |
+| `--from <tool>` | 仅以该工具为反解作者来源（覆盖 dirty-wins） |
 
 ## `imwel propose [file]`
 

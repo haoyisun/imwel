@@ -16,6 +16,7 @@ import type { LocaleKey } from '../locales/en.js';
 import {
   graduateProjectContributions,
   readPendingProposals,
+  refreshProposalBaselinesAfterSync,
   writePendingProposals,
 } from '../core/propose.js';
 import { promptFinalWriteAction } from './write-safety.js';
@@ -132,12 +133,26 @@ export async function applyInteractiveModuleDrift(
   }
 }
 
-async function graduateContributions(projectDir: string, binding: Binding): Promise<void> {
+async function graduateContributions(projectDir: string, binding: Binding): Promise<number> {
   const proposals = await readPendingProposals(projectDir);
   const remaining = graduateProjectContributions(proposals, binding.remote, binding.artifacts);
-  if (remaining.length !== proposals.length) {
-    await writePendingProposals(projectDir, remaining);
+  const graduated = proposals.length - remaining.length;
+  const refreshed = refreshProposalBaselinesAfterSync(remaining, binding.remote, {
+    baseBranch: binding.branch,
+    baseCommit: binding.lastSyncedCommit,
+  });
+  const baselinesChanged = refreshed.some(
+    (proposal, index) =>
+      proposal.baseCommit !== remaining[index]?.baseCommit ||
+      proposal.baseBranch !== remaining[index]?.baseBranch,
+  );
+  if (graduated > 0 || baselinesChanged) {
+    await writePendingProposals(projectDir, refreshed);
   }
+  if (graduated > 0) {
+    info(t('sync.graduated', { count: graduated }));
+  }
+  return graduated;
 }
 
 function printRenderSideEffects(

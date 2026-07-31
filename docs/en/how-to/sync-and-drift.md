@@ -50,10 +50,11 @@ Restores a prior `.imwel/history/` commit and deletes **managed** files added af
 
 - Tool-native files match the template (plus any merged local edits)
 - `imwel status` is clean, or clearly lists remaining drift
+- Project contribution tracking that now matches binding is graduated (removed); retained module tracking baselines refresh so passive “proposal updates” notices stay quiet until the remote moves again
 
 ## Passive remote notices
 
-Ordinary CLI commands may mention that a remote branch moved (default throttle **2 hours**). That notice compares **remote commits only** — it does not sync files and does not mean your local edits were overwritten. Override with `IMWEL_FETCH_THROTTLE_MS`.
+Ordinary CLI commands may mention that a remote branch moved (default throttle **2 hours**). That notice compares **remote commits only** — it does not sync files and does not mean your local edits were overwritten. After a successful sync, retained proposal baselines advance with the binding tip. Override with `IMWEL_FETCH_THROTTLE_MS`.
 
 ## Fix rule health findings
 

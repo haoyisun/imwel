@@ -26,6 +26,16 @@ imwel doctor
 
 安装后命令名仍是 `imwel`。
 
+### `imwel doctor` —— 随时可跑的环境诊断
+
+`doctor` 不只是安装时的检查。每当有异常（找不到 Git、工具路径误判、sync 起不来）都跑一下——它校验 `git` 在 `PATH` 上及其他环境前置，并明确告诉你缺什么：
+
+```bash
+imwel doctor
+```
+
+只读，不改任何东西。
+
 ## 预期结果
 
 `imwel doctor`（或 `npx` 形式）显示环境检查通过，或明确告诉你缺什么。

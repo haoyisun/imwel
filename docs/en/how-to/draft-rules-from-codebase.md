@@ -30,6 +30,8 @@ imwel skill install
 
 In Cursor (or another supported tool), run `/imwel-extract` and follow the skill. Drafts land under `.imwel/drafts/<box>/`.
 
+> For the full in-tool workflow (`/imwel-extract` → `/imwel-adopt` → `/imwel-audit` → `/imwel-create-template`) with minimal examples and combination patterns, see [Use first-party skills](./use-first-party-skills.md).
+
 ### 4. Review, then adopt locally
 
 ```bash

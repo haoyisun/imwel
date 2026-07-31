@@ -54,6 +54,8 @@ git push -u origin main
 
 发布**不是** imwel 命令——就是正常的 `git push`。
 
+> 想让 AI 工具来驱动？在工具内运行 `/imwel-create-template`——它跑 `imwel template init --from-project`（只收割你自己的 artifact），再指导语义组织（拆分 project、分配 role、写 README）。见[使用第一方 skill](./use-first-party-skills.md)。
+
 ## 预期结果
 
 - 在模板根目录跑 `imwel lint` 可通过（或仅有风格类警告）

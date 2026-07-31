@@ -55,6 +55,18 @@ Restores a prior `.imwel/history/` commit and deletes **managed** files added af
 
 Ordinary CLI commands may mention that a remote branch moved (default throttle **2 hours**). That notice compares **remote commits only** — it does not sync files and does not mean your local edits were overwritten. Override with `IMWEL_FETCH_THROTTLE_MS`.
 
+## Fix rule health findings
+
+`imwel status` also runs a deterministic rule-health check over managed rendered files. Findings are advisory (they never change the exit code). Fix each as below:
+
+| Finding | What it means | Fix |
+|---------|---------------|-----|
+| `[empty]` | A managed rule is empty or placeholder-only | Add substantive guidance, or remove the rule from the template |
+| `[dead-import]` | An `@path` import cannot be resolved | Correct the import path, or restore the referenced file |
+| `[orphan-ref]` | A backtick path (e.g. `` `src/foo.ts` ``) points to a missing file | Update or remove the reference, or restore the file if it should still exist |
+
+For a deeper, semantic pass (rule↔code mismatch, rule↔rule conflict, missing rules), run `/imwel-audit` — see [Use first-party skills](./use-first-party-skills.md).
+
 ## Troubleshooting
 
 | Problem | Fix |

@@ -26,9 +26,11 @@ imwel scan
 imwel skill install
 ```
 
-### 3. 提取草稿（工具内）
+### 3. 在工具内提取草稿
 
 在 Cursor（或其他支持的工具）中运行 `/imwel-extract`。草稿落在 `.imwel/drafts/<box>/`。
+
+> 工具内完整工作流（`/imwel-extract` → `/imwel-adopt` → `/imwel-audit` → `/imwel-create-template`）与最小示例、组合模式见[使用第一方 skill](./use-first-party-skills.md)。
 
 ### 4. 审阅后本地采纳
 

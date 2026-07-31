@@ -21,6 +21,8 @@
 imwel adopt --from <box>
 ```
 
+也可在 AI 工具内调用 `/imwel-adopt`——它封装了同一条命令。工具内完整工作流与组合模式见[使用第一方 skill](./use-first-party-skills.md)。
+
 按提示操作（旗标见[命令](../reference/commands.md)）。
 
 ### 3. 决定长期归属

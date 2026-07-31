@@ -21,6 +21,8 @@ Open `.imwel/drafts/<box>/` and edit until you trust the content.
 imwel adopt --from <box>
 ```
 
+You can also invoke `/imwel-adopt` inside your AI tool — it wraps this same command. See [Use first-party skills](./use-first-party-skills.md) for the in-tool workflow and combination patterns.
+
 Follow prompts (or pass tool flags as documented in [Commands](../reference/commands.md)).
 
 ### 3. Decide the long-term home

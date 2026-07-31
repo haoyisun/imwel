@@ -54,6 +54,8 @@ git push -u origin main
 
 Publishing is **not** an imwel command — it is normal `git push`.
 
+> Prefer the AI tool to drive this? Run `/imwel-create-template` in your tool — it runs `imwel template init --from-project` (harvesting only your own artifacts) and then guides the semantic organization (splitting projects, assigning roles, writing README). See [Use first-party skills](./use-first-party-skills.md).
+
 ## Expected result
 
 - `imwel lint` inside the template root exits clean (or only style warnings)

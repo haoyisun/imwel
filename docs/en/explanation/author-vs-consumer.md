@@ -29,3 +29,22 @@ Teams need one place to review rules like code (author), and many checkouts that
 ## Monorepos
 
 Bindings are **per directory**. Run `imwel init` in each sub-project that should consume a template project. There is no special monorepo mode.
+
+## Artifact provenance & ownership
+
+When imwel looks at a file on disk, it needs to know **who owns it** before it will touch it. Every renderable file carries one of four provenance tags:
+
+| Tag | Meaning | What imwel does with it |
+|-----|---------|--------------------------|
+| `USER` | Authored by you (your tool-native rule, or a draft you adopted) | Eligible for `propose` / `push` / `--from-project` harvest |
+| `MINE` | Installed and managed by *your* binding | Tracked by `sync`/`status`; pushable as a binding-owned edit |
+| `FOREIGN` | Installed by a *different* tool/binding, not yours | Left alone — never overwritten, never pushed by you |
+| `generatedBy: imwel` | imwel's own command pack (`imwel-*` skills) | Unmanaged; skipped by `sync`/`status`/`push` |
+
+### Why this matters
+
+- **`imwel propose` excludes `MINE` / `FOREIGN`** — you only propose artifacts you actually authored (`USER`), so you can't accidentally push someone else's managed install or a foreign tool's file.
+- **`imwel template init --from-project` harvests only `USER`** — it excludes imwel's own command pack and other tools' installed artifacts, and prints what it excluded and why. So the generated template skeleton contains only your rules, not a copy of imwel itself.
+- **`imwel adopt` writes are unmanaged** — adopted drafts land as `USER`-style files that don't enter the binding, so trying drafts locally can never corrupt team state.
+
+The rule of thumb: imwel never silently overwrites or pushes a file it didn't author or wasn't asked to manage. Provenance is the label that enforces that.

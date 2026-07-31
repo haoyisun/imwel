@@ -26,6 +26,16 @@ imwel doctor
 
 The installed command name stays `imwel`.
 
+### `imwel doctor` — environment check, any time
+
+`doctor` isn't only an install-time check. Run it whenever something seems off (Git not found, a tool path misdetected, a sync that won't start) — it verifies `git` is on `PATH` and other environment prerequisites, and tells you exactly what to fix:
+
+```bash
+imwel doctor
+```
+
+It is read-only and changes nothing.
+
 ## Expected result
 
 `imwel doctor` (or the `npx` form) reports that Git and environment checks pass, or tells you exactly what to fix.

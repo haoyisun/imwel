@@ -469,9 +469,9 @@ export const en = {
   'skill.install.written': '  + {path}',
   'skill.install.success': 'Installed {count} first-party skill(s).',
   'skill.install.nextSteps':
-    'Run `imwel scan` first if you have not, then invoke the `imwel-extract` skill in your AI tool to draft rules into `.imwel/drafts/`.',
-  'commandPack.skillOnly':
-    'These tools have no slash-command mechanism — installed the backing skill only: {tools}',
+    'Run `imwel scan` first if you have not, then invoke the `imwel-extract` skill in your AI tool (e.g. `/imwel-extract`) to draft rules into `.imwel/drafts/`.',
+  'commandPack.removedStale':
+    '  - {path} (removed legacy thin command; invoke the skill via `/` instead)',
 
   'init.prompt.commandPack': 'Install the imwel command pack (extract/audit/...) into: {tools}?',
   'init.commandPack.skipped':

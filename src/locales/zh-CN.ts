@@ -454,8 +454,9 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
   'skill.install.written': '  + {path}',
   'skill.install.success': '已安装 {count} 个第一方 skill。',
   'skill.install.nextSteps':
-    '如尚未运行请先 `imwel scan`，然后在你的 AI 工具中调用 `imwel-extract` skill，将草稿起草到 `.imwel/drafts/`。',
-  'commandPack.skillOnly': '这些工具没有 slash 命令机制——只安装了配套 skill：{tools}',
+    '如尚未运行请先 `imwel scan`，然后在你的 AI 工具中调用 `imwel-extract` skill（例如 `/imwel-extract`），将草稿起草到 `.imwel/drafts/`。',
+  'commandPack.removedStale':
+    '  - {path}（已移除旧版薄命令；请改为通过 `/` 调用 skill）',
 
   'init.prompt.commandPack': '将 imwel 命令包（extract/audit/...）安装进：{tools}？',
   'init.commandPack.skipped': '已跳过命令包。稍后可用 `imwel skill install --tools <ids>` 安装。',

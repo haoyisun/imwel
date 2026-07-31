@@ -120,8 +120,8 @@ export async function runSkillInstall(opts: SkillInstallOptions = {}): Promise<n
 
 /**
  * Shared command-pack install used by `imwel skill install` and `imwel init`.
- * Loads assets, prints the plan, optionally confirms, applies, and reports which
- * tools got commands vs skill-only.
+ * Loads assets, prints the plan, optionally confirms, applies skills, and
+ * removes any legacy thin command files that would duplicate skills in `/`.
  */
 export async function installCommandPackWithFeedback(
   projectDir: string,
@@ -161,9 +161,6 @@ export async function installCommandPackWithFeedback(
       tools: tools.join(', '),
     }),
   );
-  if (plan.skillOnlyTools.length) {
-    info(t('commandPack.skillOnly', { tools: plan.skillOnlyTools.join(', ') }));
-  }
 
   if (opts.confirm && !opts.yes && isInteractiveStdin()) {
     const confirm = await p.confirm({ message: t('skill.install.confirm'), initialValue: true });
@@ -173,9 +170,12 @@ export async function installCommandPackWithFeedback(
     }
   }
 
-  const written = await installCommandPack(projectDir, plan);
-  for (const path of written) {
-    info(t('skill.install.written', { path }));
+  const { written, removed } = await installCommandPack(projectDir, plan);
+  for (const filePath of written) {
+    info(t('skill.install.written', { path: filePath }));
+  }
+  for (const filePath of removed) {
+    info(t('commandPack.removedStale', { path: filePath }));
   }
   for (const key of plan.warningLocaleKeys) {
     warn(t(key as 'adapter.skill.r4Warning'));

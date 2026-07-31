@@ -135,7 +135,7 @@ The fingerprint is **not** a managed artifact — it never participates in `sync
 
 ## `imwel skill install`
 
-Installs imwel's own **first-party command pack** (shipped with the npm package) into your selected tools: a slash command **plus** its backing skill for each member, delivered the way openspec delivers its commands. Tools with a native command mechanism (Cursor `.cursor/commands`, Claude Code `.claude/commands`) get both a `/imwel-*` thin command and the backing skill; tools without one degrade to **skill-only** (the command is skipped and reported). Members:
+Installs imwel's own **first-party command pack** (shipped with the npm package) into your selected tools as **skills only** (for example `.cursor/skills/imwel-*`, `.claude/skills/imwel-*`). In tools that surface skills via `/` (Cursor, Claude Code), invoke them as `/imwel-*`. Re-running install also removes legacy thin command files for pack members so they do not duplicate the skill in the slash menu. Members:
 
 - `imwel-extract` — drafts project-fit rules/skills from scratch using the scan fingerprint.
 - `imwel-audit` — audits existing rules for semantic drift (rule ↔ code mismatch, rule ↔ rule conflict, missing rules) and writes actionable suggestions to `.imwel/audit/`.

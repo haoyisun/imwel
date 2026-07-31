@@ -1,10 +1,9 @@
 # In-tool skills & commands
 
-imwel ships a small **command pack** — first-party slash commands plus their backing skills —
-that you install into your AI coding tools and invoke *inside the tool's chat*, the way you use
-openspec's commands. This page covers what each member does and how to invoke it. For the CLI
-commands they wrap (`imwel scan`, `imwel adopt`, `imwel template init`), see
-[Commands](./commands.md).
+imwel ships a small **command pack** — first-party skills you install into your AI coding tools and
+invoke *inside the tool's chat* (for example `/imwel-extract` in Cursor or Claude Code). This page
+covers what each member does and how to invoke it. For the CLI commands they wrap (`imwel scan`,
+`imwel adopt`, `imwel template init`), see [Commands](./commands.md).
 
 ## Install the pack
 
@@ -14,10 +13,12 @@ imwel skill install --tools cursor,claude-code   # or omit --tools to pick inter
 
 `imwel init` can also install the pack (opt-in prompt, or `--command-pack` / `--no-command-pack`).
 
-- Tools with a slash-command mechanism (Cursor `.cursor/commands`, Claude Code `.claude/commands`)
-  get a `/imwel-*` command **and** the backing skill.
-- Tools without one get the **backing skill only** (still invocable by description); the command is
-  skipped and reported.
+- The pack installs **skills only** (e.g. `.cursor/skills/imwel-*`, `.claude/skills/imwel-*`).
+  Tools that surface skills in `/` (Cursor, Claude Code) let you invoke them as `/imwel-*`; other
+  tools still match them by description.
+- Re-running install **removes legacy thin command files** (`.cursor/commands/imwel-*.md`,
+  `.claude/commands/imwel-*.md`) for pack members so they do not duplicate the skill in the slash
+  menu. Author scaffold commands such as `/imwel-author` are left alone.
 - All pack files are **unmanaged**: they carry a `generatedBy: imwel` marker under the `imwel-*`
   namespace and are never tracked by `sync`/`status`/`push`.
 

@@ -10,7 +10,6 @@ import type { Adapter, ParsedExisting, RenderedFile } from './types.js';
 import { toSlug } from './slug.js';
 import { discoverFrontmatterDir, discoverSkillBundles } from './strategies/discover.js';
 import { renderSkillBundle } from './strategies/skill-render.js';
-import { renderCommandFile } from './strategies/command-render.js';
 
 export interface CursorOverrides {
   globs?: string[];
@@ -22,10 +21,6 @@ export const cursorAdapter: Adapter = {
   id: 'cursor',
   async detect(projectDir: string): Promise<boolean> {
     return pathExists(path.join(projectDir, '.cursor'));
-  },
-  supportsCommands: true,
-  renderCommand(command): RenderedFile[] {
-    return renderCommandFile(command, '.cursor/commands');
   },
   render(artifact, targetOverrides?: Record<string, unknown>): RenderedFile[] {
     if (artifact.type === 'skill') {

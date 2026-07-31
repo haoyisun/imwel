@@ -135,7 +135,7 @@
 
 ## `imwel skill install`
 
-把 imwel 自带的**第一方命令包**（随 npm 包分发）安装进你所选的工具：每个成员都是 slash 命令**加**其配套 skill，交付方式与 openspec 分发命令一致。有命令机制的工具（Cursor `.cursor/commands`、Claude Code `.claude/commands`）会同时得到 `/imwel-*` 薄命令与配套 skill；没有命令机制的工具**降级为只装 skill**（跳过命令并提示）。成员：
+把 imwel 自带的**第一方命令包**（随 npm 包分发）以**仅 skill** 的方式安装进你所选的工具（例如 `.cursor/skills/imwel-*`、`.claude/skills/imwel-*`）。在会把 skill 挂到 `/` 的工具（Cursor、Claude Code）里可用 `/imwel-*` 调用。重新安装还会清理命令包成员的旧版薄命令文件，避免 slash 菜单重复。成员：
 
 - `imwel-extract` —— 借 scan 指纹从零起草贴合本项目的 rule/skill。
 - `imwel-audit` —— 审计现有规则的语义脱节（规则↔代码不符、规则↔规则矛盾、缺失规则），把可执行建议写入 `.imwel/audit/`。

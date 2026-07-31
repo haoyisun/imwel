@@ -1,8 +1,8 @@
 # 工具内 skill 与命令
 
-imwel 附带一个小小的**命令包**——第一方 slash 命令加其配套 skill——你把它装进 AI 编码工具，然后
-*在工具的对话框里*调用，用法就像 openspec 的命令。本页讲每个成员做什么、怎么调用。它们包装的 CLI
-命令（`imwel scan`、`imwel adopt`、`imwel template init`）见[命令](./commands.md)。
+imwel 附带一个小小的**命令包**——第一方 skill，装进 AI 编码工具后在对话框里调用（例如 Cursor /
+Claude Code 里的 `/imwel-extract`）。本页讲每个成员做什么、怎么调用。它们包装的 CLI 命令
+（`imwel scan`、`imwel adopt`、`imwel template init`）见[命令](./commands.md)。
 
 ## 安装命令包
 
@@ -12,9 +12,10 @@ imwel skill install --tools cursor,claude-code   # 省略 --tools 则交互选�
 
 `imwel init` 也能安装（opt-in 提示，或 `--command-pack` / `--no-command-pack`）。
 
-- 有 slash 命令机制的工具（Cursor `.cursor/commands`、Claude Code `.claude/commands`）会同时得到
-  `/imwel-*` 命令**和**配套 skill。
-- 没有的工具**只装配套 skill**（仍可按 description 触发）；命令被跳过并提示。
+- 命令包**只安装 skill**（如 `.cursor/skills/imwel-*`、`.claude/skills/imwel-*`）。会把 skill 挂到
+  `/` 的工具（Cursor、Claude Code）可用 `/imwel-*` 显式调用；其它工具仍可按 description 匹配。
+- 重新安装时会**清理旧版薄命令文件**（`.cursor/commands/imwel-*.md`、`.claude/commands/imwel-*.md`
+  中的命令包成员），避免与 skill 在 slash 菜单里重复。作者脚手架命令（如 `/imwel-author`）不会动。
 - 所有命令包文件都是**非受管**的：带 `generatedBy: imwel` 标记、位于 `imwel-*` 命名空间，永不被
   `sync`/`status`/`push` 跟踪。
 

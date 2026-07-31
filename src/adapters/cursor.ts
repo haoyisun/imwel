@@ -9,7 +9,7 @@ import type { Artifact } from '../core/artifact-types.js';
 import type { Adapter, ParsedExisting, RenderedFile } from './types.js';
 import { toSlug } from './slug.js';
 import { discoverFrontmatterDir, discoverSkillBundles } from './strategies/discover.js';
-import { renderSkillBundle } from './strategies/skill-render.js';
+import { parseSkillBundle, renderSkillBundle } from './strategies/skill-render.js';
 
 export interface CursorOverrides {
   globs?: string[];
@@ -48,6 +48,9 @@ export const cursorAdapter: Adapter = {
     return [{ path: `.cursor/rules/${slug}.mdc`, content, merge: 'replace' }];
   },
   parseExisting(files): ParsedExisting {
+    if (files.some((f) => f.path.includes('/skills/') && f.path.endsWith('SKILL.md'))) {
+      return parseSkillBundle(files);
+    }
     const file = files[0];
     if (!file) {
       return { canonicalContent: '' };

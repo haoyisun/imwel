@@ -1,4 +1,4 @@
-import type { Artifact } from '../../core/artifact-types.js';
+import type { Artifact, BundleFile } from '../../core/artifact-types.js';
 import type { ParsedExisting, RenderedFile } from '../types.js';
 import { toSlug } from '../slug.js';
 import {
@@ -37,7 +37,26 @@ export function renderSkillBundle(
 
 export function parseSkillBundle(files: { path: string; content: string }[]): ParsedExisting {
   const skillFile = files.find((f) => f.path.endsWith('SKILL.md')) ?? files[0];
-  return { canonicalContent: skillFile?.content ?? '' };
+  const skillDir = skillFile ? posixDirname(skillFile.path) : '';
+  const bundleFiles: BundleFile[] = files.map((f) => ({
+    relativePath: relativizeToSkillDir(f.path, skillDir),
+    content: f.content,
+  }));
+  return { canonicalContent: skillFile?.content ?? '', bundleFiles };
+}
+
+function posixDirname(p: string): string {
+  const posix = p.replace(/\\/g, '/');
+  const idx = posix.lastIndexOf('/');
+  return idx < 0 ? '' : posix.slice(0, idx);
+}
+
+function relativizeToSkillDir(filePath: string, skillDir: string): string {
+  const posix = filePath.replace(/\\/g, '/');
+  if (skillDir && posix.startsWith(`${skillDir}/`)) {
+    return posix.slice(skillDir.length + 1);
+  }
+  return posix;
 }
 
 /** R3: skill → prompts directory as a single markdown file. */

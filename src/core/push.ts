@@ -12,7 +12,9 @@ import {
 } from './propose.js';
 import { resolveConventions, readManifest } from './manifest.js';
 import { pathExists } from './fs-utils.js';
+import { assertBundlePathsSafe } from './propose-validate.js';
 import { toSlug } from '../adapters/slug.js';
+import type { BundleFile } from './artifact-types.js';
 
 export interface PushCandidate {
   sourcePath: string;
@@ -22,6 +24,8 @@ export interface PushCandidate {
   optional: boolean;
   canonicalContent: string;
   targetOverrides?: Record<string, Record<string, unknown>>;
+  /** For `type=skill`: full bundle (SKILL.md + accompanying files) to write upstream. */
+  bundleFiles?: BundleFile[];
   projectPath: string;
   remote: string;
   project: string;
@@ -91,16 +95,24 @@ export interface ToolParseResult {
   tool: string;
   canonicalContent: string;
   targetOverrides?: Record<string, unknown>;
+  bundleFiles?: BundleFile[];
 }
 
 /**
  * Merge reverse-render results from multiple tools.
  * Returns merged overrides, or lists tools that disagree on canonical content.
+ * For `type=skill` bundles, accompanying files are deduped by relative path when
+ * content matches; a same-path content mismatch fails the merge (no silent pick).
  */
 export function mergeMultiToolParseResults(
   results: ToolParseResult[],
 ):
-  | { ok: true; canonicalContent: string; targetOverrides: Record<string, Record<string, unknown>> }
+  | {
+      ok: true;
+      canonicalContent: string;
+      targetOverrides: Record<string, Record<string, unknown>>;
+      bundleFiles?: BundleFile[];
+    }
   | { ok: false; tools: string[] } {
   if (results.length === 0) {
     return { ok: false, tools: [] };
@@ -117,7 +129,26 @@ export function mergeMultiToolParseResults(
   for (const result of results) {
     targetOverrides[result.tool] = result.targetOverrides ?? {};
   }
-  return { ok: true, canonicalContent, targetOverrides };
+  const bundleFiles = mergeBundleFiles(results);
+  return { ok: true, canonicalContent, targetOverrides, ...(bundleFiles ? { bundleFiles } : {}) };
+}
+
+function mergeBundleFiles(results: ToolParseResult[]): BundleFile[] | undefined {
+  const withBundles = results.filter((r) => r.bundleFiles && r.bundleFiles.length > 0);
+  if (withBundles.length === 0) {
+    return undefined;
+  }
+  const byPath = new Map<string, string>();
+  for (const result of withBundles) {
+    for (const file of result.bundleFiles!) {
+      const existing = byPath.get(file.relativePath);
+      if (existing !== undefined && existing !== file.content) {
+        throw new CanonicalConflictError(file.relativePath, withBundles.map((r) => r.tool));
+      }
+      byPath.set(file.relativePath, file.content);
+    }
+  }
+  return [...byPath.entries()].map(([relativePath, content]) => ({ relativePath, content }));
 }
 
 export async function collectEditCandidates(
@@ -246,6 +277,7 @@ export async function collectEditCandidatesWithSkipped(
         tool,
         canonicalContent: parsed.canonicalContent,
         targetOverrides: parsed.targetOverrides,
+        ...(parsed.bundleFiles ? { bundleFiles: parsed.bundleFiles } : {}),
       });
     }
     if (missingDuringRead.length > 0) {
@@ -284,6 +316,7 @@ export async function collectEditCandidatesWithSkipped(
       optional: artifact.optional,
       canonicalContent: merged.canonicalContent,
       targetOverrides: merged.targetOverrides,
+      ...(merged.bundleFiles ? { bundleFiles: merged.bundleFiles } : {}),
       projectPath: project.path,
       remote: binding.remote,
       project: artifact.project,
@@ -357,6 +390,10 @@ export async function collectProposalCandidatesWithSkipped(
     if (await matchesPushedCommit(cacheDir, project.path, proposal, parsed.canonicalContent)) {
       continue;
     }
+    const bundleFiles =
+      proposal.type === 'skill'
+        ? parsed.bundleFiles ?? [{ relativePath: 'SKILL.md', content: parsed.canonicalContent } as BundleFile]
+        : undefined;
     candidates.push({
       sourcePath: proposal.canonicalPath,
       sourceFiles: proposal.sourceFiles,
@@ -367,6 +404,7 @@ export async function collectProposalCandidatesWithSkipped(
       targetOverrides: {
         [proposal.tool]: parsed.targetOverrides ?? {},
       },
+      ...(bundleFiles ? { bundleFiles } : {}),
       projectPath: project.path,
       remote: proposal.remote,
       project: proposal.project,
@@ -425,6 +463,22 @@ export async function executePush(
   }
 
   for (const candidate of candidates) {
+    if (candidate.type === 'skill' && candidate.bundleFiles && candidate.bundleFiles.length > 0) {
+      assertBundlePathsSafe(candidate.bundleFiles);
+      const skillDir = candidate.canonicalPath.replace(/\\/g, '/').replace(/\/$/, '');
+      for (const bundleFile of candidate.bundleFiles) {
+        const dest = path.posix.join(
+          candidate.projectPath.replace(/\\/g, '/'),
+          skillDir,
+          bundleFile.relativePath.replace(/\\/g, '/'),
+        );
+        const abs = path.join(cacheDir, dest);
+        await fs.mkdir(path.dirname(abs), { recursive: true });
+        await fs.writeFile(abs, bundleFile.content, 'utf8');
+        await runGit(['add', '--', dest], { cwd: cacheDir });
+      }
+      continue;
+    }
     const dest = path.posix.join(
       candidate.projectPath.replace(/\\/g, '/'),
       candidate.canonicalPath.replace(/\\/g, '/'),

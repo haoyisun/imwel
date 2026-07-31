@@ -26,6 +26,11 @@ describe('collectProposeCandidates', () => {
     const skillPath = path.join(projectDir, '.cursor/skills/review/SKILL.md');
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
     await fs.writeFile(skillPath, '# Review\n', 'utf8');
+    const layeredSkillDir = path.join(projectDir, '.cursor/skills/layered/SKILL.md');
+    await fs.mkdir(path.dirname(layeredSkillDir), { recursive: true });
+    await fs.writeFile(layeredSkillDir, '# Layered\n', 'utf8');
+    await fs.mkdir(path.join(projectDir, '.cursor/skills/layered', 'references'), { recursive: true });
+    await fs.writeFile(path.join(projectDir, '.cursor/skills/layered/references/foo.md'), 'foo ref\n', 'utf8');
     await fs.writeFile(path.join(projectDir, 'AGENTS.md'), '# Shared instructions\n', 'utf8');
   });
 
@@ -112,6 +117,31 @@ describe('collectProposeCandidates', () => {
 
     assert.equal(discoverCalls, 0);
     assert.equal(result.candidates[0]?.canonicalPath, 'rules/cached-rule.md');
+  });
+
+  it('captures the full bundle file list for a layered skill candidate', async () => {
+    const result = await collectProposeCandidates(
+      projectDir,
+      adapters,
+      null,
+      [],
+      {
+        remote: 'org',
+        project: { name: 'app', path: 'projects/app' },
+        conventions: { rulesDir: 'rules', skillsDir: 'skills', agentsFile: 'agents.md' },
+      },
+      projectDir,
+    );
+    const layered = result.candidates.find((c) => c.path.includes('/skills/layered/'));
+    assert.ok(layered, 'expected a layered skill candidate');
+    assert.ok(
+      layered!.sourceFiles.some((s) => s.endsWith('references/foo.md')),
+      'sourceFiles should include the accompanying references/foo.md',
+    );
+    assert.ok(
+      layered!.sourceFiles.some((s) => s.endsWith('SKILL.md')),
+      'sourceFiles should include SKILL.md',
+    );
   });
 
 });

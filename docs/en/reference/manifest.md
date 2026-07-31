@@ -28,7 +28,7 @@ Template repositories declare projects and directory conventions in **`.imwel/ma
 | Field | Default | Description |
 |-------|---------|-------------|
 | `rulesDir` | `rules` | Directory under each project path for `rule` Artifacts |
-| `skillsDir` | `skills` | Directory for `skill` Artifacts (each skill is a folder with `SKILL.md`) |
+| `skillsDir` | `skills` | Directory for `skill` Artifacts (each skill is a folder with `SKILL.md` plus optional accompanying files such as `references/*.md`; accompanying files are harvested and pushed with the bundle on native-skills tools) |
 | `agentsFile` | `agents.md` | Project-level agents instructions filename |
 
 If `conventions` is omitted or partial, missing keys use the defaults above.

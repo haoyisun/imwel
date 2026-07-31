@@ -5,6 +5,7 @@ import type { Artifact } from '../core/artifact-types.js';
 import type { Adapter, ParsedExisting, RenderedFile } from './types.js';
 import { toSlug } from './slug.js';
 import { discoverSingleMdBlocks, discoverSkillBundles } from './strategies/discover.js';
+import { parseSkillBundle } from './strategies/skill-render.js';
 
 export interface ClaudeCodeOverrides {
   imports?: string[];
@@ -53,6 +54,9 @@ export const claudeCodeAdapter: Adapter = {
     return [];
   },
   parseExisting(files): ParsedExisting {
+    if (files.some((f) => f.path.includes('/skills/') && f.path.endsWith('SKILL.md'))) {
+      return parseSkillBundle(files);
+    }
     const claudeFile = files.find((f) => f.path === 'CLAUDE.md' || f.path.endsWith('CLAUDE.md'));
     if (!claudeFile) {
       const skillFile = files.find((f) => f.path.endsWith('SKILL.md'));

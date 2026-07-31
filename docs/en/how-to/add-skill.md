@@ -68,6 +68,15 @@ git push -u origin HEAD
 
 - Lint passes
 - After consumer `init` / `sync`, paths like `.cursor/skills/review-pr/SKILL.md` or `.claude/skills/review-pr/SKILL.md` appear (depending on selected tools)
+- Accompanying files (e.g. `references/*.md`, `evals/*.md`) ship alongside `SKILL.md` and keep their relative directory structure on install
+
+## Round-trip: harvesting and pushing layered skills
+
+Layered skill bundles survive the full consumer → template → consumer round-trip:
+
+- `imwel template init --from-project` harvests every file in a skill directory (not just `SKILL.md`) into the generated template, preserving subdirectories like `references/` and `evals/`.
+- `imwel push` / `imwel propose` write all bundle files back to the template repo under `skills/<slug>/<relativePath>`. The push confirmation lists each skill as `SKILL.md + N accompanying file(s)` so you can see exactly what will change.
+- On degraded (non-native-skills) targets, accompanying files are flattened into the `SKILL.md` body — only native-skills tools (Cursor, Claude Code, Trae, Qoder, Codex, OpenCode, Zcode) preserve the directory bundle.
 
 ## Troubleshooting
 

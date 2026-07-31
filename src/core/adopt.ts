@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Adapter } from '../adapters/types.js';
-import type { ArtifactType } from './artifact-types.js';
+import type { ArtifactType, BundleFile } from './artifact-types.js';
 import { mergeMultiToolParseResults, type ToolParseResult } from './push.js';
 import { classifyProvenance } from './provenance.js';
+import { assertBundlePathsSafe } from './propose-validate.js';
 
 export interface ConsolidatedArtifact {
   slug: string;
@@ -12,6 +13,8 @@ export interface ConsolidatedArtifact {
   targetOverrides: Record<string, Record<string, unknown>>;
   tools: string[];
   sourceFiles: string[];
+  /** For `type=skill`: full bundle (SKILL.md + accompanying files), or undefined. */
+  bundleFiles?: BundleFile[];
 }
 
 export interface ConsolidateConflict {
@@ -99,6 +102,7 @@ export async function consolidateExisting(
         tool: adapter.id,
         canonicalContent: parsed.canonicalContent,
         targetOverrides: parsed.targetOverrides,
+        ...(parsed.bundleFiles ? { bundleFiles: parsed.bundleFiles } : {}),
       });
       item.sourceFiles.forEach((s) => group.sourceFiles.add(s));
       groups.set(key, group);
@@ -126,6 +130,7 @@ export async function consolidateExisting(
       targetOverrides: merged.targetOverrides,
       tools: group.results.map((r) => r.tool),
       sourceFiles: [...group.sourceFiles],
+      ...(merged.bundleFiles ? { bundleFiles: merged.bundleFiles } : {}),
     });
   }
 
@@ -166,17 +171,13 @@ export async function collectDrafts(draftsDir: string): Promise<ConsolidatedArti
     if (!entry.isDirectory()) {
       continue;
     }
-    const skillMd = path.join(draftsDir, 'skills', entry.name, 'SKILL.md');
-    let content: string;
-    try {
-      content = await fs.readFile(skillMd, 'utf8');
-    } catch {
+    const skillDirAbs = path.join(draftsDir, 'skills', entry.name);
+    const bundleFiles = await readDraftBundleFiles(skillDirAbs);
+    const skillMd = bundleFiles.find((f) => f.relativePath === 'SKILL.md');
+    if (!skillMd || !skillMd.content.trim()) {
       continue;
     }
-    if (!content.trim()) {
-      continue;
-    }
-    artifacts.push(draftArtifact('skill', entry.name, content, `skills/${entry.name}/SKILL.md`));
+    artifacts.push(draftArtifact('skill', entry.name, skillMd.content, `skills/${entry.name}/SKILL.md`, bundleFiles));
   }
 
   return artifacts.sort((a, b) => `${a.type}:${a.slug}`.localeCompare(`${b.type}:${b.slug}`));
@@ -195,11 +196,42 @@ function draftArtifact(
   slug: string,
   canonicalContent: string,
   sourceFile: string,
+  bundleFiles?: BundleFile[],
 ): ConsolidatedArtifact {
-  return { slug, type, canonicalContent, targetOverrides: {}, tools: [], sourceFiles: [sourceFile] };
+  return {
+    slug,
+    type,
+    canonicalContent,
+    targetOverrides: {},
+    tools: [],
+    sourceFiles: [sourceFile],
+    ...(bundleFiles ? { bundleFiles } : {}),
+  };
 }
 
-/** Output-relative path for a consolidated artifact, using template-repo layout. */
+/** Recursively read draft skill bundle files as { relativePath, content }, paths relative to the skill dir. */
+async function readDraftBundleFiles(dirAbs: string): Promise<BundleFile[]> {
+  const out: BundleFile[] = [];
+  let entries: import('node:fs').Dirent[];
+  try {
+    entries = await fs.readdir(dirAbs, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    const childAbs = path.join(dirAbs, entry.name);
+    if (entry.isDirectory()) {
+      for (const nested of await readDraftBundleFiles(childAbs)) {
+        out.push({ relativePath: `${entry.name}/${nested.relativePath}`.replace(/\\/g, '/'), content: nested.content });
+      }
+    } else if (entry.isFile()) {
+      out.push({ relativePath: entry.name, content: await fs.readFile(childAbs, 'utf8') });
+    }
+  }
+  return out;
+}
+
+/** Output-relative path for a consolidated artifact's primary file, using template-repo layout. */
 export function outputPathFor(artifact: ConsolidatedArtifact): string {
   if (artifact.type === 'skill') {
     return `skills/${artifact.slug}/SKILL.md`;
@@ -207,13 +239,24 @@ export function outputPathFor(artifact: ConsolidatedArtifact): string {
   return `rules/${artifact.slug}.md`;
 }
 
-/** Write consolidated artifacts under `outDir`. Returns absolute paths written. */
+/** Write consolidated artifacts under `outDir`, including skill bundle files. Returns absolute paths written. */
 export async function writeConsolidated(
   outDir: string,
   artifacts: ConsolidatedArtifact[],
 ): Promise<string[]> {
   const written: string[] = [];
   for (const artifact of artifacts) {
+    if (artifact.type === 'skill' && artifact.bundleFiles && artifact.bundleFiles.length > 0) {
+      assertBundlePathsSafe(artifact.bundleFiles);
+      for (const bundleFile of artifact.bundleFiles) {
+        const rel = path.posix.join('skills', artifact.slug, bundleFile.relativePath);
+        const abs = path.join(outDir, rel);
+        await fs.mkdir(path.dirname(abs), { recursive: true });
+        await fs.writeFile(abs, ensureTrailingNewline(bundleFile.content), 'utf8');
+        written.push(abs);
+      }
+      continue;
+    }
     const abs = path.join(outDir, outputPathFor(artifact));
     await fs.mkdir(path.dirname(abs), { recursive: true });
     const content = artifact.canonicalContent.endsWith('\n')
@@ -223,4 +266,8 @@ export async function writeConsolidated(
     written.push(abs);
   }
   return written;
+}
+
+function ensureTrailingNewline(content: string): string {
+  return content.endsWith('\n') ? content : `${content}\n`;
 }

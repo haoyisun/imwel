@@ -199,7 +199,7 @@ function draftsToArtifacts(drafts: ConsolidatedArtifact[]): Artifact[] {
     canonicalContent: draft.canonicalContent,
     bundleFiles:
       draft.type === 'skill'
-        ? [{ relativePath: 'SKILL.md', content: draft.canonicalContent }]
+        ? draft.bundleFiles ?? [{ relativePath: 'SKILL.md', content: draft.canonicalContent }]
         : undefined,
   }));
 }

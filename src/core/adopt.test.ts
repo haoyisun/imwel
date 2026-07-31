@@ -140,4 +140,20 @@ describe('collectDrafts', () => {
     const content = await fs.readFile(written[0]!, 'utf8');
     assert.match(content, /Use TypeScript\./);
   });
+
+  it('regression: a skill with only SKILL.md still harvests and writes correctly', async () => {
+    await writeFile(root, '.cursor/skills/solo/SKILL.md', '# Solo\n\nBody.\n');
+    const result = await consolidateExisting(root, adapters);
+    const solo = result.artifacts.find((a) => a.type === 'skill' && a.slug === 'solo');
+    assert.ok(solo, 'expected a solo skill artifact');
+    assert.equal(solo!.canonicalContent, '# Solo\n\nBody.\n');
+    // bundleFiles contains only SKILL.md; no accompanying files.
+    assert.ok(solo!.bundleFiles && solo!.bundleFiles.length === 1);
+    assert.equal(solo!.bundleFiles![0]!.relativePath, 'SKILL.md');
+
+    const outDir = path.join(root, '.imwel', 'adopted');
+    const written = await writeConsolidated(outDir, [solo!]);
+    assert.equal(written.length, 1);
+    assert.ok(written[0]!.endsWith(path.join('skills', 'solo', 'SKILL.md')));
+  });
 });

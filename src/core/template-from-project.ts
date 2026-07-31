@@ -3,6 +3,7 @@ import path from 'node:path';
 import { adapters } from '../adapters/index.js';
 import { consolidateExisting, type ConsolidateConflict, type ConsolidatedArtifact } from './adopt.js';
 import { pathExists } from './fs-utils.js';
+import { assertBundlePathsSafe } from './propose-validate.js';
 import { templatesDir } from './package-root.js';
 
 export interface GenerateFromProjectOptions {
@@ -71,6 +72,17 @@ export async function generateTemplateFromProject(
   for (const artifact of consolidated.artifacts) {
     if (artifact.type === 'agents') {
       agentsChunks.push(artifact.canonicalContent.trimEnd());
+      continue;
+    }
+    if (artifact.type === 'skill' && artifact.bundleFiles && artifact.bundleFiles.length > 0) {
+      assertBundlePathsSafe(artifact.bundleFiles);
+      for (const bundleFile of artifact.bundleFiles) {
+        const rel = path.posix.join('skills', artifact.slug, bundleFile.relativePath);
+        const abs = path.join(projectDirAbs, rel);
+        await fs.mkdir(path.dirname(abs), { recursive: true });
+        await fs.writeFile(abs, ensureTrailingNewline(bundleFile.content), 'utf8');
+        writtenPaths.push(abs);
+      }
       continue;
     }
     const rel =

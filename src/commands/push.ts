@@ -130,7 +130,12 @@ export async function runPush(opts: PushOptions = {}): Promise<number> {
   }
   info(t('push.valid.title'));
   for (const candidate of all) {
-    info(t('push.valid.entry', { path: candidate.sourcePath }));
+    const accompanying = candidate.bundleFiles?.filter((f) => f.relativePath !== 'SKILL.md').length ?? 0;
+    if (candidate.type === 'skill' && accompanying > 0) {
+      info(t('push.valid.entrySkillBundle', { path: candidate.sourcePath, count: accompanying }));
+    } else {
+      info(t('push.valid.entry', { path: candidate.sourcePath }));
+    }
   }
 
   let selected: string[];

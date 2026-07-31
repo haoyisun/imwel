@@ -163,3 +163,74 @@ describe('pushed Git revision comparison', () => {
     }
   });
 });
+
+describe('mergeMultiToolParseResults bundle files', () => {
+  it('dedupes equivalent bundle files across tools', () => {
+    const merged = mergeMultiToolParseResults([
+      {
+        tool: 'cursor',
+        canonicalContent: '# Demo\n',
+        bundleFiles: [
+          { relativePath: 'SKILL.md', content: '# Demo\n' },
+          { relativePath: 'references/foo.md', content: 'refs' },
+        ],
+      },
+      {
+        tool: 'claude-code',
+        canonicalContent: '# Demo\n',
+        bundleFiles: [
+          { relativePath: 'SKILL.md', content: '# Demo\n' },
+          { relativePath: 'references/foo.md', content: 'refs' },
+        ],
+      },
+    ]);
+    assert.equal(merged.ok, true);
+    if (merged.ok) {
+      assert.ok(merged.bundleFiles);
+      assert.equal(merged.bundleFiles!.length, 2);
+    }
+  });
+
+  it('fails when accompanying files differ across tools', () => {
+    assert.throws(
+      () =>
+        mergeMultiToolParseResults([
+          {
+            tool: 'cursor',
+            canonicalContent: '# Demo\n',
+            bundleFiles: [{ relativePath: 'references/foo.md', content: 'a' }],
+          },
+          {
+            tool: 'claude-code',
+            canonicalContent: '# Demo\n',
+            bundleFiles: [{ relativePath: 'references/foo.md', content: 'b' }],
+          },
+        ]),
+      /Canonical content conflict for references\/foo\.md/,
+    );
+  });
+});
+
+describe('executePush writes skill bundle files', () => {
+  it('rejects unsafe bundle relative paths before any Git side effects', async () => {
+    const { assertBundlePathsSafe } = await import('./propose-validate.js');
+    assert.throws(
+      () => assertBundlePathsSafe([{ relativePath: '../escape.md', content: 'x' }]),
+      /unsafe relative path/,
+    );
+    assert.throws(
+      () => assertBundlePathsSafe([{ relativePath: '/abs/path.md', content: 'x' }]),
+      /unsafe relative path/,
+    );
+    assert.throws(
+      () => assertBundlePathsSafe([{ relativePath: 'C:/win.md', content: 'x' }]),
+      /unsafe relative path/,
+    );
+    // Safe paths pass without throwing.
+    assertBundlePathsSafe([
+      { relativePath: 'SKILL.md', content: 'x' },
+      { relativePath: 'references/foo.md', content: 'x' },
+      { relativePath: 'evals/case-1.md', content: 'x' },
+    ]);
+  });
+});

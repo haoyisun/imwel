@@ -85,6 +85,7 @@ Cold-start a template repository **from a project that already has AI coding rul
 - Uses **artifact provenance** to harvest only `USER` artifacts — it **excludes** imwel's own command pack (`imwel-*` / `generatedBy: imwel`) and other tools' installed artifacts (e.g. openspec), and prints what was excluded and why.
 - Cross-tool content conflicts are reported and skipped (resolve by hand before publishing).
 - The skeleton contains `.imwel/manifest.yaml` (one `project`), the harvested `rules/`/`skills/`/`agents.md`, and scaffolded author commands (`/imwel-author`, `/imwel-lint`).
+- For `skill` Artifacts, the full directory bundle is harvested — `SKILL.md` plus any accompanying files (`references/*.md`, `evals/*.md`, …) — preserving their relative subdirectory structure, not just `SKILL.md` alone.
 - The deterministic CLI stops at the skeleton; the **semantic** organization (splitting projects, assigning roles, writing README/CONTRIBUTING) is done by the `/imwel-create-template` skill in your AI tool. Validate with `imwel lint` in the generated dir; publishing stays plain `git`.
 
 ## `imwel template setup-hooks`
@@ -330,6 +331,8 @@ After restore, imwel **deletes managed files that were added after that history 
 Reverse-renders local tool files back to canonical Artifacts and opens an upstream proposal (branch + PR/MR by default). Writable-project edits are included normally. A subscribed-module edit is eligible only when persistent contribution tracking for that module Artifact exists, and it appears as a separate candidate that must be selected explicitly.
 
 Before creating a branch or commit, push checks every local input. A missing binding-owned file is skipped (never treated as an upstream deletion) with an `imwel sync` recovery hint. For a missing contribution source, interactive push offers to remove tracking or cancel so you can restore it; non-interactive push skips it, retains tracking, and exits non-zero. Successful items record the pushed Git branch and commit SHA. Unselected or failed records are unchanged, and content already represented by that Git commit is not pushed again.
+
+For `skill` Artifacts, push writes the full bundle (`SKILL.md` plus accompanying files) back to the template repo under `skills/<slug>/<relativePath>`, preserving subdirectories. The candidate summary lists each skill as `SKILL.md + N accompanying file(s)`. When two bound tools disagree on an accompanying file's content, push reports a conflict and fails rather than silently picking one.
 
 | Flag | Description |
 |------|-------------|

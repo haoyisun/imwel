@@ -359,6 +359,7 @@ export const en = {
     '  - {source}: proposal source missing ({paths}); tracking is retained. Restore the file and retry, or cancel its tracking when contribution tracking is available.',
   'push.valid.title': 'Valid push candidates:',
   'push.valid.entry': '  + {path}',
+  'push.valid.entrySkillBundle': '  + {path} (SKILL.md + {count} accompanying file(s))',
   'push.confirm': 'Push {count} valid artifact(s) upstream and skip {skipped} missing item(s)?',
   'push.missing.prompt':
     'Tracked contribution sources are missing. Remove their tracking, or cancel push and restore the files?',

@@ -28,7 +28,7 @@
 | 字段 | 默认 | 说明 |
 |------|------|------|
 | `rulesDir` | `rules` | 各 project 路径下 `rule` Artifact 目录 |
-| `skillsDir` | `skills` | `skill` Artifact 目录（每个 skill 是含 `SKILL.md` 的文件夹） |
+| `skillsDir` | `skills` | `skill` Artifact 目录（每个 skill 是含 `SKILL.md` 的文件夹，可附带 `references/*.md` 等附属文件；附属文件随 bundle 在原生 skills 工具上一并收割与回推） |
 | `agentsFile` | `agents.md` | 项目级 agents 说明文件名 |
 
 若省略或部分省略 `conventions`，缺失键使用上表默认值。

@@ -85,6 +85,7 @@
 - 借**制品来源识别**只收割 `USER` 制品——**排除** imwel 自己的命令包（`imwel-*` / `generatedBy: imwel`）和其它工具装的制品（如 openspec），并打印哪些被排除、为什么。
 - 跨工具内容冲突会被报告并跳过（发布前请手动解决）。
 - 骨架含 `.imwel/manifest.yaml`（一个 `project`）、收割到的 `rules/`/`skills/`/`agents.md`，以及脚手架作者命令（`/imwel-author`、`/imwel-lint`）。
+- 对 `skill` 制品，收割整个目录 bundle——`SKILL.md` 加任意附属文件（`references/*.md`、`evals/*.md` 等），保留相对子目录结构，而非只取 `SKILL.md`。
 - 确定性 CLI 只做到骨架；**语义**组织（拆 project、指定 role、写 README/CONTRIBUTING）由 AI 工具里的 `/imwel-create-template` skill 完成。在生成目录运行 `imwel lint` 校验；发布仍走普通 `git`。
 
 ## `imwel template setup-hooks`
@@ -328,6 +329,8 @@ imwel tools --remove cursor --delete-output -y  # 只删无引用的记录路径
 将本地工具文件反向渲染为 canonical Artifact，并向上游提案（默认分支 + PR/MR）。可写项目编辑按常规进入候选。只有存在该模块 Artifact 的长期贡献追踪时，订阅模块编辑才有资格贡献，并会作为单独候选要求显式选择。
 
 创建分支或提交前，push 会检查所有本地输入。缺失的 binding 受管文件会被跳过（绝不推断为删除上游），并提示用 `imwel sync` 恢复。贡献来源缺失时，交互 push 可移除追踪或取消以便补回；非交互 push 会跳过、保留追踪并返回非零。成功项会记录 Git 分支与 commit SHA；未选择或失败记录保持不变，已由该 Git commit 表示的未变内容不会重复推送。
+
+对 `skill` 制品，push 会把整个 bundle（`SKILL.md` 加附属文件）回写到模板仓 `skills/<slug>/<relativePath>` 下，保留子目录。候选摘要会把每个 skill 列为 `SKILL.md + N 个附属文件`。当两个绑定工具在某个附属文件内容上不一致时，push 报冲突并失败，而非静默选一份。
 
 | 选项 | 说明 |
 |------|------|

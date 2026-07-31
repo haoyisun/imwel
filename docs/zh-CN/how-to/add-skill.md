@@ -68,6 +68,15 @@ git push -u origin HEAD
 
 - Lint 通过
 - 消费者 `init` / `sync` 后出现如 `.cursor/skills/review-pr/SKILL.md` 或 `.claude/skills/review-pr/SKILL.md`（取决于所选工具）
+- 附属文件（如 `references/*.md`、`evals/*.md`）随 `SKILL.md` 一起分发，并保留相对目录结构
+
+## 往返：分层 skill 的收割与回推
+
+分层 skill 包可完整跑通「消费者 → 模板 → 消费者」往返：
+
+- `imwel template init --from-project` 会收割 skill 目录下的全部文件（不只是 `SKILL.md`），保留 `references/`、`evals/` 等子目录结构到生成的模板仓。
+- `imwel push` / `imwel propose` 把全部附属文件回写到模板仓 `skills/<slug>/<relativePath>` 下。确认提示会列出每个 skill 为 `SKILL.md + N 个附属文件`，让你清楚将改变什么。
+- 在降级（非原生 skills）目标上，附属文件会被合并进 `SKILL.md` 正文——只有原生 skills 工具（Cursor、Claude Code、Trae、Qoder、Codex、OpenCode、Zcode）保留目录 bundle。
 
 ## 排错
 

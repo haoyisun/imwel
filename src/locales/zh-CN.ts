@@ -350,6 +350,7 @@ export const zhCN: Partial<Record<LocaleKey, string>> = {
     '  - {source}：proposal 来源缺失（{paths}），追踪记录已保留。请补回文件后重试；待 contribution tracking 可用后也可取消该追踪。',
   'push.valid.title': '有效推送候选：',
   'push.valid.entry': '  + {path}',
+  'push.valid.entrySkillBundle': '  + {path} (SKILL.md + {count} 个附属文件)',
   'push.confirm': '推送 {count} 个有效制品，并跳过 {skipped} 个缺失项？',
   'push.missing.prompt': '贡献追踪来源缺失。要移除这些追踪，还是取消 push 并补回文件？',
   'push.missing.remove': '移除缺失来源的追踪并继续',

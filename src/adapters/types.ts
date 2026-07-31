@@ -1,4 +1,4 @@
-import type { Artifact, ArtifactType } from '../core/artifact-types.js';
+import type { Artifact, ArtifactType, BundleFile } from '../core/artifact-types.js';
 
 export type MergeMode = 'replace' | 'upsert-block' | 'ensure-yaml-list';
 
@@ -14,6 +14,13 @@ export interface RenderedFile {
 export interface ParsedExisting {
   canonicalContent: string;
   targetOverrides?: Record<string, unknown>;
+  /**
+   * For `type=skill` Artifacts rendered as a directory bundle (fidelity ladder R1),
+   * the full set of files in the skill's rendered directory (the `SKILL.md` plus
+   * accompanying files such as `references/*.md`), keyed by path relative to the
+   * skill directory. Omitted for degraded (R2–R5) targets and for non-skill types.
+   */
+  bundleFiles?: BundleFile[];
 }
 
 /**

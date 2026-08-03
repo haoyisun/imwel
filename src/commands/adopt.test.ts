@@ -55,22 +55,42 @@ describe('runAdopt --from (render drafts into tools)', () => {
   it('refuses to render silently when drafts have health issues and no -y (non-interactive)', async () => {
     await writeFile(root, '.imwel/drafts/rules/empty-ish.md', '# Title only\n');
 
-    const code = await runAdopt({ from: true, tools: 'cursor' });
-
-    assert.equal(code, 1);
-    assert.ok(!existsSync(path.join(root, '.cursor')));
-    const draft = await fs.readFile(path.join(root, '.imwel/drafts/rules/empty-ish.md'), 'utf8');
-    assert.equal(draft, '# Title only\n');
+    const stdinDesc = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+    Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: false });
+    try {
+      const code = await runAdopt({ from: true, tools: 'cursor' });
+      assert.equal(code, 1);
+      assert.ok(!existsSync(path.join(root, '.cursor')));
+      const draft = await fs.readFile(path.join(root, '.imwel/drafts/rules/empty-ish.md'), 'utf8');
+      assert.equal(draft, '# Title only\n');
+    } finally {
+      if (stdinDesc) {
+        Object.defineProperty(process.stdin, 'isTTY', stdinDesc);
+      } else {
+        Reflect.deleteProperty(process.stdin, 'isTTY');
+      }
+    }
   });
 
   it('errors on multiple named boxes in non-interactive mode', async () => {
     await writeFile(root, '.imwel/drafts/box-a/rules/a.md', '# A\n\nRule A body.\n');
     await writeFile(root, '.imwel/drafts/box-b/rules/b.md', '# B\n\nRule B body.\n');
 
-    const code = await runAdopt({ from: true, yes: true, tools: 'cursor' });
-
-    assert.equal(code, 1);
-    assert.ok(!existsSync(path.join(root, '.cursor')));
+    // npm publish / local shells often have stdin.isTTY=true; force the
+    // non-interactive branch that must error instead of prompting.
+    const stdinDesc = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+    Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: false });
+    try {
+      const code = await runAdopt({ from: true, yes: true, tools: 'cursor' });
+      assert.equal(code, 1);
+      assert.ok(!existsSync(path.join(root, '.cursor')));
+    } finally {
+      if (stdinDesc) {
+        Object.defineProperty(process.stdin, 'isTTY', stdinDesc);
+      } else {
+        Reflect.deleteProperty(process.stdin, 'isTTY');
+      }
+    }
   });
 
   it('reports no adoptable drafts when the directory is empty', async () => {

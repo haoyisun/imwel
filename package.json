@@ -1,6 +1,6 @@
 {
   "name": "@culock/imwel",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Git-native CLI for distributing AI coding rules, skills, and agent instructions across teams and tools.",
   "license": "MIT",
   "type": "module",
@@ -52,6 +52,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.9.1",
+    "@culock/imwel": "^0.3.0",
     "commander": "^12.1.0",
     "execa": "^9.5.2",
     "picocolors": "^1.1.1",

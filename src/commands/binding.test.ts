@@ -152,6 +152,10 @@ describe('binding inspection formatting', () => {
     setActiveLocale('en');
     const messages: string[] = [];
     const originalLog = console.log;
+    const hadNoColor = Object.hasOwn(process.env, 'NO_COLOR');
+    const previousNoColor = process.env.NO_COLOR;
+    // warn() colors when stdout is a TTY; force plain icons for stable assertions.
+    process.env.NO_COLOR = '';
     console.log = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {
       emitBindingWarnings(view);
@@ -161,6 +165,11 @@ describe('binding inspection formatting', () => {
       ]);
     } finally {
       console.log = originalLog;
+      if (hadNoColor) {
+        process.env.NO_COLOR = previousNoColor;
+      } else {
+        delete process.env.NO_COLOR;
+      }
     }
   });
 
